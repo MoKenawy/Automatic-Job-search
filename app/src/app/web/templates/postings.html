@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% set active = 'postings' %}
+{% block content %}
+
+<h1>Postings</h1>
+<p class="sub">{{ rows | length }} shown, ranked by score. Unscored postings sort last.</p>
+
+<form class="filters" method="get" action="/postings">
+  <a href="/postings" class="{{ 'on' if not status }}">All</a>
+  {% for s in statuses %}
+  <a href="/postings?status={{ s }}" class="{{ 'on' if status == s }}">{{ s }}</a>
+  {% endfor %}
+  <input type="search" name="q" value="{{ q }}" placeholder="title or company">
+  {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+  <button class="btn" type="submit">Search</button>
+</form>
+
+<div class="panel scroll-x">
+  <table>
+    <thead>
+      <tr>
+        <th class="num">Score</th>
+        <th>Title</th>
+        <th>Company</th>
+        <th>Location</th>
+        <th>Sources</th>
+        <th>Posted</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p, employer in rows %}
+      <tr>
+        <td class="num score">{{ p.score if p.score is not none else '—' }}</td>
+        <td><a href="/postings/{{ p.id }}">{{ p.title }}</a></td>
+        <td>{{ employer.name }}</td>
+        <td class="muted">
+          {{ 'Remote' if p.is_remote else (p.country_code or '—') }}
+        </td>
+        <td class="muted">
+          {% for site in p.sources.keys() %}{{ site }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% if p.sources | length > 1 %}<span class="pill">×{{ p.sources | length }}</span>{% endif %}
+        </td>
+        <td class="muted">{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}</td>
+        <td><span class="pill {{ p.status }}">{{ p.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="empty">No postings match.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

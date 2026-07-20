@@ -1,0 +1,15 @@
+{# Triage control. Posts normally when HTMX is unavailable; the endpoint
+   redirects in that case, so the interface degrades rather than breaking. #}
+<span class="statusbox" id="status-{{ p.id }}">
+  <span class="pill {{ p.status }}">{{ p.status }}</span>
+  {% for s in statuses %}{% if s != p.status %}
+  <form method="post" action="/postings/{{ p.id }}/status"
+        hx-post="/postings/{{ p.id }}/status"
+        hx-target="#status-{{ p.id }}"
+        hx-swap="outerHTML"
+        style="display:inline">
+    <input type="hidden" name="status" value="{{ s }}">
+    <button class="btn" type="submit">{{ s }}</button>
+  </form>
+  {% endif %}{% endfor %}
+</span>

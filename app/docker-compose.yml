@@ -1,0 +1,76 @@
+# Two services run from one image (ADR-0004): the triage interface and the
+# scheduler. A one-shot `migrate` service brings the schema up to head first, so
+# neither long-running service races the other applying migrations.
+
+x-app: &app
+  build: .
+  image: job-discovery:latest
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    migrate:
+      condition: service_completed_successfully
+  env_file:
+    - .env
+  environment: &app-env
+    # Compose-internal DB host overrides whatever .env holds (that value is for
+    # host-side runs against the published port)
+    DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-jobs}:${POSTGRES_PASSWORD:-jobs}@postgres:5432/${POSTGRES_DB:-jobs}
+    # Ollama runs on the host so it can reach the GPU directly
+    OLLAMA_HOST: http://host.docker.internal:11434
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  volumes:
+    # CV text used to build the scoring prompt (stage 3)
+    - ./data:/app/data:ro
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: job-discovery-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobs}
+      POSTGRES_DB: ${POSTGRES_DB:-jobs}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobs} -d ${POSTGRES_DB:-jobs}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: apply migrations, then exit. Everything else waits on it.
+  migrate:
+    <<: *app
+    container_name: job-discovery-migrate
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+
+  web:
+    <<: *app
+    container_name: job-discovery-web
+    command: ["python", "-m", "app", "web"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz').status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  scheduler:
+    <<: *app
+    container_name: job-discovery-scheduler
+    command: ["python", "-m", "app", "serve"]
+
+volumes:
+  pgdata:

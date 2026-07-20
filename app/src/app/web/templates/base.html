@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Job discovery{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <style>
+    :root {
+      --bg: #fbfbfa; --panel: #fff; --ink: #1f1f1d; --muted: #6b6b66;
+      --line: #e5e4e0; --accent: #2c5f4f; --warn: #9a5b2c; --bad: #96322e;
+      --radius: 6px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #191918; --panel: #212120; --ink: #ecebe8; --muted: #9b9a94;
+        --line: #34332f; --accent: #7fbfa6; --warn: #d19a6a; --bad: #d98b83;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; }
+    header {
+      border-bottom: 1px solid var(--line); background: var(--panel);
+      position: sticky; top: 0; z-index: 5;
+    }
+    nav {
+      max-width: 1100px; margin: 0 auto; padding: 12px 20px;
+      display: flex; gap: 20px; align-items: baseline; flex-wrap: wrap;
+    }
+    nav .brand { font-weight: 650; letter-spacing: -0.01em; }
+    nav a { text-decoration: none; color: var(--muted); font-size: 14px; }
+    nav a:hover, nav a.on { color: var(--ink); }
+    main { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
+    h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+    h2 { font-size: 15px; margin: 28px 0 10px; color: var(--muted); font-weight: 600; }
+    .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 14px 16px;
+    }
+    .card .n { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+    .card .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .muted { color: var(--muted); }
+    .pill {
+      display: inline-block; padding: 1px 8px; border-radius: 999px;
+      font-size: 12px; border: 1px solid var(--line); color: var(--muted);
+    }
+    .pill.new { border-color: var(--line); }
+    .pill.shortlist { color: var(--accent); border-color: currentColor; }
+    .pill.applied { color: var(--warn); border-color: currentColor; }
+    .pill.rejected { color: var(--bad); border-color: currentColor; opacity: .8; }
+    .score { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+    .filters a, .btn {
+      text-decoration: none; font-size: 13px; padding: 4px 10px;
+      border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--panel); color: var(--muted); cursor: pointer;
+    }
+    .filters a.on { color: var(--ink); border-color: var(--ink); }
+    input[type=search] {
+      padding: 5px 10px; font-size: 13px; border: 1px solid var(--line);
+      border-radius: var(--radius); background: var(--panel); color: var(--ink); min-width: 200px;
+    }
+    .empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 14px; }
+    .bars { display: flex; gap: 3px; align-items: flex-end; height: 34px; }
+    .bars i {
+      flex: 1; min-width: 3px; background: var(--accent); opacity: .75;
+      border-radius: 1px 1px 0 0; display: block;
+    }
+    .bars i.zero { background: var(--bad); opacity: .55; min-height: 2px; }
+    .desc {
+      white-space: pre-wrap; font-size: 14px; line-height: 1.6;
+      max-height: 460px; overflow-y: auto; padding-right: 8px;
+    }
+    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+    dl.meta { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; }
+    dl.meta dt { color: var(--muted); }
+    dl.meta dd { margin: 0; word-break: break-word; }
+    .scroll-x { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <span class="brand">Job discovery</span>
+      <a href="/" class="{{ 'on' if active == 'index' }}">Overview</a>
+      <a href="/postings" class="{{ 'on' if active == 'postings' }}">Postings</a>
+      <a href="/runs" class="{{ 'on' if active == 'runs' }}">Runs</a>
+    </nav>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% set active = 'runs' %}
+{% block content %}
+
+<h1>Runs</h1>
+<p class="sub">
+  The weekly review surface (§7.4). The failure to watch for is not an error but
+  a run that succeeds while returning steadily less.
+</p>
+
+<h2>Per-source trend</h2>
+<div class="panel scroll-x">
+  <table>
+    <thead><tr><th>Source</th><th style="width:55%">Recent runs</th><th class="num">Latest</th></tr></thead>
+    <tbody>
+      {% for site in health.sites %}
+        {% set series = health.series[site] %}
+        {% set peak = (series | map(attribute=1) | max) or 1 %}
+        <tr>
+          <td>{{ site }}</td>
+          <td>
+            <div class="bars">
+              {% for _, count in series %}
+              <i class="{{ 'zero' if count == 0 }}"
+                 style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"
+                 title="{{ count }}"></i>
+              {% endfor %}
+            </div>
+          </td>
+          <td class="num">{{ series[-1][1] if series else 0 }}</td>
+        </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">No runs recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>History</h2>
+<div class="panel scroll-x">
+  <table>
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th>Started</th>
+        <th>Status</th>
+        <th class="num">Collected</th>
+        <th class="num">Distinct</th>
+        <th class="num">Scored</th>
+        <th class="num">Published</th>
+        <th>By source</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td class="num">{{ r.id }}</td>
+        <td>{{ r.started_at.strftime('%d %b %H:%M') }}</td>
+        <td>
+          <span class="pill {{ 'rejected' if r.status == 'failed' else 'shortlist' if r.status == 'success' }}">
+            {{ r.status }}
+          </span>
+        </td>
+        <td class="num">{{ r.collected_count }}</td>
+        <td class="num">{{ r.deduplicated_count }}</td>
+        <td class="num">{{ r.scored_count }}</td>
+        <td class="num">{{ r.published_count }}</td>
+        <td class="muted">
+          {% for site, n in (r.counts_by_site or {}).items() %}
+            {{ site }}={{ n }}{% if not loop.last %}, {% endif %}
+          {% endfor %}
+        </td>
+      </tr>
+      {% if r.error %}
+      <tr><td></td><td colspan="7" class="muted" style="font-size:12px">{{ r.error }}</td></tr>
+      {% endif %}
+      {% else %}
+      <tr><td colspan="8" class="empty">No runs recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

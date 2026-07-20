@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% set active = 'index' %}
+{% block content %}
+
+<h1>Overview</h1>
+<p class="sub">
+  {% if totals.last_run %}
+    Last run {{ totals.last_run.started_at.strftime('%d %b %Y, %H:%M') }} —
+    <strong>{{ totals.last_run.status }}</strong>
+  {% else %}
+    No runs recorded yet.
+  {% endif %}
+</p>
+
+<div class="cards">
+  <div class="card"><div class="n">{{ totals.postings }}</div><div class="k">Postings</div></div>
+  <div class="card"><div class="n">{{ totals.employers }}</div><div class="k">Employers</div></div>
+  <div class="card"><div class="n">{{ totals.scored }}</div><div class="k">Scored</div></div>
+  <div class="card"><div class="n">{{ totals.published }}</div><div class="k">Published</div></div>
+</div>
+
+{% if totals.scored == 0 and totals.postings > 0 %}
+<h2>Scoring not yet run</h2>
+<div class="panel"><div class="empty">
+  {{ totals.postings }} postings collected and deduplicated, none scored.<br>
+  Stage 3 requires a CV at <code>data/cv.txt</code> to build the prompt.
+</div></div>
+{% endif %}
+
+<h2>Triage</h2>
+<div class="panel scroll-x">
+  <table>
+    <thead><tr><th>Status</th><th class="num">Count</th></tr></thead>
+    <tbody>
+      {% for status, count in totals.by_status.items() %}
+      <tr>
+        <td><a href="/postings?status={{ status }}"><span class="pill {{ status }}">{{ status }}</span></a></td>
+        <td class="num">{{ count }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2" class="empty">No postings yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Source health</h2>
+<p class="sub">
+  Per-source counts across recent runs. A source trending toward zero while runs
+  keep succeeding is the signal to investigate (§7.4).
+</p>
+<div class="panel scroll-x">
+  <table>
+    <thead><tr><th>Source</th><th style="width:55%">Recent runs</th><th class="num">Latest</th></tr></thead>
+    <tbody>
+      {% for site in health.sites %}
+        {% set series = health.series[site] %}
+        {% set peak = (series | map(attribute=1) | max) or 1 %}
+        <tr>
+          <td>{{ site }}</td>
+          <td>
+            <div class="bars">
+              {% for _, count in series %}
+              <i class="{{ 'zero' if count == 0 }}"
+                 style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"
+                 title="{{ count }}"></i>
+              {% endfor %}
+            </div>
+          </td>
+          <td class="num">{{ series[-1][1] if series else 0 }}</td>
+        </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">No runs recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

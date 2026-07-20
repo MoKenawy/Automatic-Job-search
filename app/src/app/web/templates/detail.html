@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% set active = 'postings' %}
+{% block title %}{{ p.title }} — Job discovery{% endblock %}
+{% block content %}
+
+<p class="sub"><a href="/postings">← Postings</a></p>
+<h1>{{ p.title }}</h1>
+<p class="sub">{{ employer.name }}{% if p.country_code %} · {{ p.country_code }}{% endif %}{% if p.is_remote %} · Remote{% endif %}</p>
+
+{% include "_status_control.html" %}
+
+<div class="split" style="margin-top:22px">
+  <div>
+    <h2>Description</h2>
+    <div class="panel" style="padding:16px">
+      {% if p.description %}
+        <div class="desc">{{ p.description }}</div>
+      {% else %}
+        <div class="empty">No description captured.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <h2>Assessment</h2>
+    <div class="panel" style="padding:16px">
+      {% if p.score is not none %}
+        <div style="font-size:30px;font-weight:600" class="score">{{ p.score }}<span class="muted" style="font-size:15px">/100</span></div>
+        {% if p.rationale %}<p style="font-size:14px">{{ p.rationale }}</p>{% endif %}
+        {% if p.matched_skills %}
+          <h2 style="margin-top:16px">Matched</h2>
+          {% for s in p.matched_skills %}<span class="pill">{{ s }}</span> {% endfor %}
+        {% endif %}
+        {% if p.gaps %}
+          <h2 style="margin-top:16px">Gaps</h2>
+          {% for s in p.gaps %}<span class="pill">{{ s }}</span> {% endfor %}
+        {% endif %}
+        {% if p.scored_by_model %}
+          <p class="muted" style="font-size:12px;margin-top:16px">
+            {{ p.scored_by_model }}{% if p.scored_at %}, {{ p.scored_at.strftime('%d %b %H:%M') }}{% endif %}
+          </p>
+        {% endif %}
+      {% else %}
+        <div class="empty">Not scored yet.</div>
+      {% endif %}
+    </div>
+
+    <h2>Sources</h2>
+    <div class="panel" style="padding:16px">
+      <dl class="meta">
+        {% for site, info in p.sources.items() %}
+        <dt>{{ site }}</dt>
+        <dd><a href="{{ info.url }}" target="_blank" rel="noopener">open ↗</a></dd>
+        {% endfor %}
+      </dl>
+    </div>
+
+    <h2>Record</h2>
+    <div class="panel" style="padding:16px">
+      <dl class="meta">
+        <dt>Location</dt><dd>{{ p.location_raw or '—' }}</dd>
+        <dt>Job type</dt><dd>{{ p.job_type or '—' }}</dd>
+        <dt>Posted</dt><dd>{{ p.date_posted.strftime('%d %b %Y') if p.date_posted else '—' }}</dd>
+        <dt>First seen</dt><dd>{{ p.first_seen_at.strftime('%d %b %Y, %H:%M') }}</dd>
+        <dt>Last seen</dt><dd>{{ p.last_seen_at.strftime('%d %b %Y, %H:%M') }}</dd>
+        <dt>Filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
+        <dt>Fingerprint</dt><dd class="muted" style="font-size:11px">{{ p.fingerprint[:24] }}…</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

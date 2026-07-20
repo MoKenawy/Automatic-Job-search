@@ -1,0 +1,16 @@
+# Secrets and personal data
+.env
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+
+# Scratch output
+*.csv
