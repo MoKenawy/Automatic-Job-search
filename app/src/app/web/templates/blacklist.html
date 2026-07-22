@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% set active = 'blacklist' %}
+{% block content %}
+
+<h1>Blacklist</h1>
+<p class="sub">
+  Postings from a blacklisted employer are automatically Rejected and never
+  published, but retained. Removing a blacklist stops future auto-rejection; it
+  does not reinstate already-rejected postings.
+</p>
+
+<div class="panel scroll-x">
+  <table>
+    <thead>
+      <tr><th>Employer</th><th class="num">Postings</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for employer, count in employers %}
+      <tr>
+        <td>{{ employer.name }}</td>
+        <td class="num">{{ count }}</td>
+        <td>
+          <form method="post" action="/employers/{{ employer.id }}/unblacklist"
+                hx-post="/employers/{{ employer.id }}/unblacklist" style="display:inline">
+            <input type="hidden" name="return_to" value="/blacklist">
+            <button class="btn" type="submit">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">No employers blacklisted.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

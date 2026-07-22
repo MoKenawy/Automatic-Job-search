@@ -15,6 +15,7 @@ The three guides are task-oriented and can be read as needed.
 | [Software Requirements Specification](software-requirements-specification.md) | What the system must do | Everyone |
 | [System Architecture](design/system-architecture.md) | Structure, stages, runtime topology | Developers, operators |
 | [Data Model](design/data-model.md) | Entities, relationships, schema | Developers |
+| [Object Model Refactor](design/oop-refactor.md) | Paradigm assignment and phased refactor plan **(proposal)** | Developers |
 | [Deployment Guide](deployment-guide.md) | Standing the system up | Operators |
 | [Development Guide](development-guide.md) | Working on the code | Developers |
 | [Operations Guide](operations-guide.md) | Running it day to day | Operators |
@@ -30,6 +31,7 @@ earlier record is retained.
 | [0002](ADRs/0002-no-jobsync-integration.md) | Do not integrate JobSync | Accepted |
 | [0003](ADRs/0003-build-collection-and-scoring.md) | Build collection and scoring | Accepted |
 | [0004](ADRs/0004-web-app-replaces-notion.md) | Web application replaces Notion | Accepted |
+| [0005](ADRs/0005-ui-config-and-db-search-profiles.md) | UI config & DB-backed search profiles | Accepted |
 
 ## Project structure
 
@@ -38,7 +40,8 @@ Automatic-Job-search/
 ├── Docs/                          # This documentation set
 │   ├── design/                    # Design documents
 │   │   ├── system-architecture.md
-│   │   └── data-model.md
+│   │   ├── data-model.md
+│   │   └── oop-refactor.md        # Paradigm assignment (proposal)
 │   ├── ADRs/                      # Architecture Decision Records
 │   │   └── 000N-*.md
 │   ├── job-discovery-pipeline-design.md

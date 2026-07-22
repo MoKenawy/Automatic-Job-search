@@ -9,6 +9,23 @@
 
 {% include "_status_control.html" %}
 
+{# US3 FR-012 — blacklist this employer directly from a posting #}
+<p style="margin-top:10px">
+  {% if employer.suppressed %}
+    <span class="pill rejected">employer blacklisted</span>
+    <form method="post" action="/employers/{{ employer.id }}/unblacklist" style="display:inline">
+      <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
+      <button class="btn" type="submit">Remove from blacklist</button>
+    </form>
+  {% else %}
+    <form method="post" action="/employers/{{ employer.id }}/blacklist" style="display:inline"
+          onsubmit="return confirm('Blacklist {{ employer.name }}? All their postings will be rejected.');">
+      <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
+      <button class="btn" type="submit">Blacklist {{ employer.name }}</button>
+    </form>
+  {% endif %}
+</p>
+
 <div class="split" style="margin-top:22px">
   <div>
     <h2>Description</h2>

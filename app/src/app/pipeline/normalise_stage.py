@@ -15,7 +15,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Employer, Posting, RawPosting, Run
+from app.db.models import STATUS_NEW, STATUS_REJECTED, Employer, Posting, RawPosting, Run
 from app.normalise import build_fingerprint, normalise_employer
 
 log = logging.getLogger(__name__)
@@ -97,6 +97,10 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
 
         if posting is None:
             employer = _get_or_create_employer(session, payload.get("company"), payload)
+            # A new posting from a blacklisted employer is born Rejected, so it is
+            # never published (US3, FR-007). The suppression pass is the general
+            # mechanism; this catches the row at creation without a second sweep.
+            born_status = STATUS_REJECTED if employer.suppressed else STATUS_NEW
             posting = Posting(
                 fingerprint=parts.digest,
                 employer_id=employer.id,
@@ -109,6 +113,7 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
                 date_posted=_parse_date(payload.get("date_posted")),
                 job_type=(payload.get("job_type") or None),
                 sources={raw.site: provenance},
+                status=born_status,
             )
             session.add(posting)
         else:

@@ -82,6 +82,18 @@ def get_posting(session: Session, posting_id: int) -> tuple[Posting, Employer] |
     ).first()
 
 
+def blacklisted_employers(session: Session) -> list[tuple[Employer, int]]:
+    """Suppressed employers with a count of their postings (US3)."""
+    stmt = (
+        select(Employer, func.count(Posting.id))
+        .outerjoin(Posting, Posting.employer_id == Employer.id)
+        .where(Employer.suppressed.is_(True))
+        .group_by(Employer.id)
+        .order_by(Employer.name)
+    )
+    return list(session.execute(stmt).all())
+
+
 def recent_runs(session: Session, limit: int = 30) -> list[Run]:
     return list(
         session.scalars(select(Run).order_by(Run.started_at.desc()).limit(limit)).all()
