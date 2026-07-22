@@ -15,7 +15,7 @@ The three guides are task-oriented and can be read as needed.
 | [Software Requirements Specification](software-requirements-specification.md) | What the system must do | Everyone |
 | [System Architecture](design/system-architecture.md) | Structure, stages, runtime topology | Developers, operators |
 | [Data Model](design/data-model.md) | Entities, relationships, schema | Developers |
-| [Object Model Refactor](design/oop-refactor.md) | Paradigm assignment and phased refactor plan **(proposal)** | Developers |
+| [Refactor Plan](design/refactor-plan.md) | Phased refactor and package restructure **(proposal)** | Developers |
 | [Deployment Guide](deployment-guide.md) | Standing the system up | Operators |
 | [Development Guide](development-guide.md) | Working on the code | Developers |
 | [Operations Guide](operations-guide.md) | Running it day to day | Operators |
@@ -41,7 +41,7 @@ Automatic-Job-search/
 │   ├── design/                    # Design documents
 │   │   ├── system-architecture.md
 │   │   ├── data-model.md
-│   │   └── oop-refactor.md        # Paradigm assignment (proposal)
+│   │   └── refactor-plan.md       # Phases + restructure (proposal)
 │   ├── ADRs/                      # Architecture Decision Records
 │   │   └── 000N-*.md
 │   ├── job-discovery-pipeline-design.md
