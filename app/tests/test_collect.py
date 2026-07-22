@@ -8,7 +8,9 @@ import pandas as pd
 import pytest
 
 from app.collect.jobspy_client import _rows_from_frame, collect_one
-from app.config import SearchSpec
+from app.config import RunConfig, SearchSpec
+
+CFG = RunConfig()  # code defaults; individual tests override via RunConfig(...)
 
 
 def test_zero_by_zero_frame_yields_no_rows():
@@ -61,7 +63,7 @@ def test_failing_source_is_recorded_not_raised(monkeypatch):
     monkeypatch.setattr("app.collect.jobspy_client.scrape_jobs", boom)
 
     spec = SearchSpec(term="data engineer", sites=["glassdoor", "indeed"])
-    result = collect_one(spec)
+    result = collect_one(spec, CFG)
 
     assert "glassdoor" in result.errors
     assert result.counts_by_site["glassdoor"] == 0
@@ -79,7 +81,7 @@ def test_counts_recorded_per_site(monkeypatch):
 
     monkeypatch.setattr("app.collect.jobspy_client.scrape_jobs", responder)
 
-    result = collect_one(SearchSpec(term="x", sites=["indeed", "linkedin"]))
+    result = collect_one(SearchSpec(term="x", sites=["indeed", "linkedin"]), CFG)
     assert result.counts_by_site == {"indeed": 2, "linkedin": 0}
 
 
@@ -95,7 +97,7 @@ def test_country_indeed_passed_only_where_it_applies(monkeypatch, site, expect_c
         return pd.DataFrame()
 
     monkeypatch.setattr("app.collect.jobspy_client.scrape_jobs", capture)
-    collect_one(SearchSpec(term="x", country="egypt", sites=[site]))
+    collect_one(SearchSpec(term="x", country="egypt", sites=[site]), CFG)
 
     assert ("country_indeed" in seen) is expect_country_kwarg
 
@@ -114,9 +116,33 @@ def test_linkedin_description_fetch_passed_only_for_linkedin(monkeypatch, site, 
         return pd.DataFrame()
 
     monkeypatch.setattr("app.collect.jobspy_client.scrape_jobs", capture)
-    collect_one(SearchSpec(term="x", country="egypt", sites=[site]))
+    collect_one(SearchSpec(term="x", country="egypt", sites=[site]), CFG)
 
     assert ("linkedin_fetch_description" in seen) is expect_fetch
+
+
+def test_request_delay_applied_between_sites(monkeypatch):
+    """The etiquette delay (design §9.3) must actually run between requests —
+    previously declared, validated and rendered in the UI, but never passed to
+    anything."""
+    sleeps = []
+    monkeypatch.setattr("time.sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr("app.collect.jobspy_client.scrape_jobs", lambda **_: pd.DataFrame())
+
+    config = RunConfig(request_delay_seconds=3.0)
+    collect_one(SearchSpec(term="x", sites=["indeed", "linkedin"]), config)
+
+    assert sleeps == [3.0]  # one delay between two sites, none before the first
+
+
+def test_no_delay_for_a_single_site(monkeypatch):
+    sleeps = []
+    monkeypatch.setattr("time.sleep", lambda seconds: sleeps.append(seconds))
+    monkeypatch.setattr("app.collect.jobspy_client.scrape_jobs", lambda **_: pd.DataFrame())
+
+    collect_one(SearchSpec(term="x", sites=["indeed"]), CFG)
+
+    assert sleeps == []
 
 
 def test_linkedin_description_fetch_can_be_disabled(monkeypatch):
@@ -128,9 +154,8 @@ def test_linkedin_description_fetch_can_be_disabled(monkeypatch):
         return pd.DataFrame()
 
     monkeypatch.setattr("app.collect.jobspy_client.scrape_jobs", capture)
-    monkeypatch.setattr(
-        "app.collect.jobspy_client.settings.linkedin_fetch_description", False
-    )
-    collect_one(SearchSpec(term="x", sites=["linkedin"]))
+
+    config = RunConfig(linkedin_fetch_description=False)
+    collect_one(SearchSpec(term="x", sites=["linkedin"]), config)
 
     assert "linkedin_fetch_description" not in seen

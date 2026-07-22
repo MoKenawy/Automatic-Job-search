@@ -58,14 +58,27 @@ def test_all_effective_covers_every_editable_key(session):
     assert set(eff.keys()) == set(store.EDITABLE_KEYS)
 
 
-def test_apply_to_settings_overlays_singleton(session):
+def test_run_config_resolves_db_override_without_touching_the_singleton(session):
+    """Replaces the old apply_to_settings() overlay (refactor-plan.md §3): a DB
+    override must reach RunConfig without mutating the process-wide `settings`
+    singleton, so two runs can hold different configurations."""
+    from app.config import RunConfig
+
     original = settings.publish_threshold
-    try:
-        store.set_many(session, store.coerce_form({"publish_threshold": "42"}))
-        store.apply_to_settings(session)
-        assert settings.publish_threshold == 42
-    finally:
-        settings.publish_threshold = original  # don't leak into other tests
+    store.set_many(session, store.coerce_form({"publish_threshold": "42"}))
+
+    config = RunConfig.resolve(session)
+
+    assert config.publish_threshold == 42
+    assert settings.publish_threshold == original  # singleton untouched
+
+
+def test_run_config_falls_back_to_code_default_with_no_overrides(session):
+    from app.config import RunConfig
+
+    config = RunConfig.resolve(session)
+    assert config.results_per_search == settings.results_per_search
+    assert config.request_delay_seconds == settings.request_delay_seconds
 
 
 def test_proxies_parsed_from_multiline(session):
@@ -81,3 +94,12 @@ def test_linkedin_fetch_toggle(session):
 def test_readonly_keys_are_not_editable(session):
     for key in store.READONLY_KEYS:
         assert key not in store.EDITABLE_KEYS
+
+
+def test_every_editable_key_is_consumed_or_pending():
+    """An editable key that is neither consumed nor pending drives nothing —
+    exactly the state `request_delay_seconds` was silently in. This must fail
+    the moment a new setting is added without also declaring where it is read."""
+    accounted = store.CONSUMED_KEYS | store.PENDING_KEYS
+    assert set(store.EDITABLE_KEYS) == accounted
+    assert not (store.CONSUMED_KEYS & store.PENDING_KEYS)

@@ -59,6 +59,28 @@ EDITABLE_KEYS: tuple[str, ...] = tuple(_EditableModel.model_fields.keys())
 # Shown but not editable (restart-affecting).
 READONLY_KEYS: tuple[str, ...] = ("timezone", "web_host", "web_port")
 
+# Every editable key must appear in exactly one of these two sets. An editable
+# setting that is neither read by a named consumer nor explicitly pending is a
+# setting that silently does nothing — `request_delay_seconds` was exactly this
+# until it was wired into app.collect.jobspy_client. See test_every_editable_
+# key_is_consumed_or_pending, which fails the moment a key falls through the gap.
+CONSUMED_KEYS: frozenset[str] = frozenset({
+    "results_per_search",           # collect_one -> results_wanted
+    "hours_old",                    # collect_one -> hours_old
+    "request_delay_seconds",        # collect_one -> time.sleep between sites
+    "linkedin_fetch_description",   # collect_one -> linkedin kwarg
+    "proxies",                      # collect_one -> proxies kwarg
+})
+
+# Declared and validated ahead of the stage that will read them (stages 3-4 are
+# not yet implemented). Listed here rather than silently unconsumed.
+PENDING_KEYS: frozenset[str] = frozenset({
+    "publish_threshold",     # stage 4 - publication
+    "scoring_model",         # stage 3 - scoring
+    "title_include_pattern",  # stage 3 - title filter
+    "title_exclude_pattern",  # stage 3 - title filter
+})
+
 
 def get(session: Session, key: str) -> Any:
     """Effective value: DB override if present, else the environment/code default."""
@@ -124,26 +146,13 @@ def coerce_form(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def apply_to_settings(session: Session) -> None:
-    """Overlay DB overrides onto the in-memory Settings singleton.
-
-    Called at the start of a pipeline run so the collector and (future) scorer read
-    effective values through the existing `settings.<name>` call sites without
-    each having to consult the store. Acceptable global mutation for a
-    single-operator system (ADR-0005).
-    """
-    for key in EDITABLE_KEYS:
-        row = session.get(AppSetting, key)
-        if row is not None:
-            setattr(settings, key, row.value)
-
-
 __all__ = [
+    "CONSUMED_KEYS",
     "EDITABLE_KEYS",
+    "PENDING_KEYS",
     "READONLY_KEYS",
     "ValidationError",
     "all_effective",
-    "apply_to_settings",
     "coerce_form",
     "get",
     "set_many",

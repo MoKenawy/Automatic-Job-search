@@ -7,13 +7,14 @@ records and are meant to be persisted.
 """
 
 import logging
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
 import pandas as pd
 from jobspy import scrape_jobs
 
-from app.config import SearchSpec, settings
+from app.config import RunConfig, SearchSpec, settings
 
 log = logging.getLogger(__name__)
 
@@ -53,18 +54,29 @@ def _rows_from_frame(df: pd.DataFrame | None, site: str) -> list[dict[str, Any]]
     return records
 
 
-def collect_one(spec: SearchSpec) -> CollectionResult:
-    """Run a single search spec across its configured sources."""
+def collect_one(spec: SearchSpec, config: RunConfig) -> CollectionResult:
+    """Run a single search spec across its configured sources.
+
+    `config` is a resolved `RunConfig` (settings_store.store → environment →
+    code default, ADR-0005) — never the `settings` singleton directly, so two
+    runs can carry different configurations (refactor-plan.md §3).
+    """
     result = CollectionResult()
 
-    for site in spec.sites:
+    for index, site in enumerate(spec.sites):
+        if index > 0 and config.request_delay_seconds > 0:
+            # Etiquette delay between successive requests to the boards (design
+            # §9.3). JobSpy itself takes no such parameter, so this is enforced
+            # here rather than passed through as a kwarg.
+            time.sleep(config.request_delay_seconds)
+
         kwargs: dict[str, Any] = {
             "site_name": [site],
             "search_term": spec.term,
             "location": spec.location,
             "is_remote": spec.is_remote,
-            "results_wanted": settings.results_per_search,
-            "hours_old": settings.hours_old,
+            "results_wanted": config.results_per_search,
+            "hours_old": config.hours_old,
             "verbose": 1,
         }
         # country_indeed governs Indeed and Glassdoor only; harmless elsewhere but
@@ -73,13 +85,13 @@ def collect_one(spec: SearchSpec) -> CollectionResult:
             kwargs["country_indeed"] = spec.country
         if site == "google":
             kwargs["google_search_term"] = spec.google_term or spec.term
-        if site == "linkedin" and settings.linkedin_fetch_description:
+        if site == "linkedin" and config.linkedin_fetch_description:
             # LinkedIn omits the description from list results; this fetches each
             # posting's page to obtain it (and the direct job URL). Slower, but the
             # description feeds both the detail view and the stage 3 scorer.
             kwargs["linkedin_fetch_description"] = True
-        if settings.proxies:
-            kwargs["proxies"] = settings.proxies
+        if config.proxies:
+            kwargs["proxies"] = config.proxies
 
         try:
             df = scrape_jobs(**kwargs)
@@ -99,13 +111,17 @@ def collect_one(spec: SearchSpec) -> CollectionResult:
     return result
 
 
-def collect_all(specs: list[SearchSpec] | None = None) -> CollectionResult:
-    """Run every configured search spec and merge the outcomes."""
+def collect_all(specs: list[SearchSpec] | None, config: RunConfig) -> CollectionResult:
+    """Run every configured search spec and merge the outcomes.
+
+    `specs=None` falls back to the environment `SEARCHES` list — unrelated to
+    `config`, which governs how each search is run rather than what is searched.
+    """
     specs = specs if specs is not None else settings.searches
     merged = CollectionResult()
 
     for spec in specs:
-        outcome = collect_one(spec)
+        outcome = collect_one(spec, config)
         merged.records.extend(outcome.records)
         for site, count in outcome.counts_by_site.items():
             merged.counts_by_site[site] = merged.counts_by_site.get(site, 0) + count
