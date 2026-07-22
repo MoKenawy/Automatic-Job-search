@@ -210,14 +210,28 @@ undisturbed.
 
 ---
 
+## 6a. Feature 001 additions (ADR-0005)
+
+Two tables were added for operator self-service, plus active use of a dormant
+column. Full detail in [specs/001-ui-self-service/data-model.md](../../specs/001-ui-self-service/data-model.md).
+
+| Entity | Purpose |
+|---|---|
+| **`search_profiles`** | Named, individually scheduled job surveys; supersede the `SEARCHES` env list. Seeded from `SEARCHES` on migration |
+| **`app_settings`** | Runtime-editable operational settings; resolution order `app_settings → env → code default` |
+| `employers.suppressed` | Now the blacklist flag (was dormant): a suppressed employer's postings are auto-rejected and retained |
+| `runs.profile_id` | Nullable FK attributing a run to the profile that triggered it |
+
 ## 7. Migrations
 
-The schema is managed by Alembic. Two migrations exist as at this version:
+The schema is managed by Alembic. Migrations as at this version:
 
 | Revision | Description |
 |---|---|
 | `ff6adc50ab28` | Initial schema; enables the `vector` extension up front |
 | `dc0d779245f2` | Replaces Notion delivery fields with the `status` column (ADR-0004); backfills existing rows |
+| `f35d01e216d8` | Partial index on suppressed employers (blacklist, US3) |
+| `3374777f0db4` | Adds `search_profiles` and `app_settings`; `runs.profile_id`; seeds profiles from `SEARCHES` (ADR-0005) |
 
 The `vector` extension is created in the first migration though no column uses it
 yet, to avoid a future migration whose only purpose is the extension (design §14).

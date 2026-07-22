@@ -29,6 +29,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB as _PG_JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -55,6 +56,16 @@ class Employer(Base):
     """Normalised employer records."""
 
     __tablename__ = "employers"
+    __table_args__ = (
+        # Partial index supporting blacklist suppression (US3); only the few
+        # suppressed rows are indexed. Declared here so autogenerate does not treat
+        # the migration-created index as orphaned.
+        Index(
+            "ix_employers_suppressed",
+            "suppressed",
+            postgresql_where=text("suppressed"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
@@ -99,6 +110,12 @@ class Run(Base):
     )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(32), default="running", nullable=False)
+
+    # The search profile that triggered this run (US4). Null for a manual run-all
+    # over every profile. Additive and nullable.
+    profile_id: Mapped[int | None] = mapped_column(
+        ForeignKey("search_profiles.id", ondelete="SET NULL"), index=True
+    )
 
     collected_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     deduplicated_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -221,3 +238,54 @@ class Posting(Base):
     )
 
     employer: Mapped["Employer"] = relationship(back_populates="postings")
+
+
+class SearchProfile(Base):
+    """A saved, individually scheduled job-survey definition (US4, ADR-0005).
+
+    Supersedes the SEARCHES environment list. One collector invocation per
+    profile; each carries its own schedule and can be enabled/disabled.
+    """
+
+    __tablename__ = "search_profiles"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
+
+    term: Mapped[str] = mapped_column(String(256), nullable=False)
+    location: Mapped[str | None] = mapped_column(String(256))
+    country: Mapped[str] = mapped_column(String(64), default="egypt", nullable=False)
+    is_remote: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Subset of working boards, e.g. ["indeed", "linkedin"]
+    sites: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
+    # Advisory until wired into the scorer (research Q1); a post-collection filter,
+    # not a board parameter
+    experience: Mapped[str | None] = mapped_column(String(64))
+
+    schedule_hour: Mapped[int] = mapped_column(Integer, default=6, nullable=False)
+    schedule_minute: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+
+class AppSetting(Base):
+    """Runtime-editable operational configuration (US4, ADR-0005).
+
+    Key–value; the key matches a field on the Settings model. Read resolution:
+    app_settings value → environment/.env default → code default. Secrets and
+    restart-only settings are never stored here.
+    """
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )

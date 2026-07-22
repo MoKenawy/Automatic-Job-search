@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% set active = 'settings' %}
+{% block content %}
+
+<h1>Settings</h1>
+<p class="sub">
+  Operational configuration. Changes take effect on the next run — no restart
+  (ADR-0005). Seeded from <code>.env</code>; values here override it.
+</p>
+
+{% if saved %}<div class="flash">Settings saved.</div>{% endif %}
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+
+<form method="post" action="/settings" class="panel" style="padding:18px">
+  <div class="formgrid">
+    {% macro field(key, label, type='text', hint='') %}
+      <label for="{{ key }}">{{ label }}{% if hint %}<span class="muted"> — {{ hint }}</span>{% endif %}</label>
+      <input id="{{ key }}" name="{{ key }}" type="{{ type }}" value="{{ values[key] }}">
+    {% endmacro %}
+
+    {{ field('results_per_search', 'Results per search', 'number') }}
+    {{ field('hours_old', 'Hours old window', 'number') }}
+    {{ field('request_delay_seconds', 'Request delay (s)', 'number', 'raise first to ease restriction') }}
+    {{ field('publish_threshold', 'Publish threshold', 'number', '0–100') }}
+    {{ field('scoring_model', 'Scoring model') }}
+
+    <label for="linkedin_fetch_description">Fetch LinkedIn descriptions<span class="muted"> — slower</span></label>
+    <input id="linkedin_fetch_description" name="linkedin_fetch_description" type="checkbox"
+           {{ 'checked' if values['linkedin_fetch_description'] }}>
+
+    {{ field('title_include_pattern', 'Title include regex') }}
+    {{ field('title_exclude_pattern', 'Title exclude regex') }}
+
+    <label for="proxies">Proxies<span class="muted"> — one per line</span></label>
+    <textarea id="proxies" name="proxies" rows="2">{{ values['proxies'] | join('\n') }}</textarea>
+  </div>
+
+  <div style="margin-top:16px"><button class="btn" type="submit">Save settings</button></div>
+</form>
+
+<h2>Read-only (restart required)</h2>
+<div class="panel" style="padding:16px">
+  <dl class="meta">
+    {% for key, value in readonly.items() %}
+    <dt>{{ key }}</dt><dd>{{ value }}</dd>
+    {% endfor %}
+    <dt>database_url</dt><dd class="muted">hidden — environment only</dd>
+  </dl>
+</div>
+
+{% endblock %}

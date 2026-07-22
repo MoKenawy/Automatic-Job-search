@@ -5,6 +5,8 @@
 <h1>Postings</h1>
 <p class="sub">{{ rows | length }} shown, ranked by score. Unscored postings sort last.</p>
 
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+
 <form class="filters" method="get" action="/postings">
   <a href="/postings" class="{{ 'on' if not status }}">All</a>
   {% for s in statuses %}
@@ -15,10 +17,26 @@
   <button class="btn" type="submit">Search</button>
 </form>
 
+{# US2 — bulk action bar. The form holds only the bar; row checkboxes live in the
+   table and associate with it via the HTML5 form= attribute. This keeps the row
+   status controls (their own forms) from being nested inside it — nested forms
+   are invalid. Progressive: submits normally without HTMX. #}
+<form id="bulkform" method="post" action="/postings/status"
+      hx-post="/postings/status" hx-target="body" hx-swap="innerHTML">
+  <div class="bulkbar" id="bulkbar">
+    <span class="muted" id="selcount">0 selected</span>
+    <select name="status" aria-label="Bulk status">
+      {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+    </select>
+    <button class="btn" type="submit" id="bulkapply" disabled>Apply to selected</button>
+  </div>
+</form>
+
 <div class="panel scroll-x">
   <table>
     <thead>
       <tr>
+        <th><input type="checkbox" id="selall" aria-label="Select all"></th>
         <th class="num">Score</th>
         <th>Title</th>
         <th>Company</th>
@@ -31,6 +49,7 @@
     <tbody>
       {% for p, employer in rows %}
       <tr>
+        <td><input type="checkbox" class="selrow" name="ids" value="{{ p.id }}" form="bulkform"></td>
         <td class="num score">{{ p.score if p.score is not none else '—' }}</td>
         <td><a href="/postings/{{ p.id }}">{{ p.title }}</a></td>
         <td>{{ employer.name }}</td>
@@ -42,13 +61,32 @@
           {% if p.sources | length > 1 %}<span class="pill">×{{ p.sources | length }}</span>{% endif %}
         </td>
         <td class="muted">{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}</td>
-        <td><span class="pill {{ p.status }}">{{ p.status }}</span></td>
+        <td>{% include "_row_status.html" %}</td>
       </tr>
       {% else %}
-      <tr><td colspan="7" class="empty">No postings match.</td></tr>
+      <tr><td colspan="8" class="empty">No postings match.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<script>
+  // US2 selection UX. The bulk apply/count are conveniences layered over a form
+  // that already works without JS.
+  (function () {
+    const all = document.getElementById('selall');
+    const apply = document.getElementById('bulkapply');
+    const count = document.getElementById('selcount');
+    const rows = () => Array.from(document.querySelectorAll('.selrow'));
+    function refresh() {
+      const n = rows().filter(c => c.checked).length;
+      count.textContent = n + ' selected';
+      apply.disabled = n === 0;
+    }
+    if (all) all.addEventListener('change', () => { rows().forEach(c => c.checked = all.checked); refresh(); });
+    rows().forEach(c => c.addEventListener('change', refresh));
+    refresh();
+  })();
+</script>
 
 {% endblock %}

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% set active = 'profiles' %}
+{% block content %}
+
+<h1>Search schedules</h1>
+<p class="sub">
+  Each profile is a saved job survey with its own role, sites, and run time. Enabled
+  profiles run automatically at their scheduled time; any can be run now (ADR-0005).
+</p>
+
+{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+
+<div class="panel scroll-x">
+  <table>
+    <thead>
+      <tr>
+        <th>Name</th><th>Role</th><th>Location</th><th>Remote</th>
+        <th>Sites</th><th>Experience</th><th>Runs at</th><th>Enabled</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in profiles %}
+      <tr>
+        <td>{{ p.name }}</td>
+        <td>{{ p.term }}</td>
+        <td class="muted">{{ p.location or '—' }}</td>
+        <td class="muted">{{ 'yes' if p.is_remote else '—' }}</td>
+        <td class="muted">{{ p.sites | join(', ') }}</td>
+        <td class="muted">{{ p.experience or '—' }}</td>
+        <td>{{ '%02d:%02d' | format(p.schedule_hour, p.schedule_minute) }}</td>
+        <td>
+          <form method="post" action="/profiles/{{ p.id }}/enabled" style="display:inline">
+            <input type="hidden" name="enabled" value="{{ 'false' if p.enabled else 'true' }}">
+            <button class="btn btn-xs" type="submit">{{ 'disable' if p.enabled else 'enable' }}</button>
+          </form>
+        </td>
+        <td style="white-space:nowrap">
+          <form method="post" action="/profiles/{{ p.id }}/run" style="display:inline">
+            <button class="btn btn-xs" type="submit" title="Run this profile now">run now</button>
+          </form>
+          <form method="post" action="/profiles/{{ p.id }}/delete" style="display:inline"
+                onsubmit="return confirm('Delete profile {{ p.name }}?');">
+            <button class="btn btn-xs" type="submit">delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="empty">No profiles. Add one below.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Add a profile</h2>
+<form method="post" action="/profiles" class="panel" style="padding:18px">
+  <div class="formgrid">
+    <label for="name">Name</label>
+    <input id="name" name="name" required placeholder="e.g. Senior data engineer, remote">
+
+    <label for="term">Role / search term</label>
+    <input id="term" name="term" required placeholder="data engineer">
+
+    <label for="location">Location</label>
+    <input id="location" name="location" placeholder="Cairo, Egypt (blank for remote)">
+
+    <label for="country">Country</label>
+    <input id="country" name="country" value="egypt">
+
+    <label>Sites</label>
+    <span>
+      {% for s in sites %}
+      <label style="font-weight:normal;margin-right:12px">
+        <input type="checkbox" name="sites" value="{{ s }}" checked> {{ s }}
+      </label>
+      {% endfor %}
+    </span>
+
+    <label for="experience">Experience</label>
+    <input id="experience" name="experience" placeholder="e.g. senior (optional)">
+
+    <label for="is_remote">Remote only</label>
+    <input id="is_remote" name="is_remote" type="checkbox">
+
+    <label for="schedule_hour">Runs at (hour : minute)</label>
+    <span>
+      <input id="schedule_hour" name="schedule_hour" type="number" min="0" max="23" value="6" style="width:70px">
+      :
+      <input name="schedule_minute" type="number" min="0" max="59" value="0" style="width:70px">
+    </span>
+  </div>
+
+  <div style="margin-top:16px"><button class="btn" type="submit">Add profile</button></div>
+</form>
+
+{% endblock %}

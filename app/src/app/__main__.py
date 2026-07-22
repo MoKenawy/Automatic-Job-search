@@ -73,17 +73,15 @@ def publish() -> None:
 @app.command("run-all")
 def run_all() -> None:
     """Run every stage in order, recording per-stage counts."""
-    from app.db import session_scope
-    from app.pipeline import run_collect, run_normalise, track_run
+    from app.pipeline.orchestrate import run_all_profiles
 
-    with session_scope() as session, track_run(session) as run:
-        collected = run_collect(session, run)
-        raw_count, distinct = run_normalise(session, run)
-        typer.echo(
-            f"run {run.id}: collected={collected} raw={raw_count} distinct={distinct}"
-        )
-        # Stages 3 and 4 join here once the CV and Notion credentials are supplied
-        typer.echo("stages 3-4 outstanding (scoring, publication)")
+    result = run_all_profiles()
+    typer.echo(
+        f"run {result['run_id']}: collected={result['collected']} raw={result['raw']} "
+        f"distinct={result['distinct']} suppressed={result['suppressed']}"
+    )
+    # Stages 3 and 4 join here once the CV is supplied
+    typer.echo("stages 3-4 outstanding (scoring, publication)")
 
 
 @app.command()
@@ -121,14 +119,15 @@ def status(limit: int = typer.Option(10, help="How many recent runs to show.")) 
 
 @app.command()
 def serve() -> None:
-    """Run the scheduler in the foreground (the container's default command)."""
+    """Run the scheduler in the foreground (the container's default command).
+
+    Each enabled search profile runs on its own schedule (US4, ADR-0005).
+    """
+    from app.pipeline.orchestrate import run_one_profile
     from app.scheduler import build_scheduler
 
-    scheduler = build_scheduler(run_all)
-    log.info(
-        "scheduler starting: daily at %02d:%02d %s",
-        settings.schedule_hour, settings.schedule_minute, settings.timezone,
-    )
+    scheduler = build_scheduler(run_one_profile)
+    log.info("scheduler starting: one job per enabled profile (%s)", settings.timezone)
     try:
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):

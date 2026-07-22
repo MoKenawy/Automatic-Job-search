@@ -54,7 +54,17 @@ def _jsonable(value: Any) -> Any:
 
 
 def run_collect(session: Session, run: Run, specs: list[SearchSpec] | None = None) -> int:
-    """Collect across configured searches and land every row in `raw_postings`."""
+    """Collect across configured searches and land every row in `raw_postings`.
+
+    Specs come from enabled search profiles (US4, ADR-0005). If none are provided
+    and no profiles exist, fall back to the environment `SEARCHES` so a fresh,
+    un-migrated deployment still works.
+    """
+    if specs is None:
+        from app.settings_store import profiles
+
+        specs = profiles.enabled_specs(session) or None
+
     result = collect_all(specs)
 
     for record in result.records:

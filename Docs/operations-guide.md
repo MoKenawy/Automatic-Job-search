@@ -145,6 +145,32 @@ will be trusted (design §12 item 9).
 
 ---
 
+## 6a. Self-service configuration (feature 001, ADR-0005)
+
+The interface now manages what used to require editing `.env` and restarting.
+
+**Blacklist** (`/blacklist`). Blacklisting an employer sets every posting from
+them — existing and future — to Rejected, retained but never published. Do this
+from the employer's row on a posting detail page, or manage the list on the
+Blacklist page. Removing a blacklist stops future auto-rejection; it does not
+reinstate already-rejected postings.
+
+**Settings** (`/settings`). Operational values — results per search, request
+delay, publish threshold, scoring model, LinkedIn description fetch, title
+filters, proxies — are edited here and take effect on the next run with no
+restart. Invalid values are rejected and the prior value stands. Restart-only
+settings (timezone, bind host/port) are shown read-only; the database URL is not
+shown.
+
+**Schedules** (`/profiles`). Each search profile is a saved survey — role,
+location, sites, remote, experience — with its own run time and an enabled flag.
+Enabled profiles run automatically at their time; "run now" runs one immediately.
+Disabling a profile retains it for later. This replaces the single global 06:00
+job: the scheduler now runs one job per enabled profile.
+
+**Quick triage** (`/postings`). Change a posting's status inline from its row, or
+select several and apply one status in bulk — no need to open each posting.
+
 ## 7. Health and logs
 
 ```powershell
