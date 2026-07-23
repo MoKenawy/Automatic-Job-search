@@ -14,6 +14,7 @@ from typing import Any
 import pandas as pd
 from jobspy import scrape_jobs
 
+from app.collect.sites import extra_kwargs
 from app.config import RunConfig, SearchSpec, settings
 
 log = logging.getLogger(__name__)
@@ -57,7 +58,7 @@ def _rows_from_frame(df: pd.DataFrame | None, site: str) -> list[dict[str, Any]]
 def collect_one(spec: SearchSpec, config: RunConfig) -> CollectionResult:
     """Run a single search spec across its configured sources.
 
-    `config` is a resolved `RunConfig` (settings_store.store → environment →
+    `config` is a resolved `RunConfig` (services.settings → environment →
     code default, ADR-0005) — never the `settings` singleton directly, so two
     runs can carry different configurations (refactor-plan.md §3).
     """
@@ -79,17 +80,7 @@ def collect_one(spec: SearchSpec, config: RunConfig) -> CollectionResult:
             "hours_old": config.hours_old,
             "verbose": 1,
         }
-        # country_indeed governs Indeed and Glassdoor only; harmless elsewhere but
-        # passed narrowly to keep the call surface honest
-        if site in {"indeed", "glassdoor"}:
-            kwargs["country_indeed"] = spec.country
-        if site == "google":
-            kwargs["google_search_term"] = spec.google_term or spec.term
-        if site == "linkedin" and config.linkedin_fetch_description:
-            # LinkedIn omits the description from list results; this fetches each
-            # posting's page to obtain it (and the direct job URL). Slower, but the
-            # description feeds both the detail view and the stage 3 scorer.
-            kwargs["linkedin_fetch_description"] = True
+        kwargs.update(extra_kwargs(site, spec, config))
         if config.proxies:
             kwargs["proxies"] = config.proxies
 

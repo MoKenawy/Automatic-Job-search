@@ -7,7 +7,8 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.models import Base
-from app.settings_store import profiles, store
+from app.services import profiles
+from app.services import settings as settings_service
 from app.web.app import app, get_db
 
 
@@ -55,7 +56,7 @@ def test_settings_save_persists_and_redirects(client, factory):
     )
     assert r.status_code == 303
     with factory() as s:
-        assert store.get(s, "publish_threshold") == 72
+        assert settings_service.get(s, "publish_threshold") == 72
 
 
 def test_settings_invalid_shows_error_and_keeps_prior(client, factory):

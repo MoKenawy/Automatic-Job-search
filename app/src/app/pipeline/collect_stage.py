@@ -69,7 +69,7 @@ def run_collect(
     CLI `collect` command, which runs this stage on its own).
     """
     if specs is None:
-        from app.settings_store import profiles
+        from app.services import profiles
 
         specs = profiles.enabled_specs(session) or None
 

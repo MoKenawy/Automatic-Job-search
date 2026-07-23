@@ -102,7 +102,7 @@ class RunConfig(BaseModel):
     different configurations, and it leaked between tests (refactor-plan.md
     §3). Frozen: a run's configuration is fixed for its duration.
 
-    Every field here is one of `settings_store.store.EDITABLE_KEYS`; the
+    Every field here is one of `services.settings.EDITABLE_KEYS`; the
     defaults below mirror the code defaults on `Settings` so a bare
     `RunConfig()` is a valid unresolved fallback, matching the bottom tier of
     the DB → env → code default resolution order (ADR-0005).
@@ -131,8 +131,10 @@ class RunConfig(BaseModel):
     @classmethod
     def resolve(cls, session: "Session") -> "RunConfig":
         """DB override, else environment/.env, else code default (ADR-0005)."""
-        # Local import: settings_store.store imports app.config, so importing it
+        # Local import: services.settings imports app.config, so importing it
         # at module scope here would be circular.
-        from app.settings_store import store
+        from app.services import settings as settings_service
 
-        return cls(**{key: store.get(session, key) for key in store.EDITABLE_KEYS})
+        return cls(
+            **{key: settings_service.get(session, key) for key in settings_service.EDITABLE_KEYS}
+        )

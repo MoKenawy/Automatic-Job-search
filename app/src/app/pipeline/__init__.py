@@ -2,7 +2,7 @@
 
 from app.pipeline.collect_stage import run_collect
 from app.pipeline.normalise_stage import run_normalise
-from app.pipeline.run import track_run
+from app.pipeline.runner import track_run
 from app.pipeline.suppress_stage import run_suppress
 
 __all__ = [

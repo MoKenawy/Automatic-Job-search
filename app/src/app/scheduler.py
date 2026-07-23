@@ -18,7 +18,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.config import settings
 from app.db import session_scope
-from app.settings_store import profiles
+from app.services import profiles
 
 log = logging.getLogger(__name__)
 
