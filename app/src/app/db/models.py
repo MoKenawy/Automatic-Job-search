@@ -92,6 +92,32 @@ class Employer(Base):
 
     postings: Mapped[list["Posting"]] = relationship(back_populates="employer")
 
+    def enrich_from(self, payload: dict) -> None:
+        """Fill enrichment gaps from a raw collector payload.
+
+        Indeed carries company detail that LinkedIn does not; fills gaps only,
+        never overwrites a value already held (refactor-plan.md §4.1, was
+        normalise_stage.py:41-49).
+        """
+        for column, key in (
+            ("url", "company_url"),
+            ("logo_url", "company_logo"),
+            ("num_employees", "company_num_employees"),
+            ("revenue", "company_revenue"),
+            ("description", "company_description"),
+        ):
+            if getattr(self, column) is None and payload.get(key):
+                setattr(self, column, str(payload[key])[:1024])
+
+    def blacklist(self) -> None:
+        """Exclude this employer's postings from publication (US3)."""
+        self.suppressed = True
+
+    def lift_blacklist(self) -> None:
+        """Future postings are no longer auto-rejected; previously rejected
+        postings are NOT reinstated (US3, FR-011)."""
+        self.suppressed = False
+
 
 class Run(Base):
     """One record per execution.
@@ -223,12 +249,19 @@ class Posting(Base):
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    # Triage state (design §8.1). REJECTED is the suppression mechanism required
-    # by D9: the record is retained indefinitely and never resurfaces, so no
-    # separate suppression flag is needed on the posting.
+    # Triage state (design §8.1). Suppression-driven rejection (D9) is
+    # retained indefinitely and never resurfaces via the suppression sweep;
+    # separately, an operator may move a posting between any two statuses via
+    # transition_to() below, including back out of Rejected — confirmed as
+    # existing behaviour, not changed by this model (refactor-plan.md §6.1).
     status: Mapped[str] = mapped_column(
         String(16), default=STATUS_NEW, nullable=False, index=True
     )
+    # When `status` last changed via an operator or suppression transition.
+    # Distinct from last_seen_at, which also moves on a board re-surfacing the
+    # same posting — conflating the two made it impossible for transition_to()
+    # to say honestly what it had stamped (refactor-plan.md §5).
+    status_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     first_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -238,6 +271,95 @@ class Posting(Base):
     )
 
     employer: Mapped["Employer"] = relationship(back_populates="postings")
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        fingerprint: str,
+        employer: "Employer",
+        title: str,
+        normalised_title: str,
+        location_raw: str | None,
+        country_code: str | None,
+        is_remote: bool,
+        description: str | None,
+        date_posted: date | None,
+        job_type: str | None,
+        site: str,
+        provenance: dict,
+    ) -> "Posting":
+        """A posting from a suppressed employer is born Rejected (US3, FR-007).
+
+        The suppression sweep is the general mechanism; this catches the row
+        at creation so it never surfaces even for the instant before the next
+        sweep runs (was normalise_stage.py:103).
+        """
+        return cls(
+            fingerprint=fingerprint,
+            employer_id=employer.id,
+            title=title[:512],
+            normalised_title=normalised_title[:512],
+            location_raw=location_raw,
+            country_code=country_code,
+            is_remote=is_remote,
+            description=description,
+            date_posted=date_posted,
+            job_type=job_type,
+            sources={site: provenance},
+            status=STATUS_REJECTED if employer.suppressed else STATUS_NEW,
+        )
+
+    def observe(
+        self, *, site: str, provenance: dict, description: str | None, now: datetime
+    ) -> None:
+        """Fold in a re-observation of this posting from a (possibly new) board.
+
+        Provenance is merged, never duplicated; an existing first_seen is
+        never reset; scoring and publication state are undisturbed (was
+        normalise_stage.py:119-133).
+        """
+        sources = dict(self.sources or {})
+        if site not in sources:
+            sources[site] = provenance
+        else:
+            sources[site] = {**sources[site], "url": provenance["url"]}
+        self.sources = sources
+        self.last_seen_at = now
+        self.merge_description(description)
+
+    def merge_description(self, description: str | None) -> None:
+        """Backfill a description only if this posting does not already have
+        one — never overwrite a description already held."""
+        if not self.description and description:
+            self.description = description
+
+    def transition_to(self, status: str, *, now: datetime) -> None:
+        """Move to a new triage status.
+
+        Any status may move to any other, including back out of Rejected —
+        Rejected is not terminal for operator triage (confirmed; distinct from
+        the suppression sweep's own use of it, which never resurfaces a
+        suppressed employer's posting on its own). Entering Rejected always
+        un-publishes, since a rejected posting must not remain published.
+        """
+        if status not in STATUSES:
+            raise ValueError(f"unknown status: {status}")
+        self.status = status
+        self.status_changed_at = now
+        if status == STATUS_REJECTED:
+            self.published = False
+
+    def reject_for_suppression(self, *, now: datetime) -> bool:
+        """Reject due to employer suppression (D9), idempotently.
+
+        Returns True if this call changed anything, so callers can count
+        postings newly rejected without a separate query.
+        """
+        if self.status == STATUS_REJECTED:
+            return False
+        self.transition_to(STATUS_REJECTED, now=now)
+        return True
 
 
 class SearchProfile(Base):

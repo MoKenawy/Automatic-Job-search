@@ -21,7 +21,8 @@ from app.db.models import (
     Run,
 )
 from app.pipeline.normalise_stage import run_normalise
-from app.pipeline.suppress_stage import run_suppress, suppress_employer
+from app.pipeline.suppress_stage import run_suppress
+from app.services.blacklist import reject_employer_postings
 from app.web.app import app, get_db
 
 
@@ -176,4 +177,4 @@ def test_blacklist_page_lists_suppressed_employers(client):
 def test_suppress_employer_targeted(factory):
     with factory() as s:
         emp = _employer_with_postings(s, "Spammer", suppressed=True)
-        assert suppress_employer(s, emp.id) == 2
+        assert reject_employer_postings(s, emp.id) == 2

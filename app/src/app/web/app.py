@@ -5,7 +5,6 @@ and a run-health view. Server-rendered; HTMX handles the status transitions so a
 triage action does not reload the page.
 """
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
@@ -15,9 +14,10 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import WORKING_SITES, settings
-from app.db.models import STATUSES, Employer, Posting
+from app.db.models import STATUSES
 from app.db.session import SessionFactory
-from app.pipeline import suppress_employer
+from app.services import blacklist as blacklist_service
+from app.services import triage as triage_service
 from app.settings_store import profiles as profile_store
 from app.settings_store import store
 from app.web import queries
@@ -95,16 +95,12 @@ def set_status(
     `variant` selects the fragment and the no-HTMX redirect target: 'row' for the
     list (US1), 'detail' for the detail page. One endpoint serves both.
     """
-    if status not in STATUSES:
-        raise HTTPException(status_code=400, detail=f"unknown status: {status}")
-
-    posting = db.get(Posting, posting_id)
+    try:
+        posting = triage_service.set_status(db, posting_id, status)
+    except triage_service.UnknownStatusError:
+        raise HTTPException(status_code=400, detail=f"unknown status: {status}") from None
     if posting is None:
         raise HTTPException(status_code=404, detail="posting not found")
-
-    posting.status = status
-    posting.last_seen_at = datetime.now(UTC)
-    db.commit()
 
     # HTMX swaps the control in place. Without it — script blocked, CDN
     # unreachable — the plain form still posts, so redirect back instead of
@@ -133,18 +129,12 @@ def set_status_bulk(
     Selected rows only (research Q5). Updates in a single transaction, then
     re-renders the list so every changed row is reflected together.
     """
-    if status not in STATUSES:
-        raise HTTPException(status_code=400, detail=f"unknown status: {status}")
     if not ids:
         raise HTTPException(status_code=400, detail="no postings selected")
-
-    now = datetime.now(UTC)
-    updated = 0
-    for posting in db.query(Posting).filter(Posting.id.in_(ids)).all():
-        posting.status = status
-        posting.last_seen_at = now
-        updated += 1
-    db.commit()
+    try:
+        updated = triage_service.set_status_bulk(db, ids, status)
+    except triage_service.UnknownStatusError:
+        raise HTTPException(status_code=400, detail=f"unknown status: {status}") from None
 
     # Re-render the full list so all changes show at once. Without HTMX the plain
     # form posts and this same render is returned as a normal page.
@@ -185,13 +175,10 @@ def blacklist_employer(
     Rejected postings are retained (D9). Callable from the blacklist page or from
     a posting (FR-012); `return_to` sends the operator back where they were.
     """
-    employer = db.get(Employer, employer_id)
-    if employer is None:
-        raise HTTPException(status_code=404, detail="employer not found")
-
-    employer.suppressed = True
-    db.commit()
-    suppress_employer(db, employer_id)
+    try:
+        blacklist_service.blacklist(db, employer_id)
+    except blacklist_service.EmployerNotFoundError:
+        raise HTTPException(status_code=404, detail="employer not found") from None
 
     return RedirectResponse(url=return_to, status_code=303)
 
@@ -204,12 +191,10 @@ def unblacklist_employer(
 ):
     """Remove a blacklist. Future postings are no longer auto-rejected; previously
     rejected postings are NOT reinstated (US3, FR-011)."""
-    employer = db.get(Employer, employer_id)
-    if employer is None:
-        raise HTTPException(status_code=404, detail="employer not found")
-
-    employer.suppressed = False
-    db.commit()
+    try:
+        blacklist_service.lift(db, employer_id)
+    except blacklist_service.EmployerNotFoundError:
+        raise HTTPException(status_code=404, detail="employer not found") from None
 
     return RedirectResponse(url=return_to, status_code=303)
 
