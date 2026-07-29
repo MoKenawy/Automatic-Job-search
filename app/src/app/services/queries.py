@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.config import WORKING_SITES
-from app.db.models import STATUS_REJECTED, Employer, Posting, Run
+from app.db.models import STATUS_REJECTED, Employer, Posting, Run, SearchProfile
 
 # Selects postings whose country could not be resolved. `parse_country` returns
 # None rather than guessing (normalise/country.py), so this is a real bucket the
@@ -279,9 +279,17 @@ def blacklisted_employers(session: Session) -> list[tuple[Employer, int]]:
 
 
 def recent_runs(session: Session, limit: int = 30) -> list[Run]:
-    return list(
-        session.scalars(select(Run).order_by(Run.started_at.desc()).limit(limit)).all()
-    )
+    rows = session.execute(
+        select(Run, SearchProfile.name)
+        .outerjoin(SearchProfile, Run.profile_id == SearchProfile.id)
+        .order_by(Run.started_at.desc())
+        .limit(limit)
+    ).all()
+    runs = []
+    for run, profile_name in rows:
+        run.profile_name = profile_name
+        runs.append(run)
+    return runs
 
 
 def source_health(session: Session, limit: int = 14) -> dict[str, Any]:

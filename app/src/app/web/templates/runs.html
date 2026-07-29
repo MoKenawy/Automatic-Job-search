@@ -43,6 +43,7 @@
       <tr>
         <th class="num">#</th>
         <th>Started</th>
+        <th>Profile</th>
         <th>Status</th>
         <th class="num">Collected</th>
         <th class="num">Distinct</th>
@@ -56,6 +57,9 @@
       <tr>
         <td class="num">{{ r.id }}</td>
         <td>{{ r.started_at.strftime('%d %b %H:%M') }}</td>
+        <td class="muted">
+          {% if r.profile_id %}#{{ r.profile_id }} {{ r.profile_name or '(deleted)' }}{% else %}—{% endif %}
+        </td>
         <td>
           <span class="pill {{ 'rejected' if r.status == 'failed' else 'shortlist' if r.status == 'success' }}">
             {{ r.status }}
@@ -72,10 +76,10 @@
         </td>
       </tr>
       {% if r.error %}
-      <tr><td></td><td colspan="7" class="muted" style="font-size:12px">{{ r.error }}</td></tr>
+      <tr><td></td><td colspan="8" class="muted" style="font-size:12px">{{ r.error }}</td></tr>
       {% endif %}
       {% else %}
-      <tr><td colspan="8" class="empty">No runs recorded yet.</td></tr>
+      <tr><td colspan="9" class="empty">No runs recorded yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>
