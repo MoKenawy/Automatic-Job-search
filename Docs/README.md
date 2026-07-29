@@ -16,6 +16,7 @@ The three guides are task-oriented and can be read as needed.
 | [System Architecture](design/system-architecture.md) | Structure, stages, runtime topology | Developers, operators |
 | [Data Model](design/data-model.md) | Entities, relationships, schema | Developers |
 | [Refactor Plan](design/refactor-plan.md) | Phased refactor and package restructure **(proposal)** | Developers |
+| [Reports Implementation Plan](design/reports-implementation-plan.md) | The six admitted reports, phased **(proposal)** | Developers |
 | [Deployment Guide](deployment-guide.md) | Standing the system up | Operators |
 | [Development Guide](development-guide.md) | Working on the code | Developers |
 | [Operations Guide](operations-guide.md) | Running it day to day | Operators |
@@ -32,6 +33,10 @@ earlier record is retained.
 | [0003](ADRs/0003-build-collection-and-scoring.md) | Build collection and scoring | Accepted |
 | [0004](ADRs/0004-web-app-replaces-notion.md) | Web application replaces Notion | Accepted |
 | [0005](ADRs/0005-ui-config-and-db-search-profiles.md) | UI config & DB-backed search profiles | Accepted |
+| [0008](ADRs/0008-report-system-scope.md) | Report system — admission criteria and scope | Accepted |
+| [0009](ADRs/0009-last-seen-at-contamination-detection.md) | Detecting `last_seen_at` contamination for R2 | Decision superseded by 0012 |
+| [0010](ADRs/0010-r2-span-computation-strategy.md) | Where R2's span arithmetic runs — Python, SQL, or the write path | Accepted |
+| [0011](ADRs/0011-job-type-taxonomy-for-arrangement-mix.md) | `job_type` taxonomy for the work-arrangement-mix report | Accepted |
 | [0012](ADRs/0012-retrieval-date-column-split.md) | Split `last_seen_at` into `updated_at` and `last_retrieved_at` | Accepted |
 
 ## Project structure
