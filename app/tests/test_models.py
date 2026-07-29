@@ -5,12 +5,16 @@ web/app.py and pipeline/normalise_stage.py (refactor-plan.md §4.1).
 from datetime import UTC, datetime
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from app.db.models import (
     STATUS_APPLIED,
     STATUS_NEW,
     STATUS_REJECTED,
     STATUS_SHORTLIST,
+    Base,
     Employer,
     Posting,
 )
@@ -108,10 +112,10 @@ def test_observe_updates_the_url_for_an_already_seen_source():
     assert posting.sources["linkedin"]["url"] == "https://new"
 
 
-def test_observe_stamps_last_seen_at():
+def test_observe_stamps_last_retrieved_at():
     posting = Posting(sources={})
     posting.observe(site="indeed", provenance={}, description=None, now=NOW)
-    assert posting.last_seen_at == NOW
+    assert posting.last_retrieved_at == NOW
 
 
 def test_observe_backfills_a_missing_description():
@@ -157,13 +161,13 @@ def test_transition_to_rejected_unpublishes():
     assert posting.published is False
 
 
-def test_transition_to_stamps_status_changed_at_but_not_last_seen_at():
-    """status_changed_at and last_seen_at are separate facts (refactor-plan.md
-    §5) — a triage transition must not look like a board re-surfacing."""
-    posting = Posting(status=STATUS_NEW, last_seen_at=None)
+def test_transition_to_stamps_status_changed_at_but_not_last_retrieved_at():
+    """status_changed_at and last_retrieved_at are separate facts (ADR-0012)
+    — a triage transition must not look like a board re-surfacing."""
+    posting = Posting(status=STATUS_NEW, last_retrieved_at=None)
     posting.transition_to(STATUS_SHORTLIST, now=NOW)
     assert posting.status_changed_at == NOW
-    assert posting.last_seen_at is None
+    assert posting.last_retrieved_at is None
 
 
 # --- Posting.reject_for_suppression — idempotent -----------------------------
@@ -180,6 +184,51 @@ def test_reject_for_suppression_is_a_noop_when_already_rejected():
     posting = Posting(status=STATUS_REJECTED, published=False, status_changed_at=None)
     assert posting.reject_for_suppression(now=NOW) is False
     assert posting.status_changed_at is None  # untouched — nothing changed
+
+
+# --- Posting.transition_to — history recording -------------------------------
+
+
+def test_transition_to_appends_a_history_row():
+    posting = Posting(status=STATUS_NEW, published=True)
+    posting.transition_to(STATUS_SHORTLIST, now=NOW, actor="operator")
+    assert len(posting.status_history) == 1
+    entry = posting.status_history[0]
+    assert entry.previous_status == STATUS_NEW
+    assert entry.new_status == STATUS_SHORTLIST
+    assert entry.changed_at == NOW
+    assert entry.actor == "operator"
+    assert entry.reason is None
+
+
+def test_transition_to_records_a_reason_when_given():
+    posting = Posting(status=STATUS_NEW)
+    posting.transition_to(STATUS_REJECTED, now=NOW, actor="operator", reason="not a fit")
+    assert posting.status_history[-1].reason == "not a fit"
+
+
+def test_transition_to_appends_history_even_on_a_rejected_unknown_status_is_not_recorded():
+    """An unknown status raises before mutating anything — no partial history."""
+    posting = Posting(status=STATUS_NEW)
+    with pytest.raises(ValueError):
+        posting.transition_to("banana", now=NOW)
+    assert posting.status_history == []
+
+
+def test_multiple_transitions_accumulate_history_in_order():
+    posting = Posting(status=STATUS_NEW)
+    posting.transition_to(STATUS_SHORTLIST, now=NOW)
+    posting.transition_to(STATUS_APPLIED, now=NOW)
+    assert [h.new_status for h in posting.status_history] == [STATUS_SHORTLIST, STATUS_APPLIED]
+    assert posting.status_history[1].previous_status == STATUS_SHORTLIST
+
+
+def test_reject_for_suppression_records_system_actor_and_reason():
+    posting = Posting(status=STATUS_NEW)
+    posting.reject_for_suppression(now=NOW)
+    entry = posting.status_history[-1]
+    assert entry.actor == "system"
+    assert entry.reason == "employer suppressed"
 
 
 # --- Employer.enrich_from / blacklist / lift_blacklist -----------------------
@@ -203,3 +252,118 @@ def test_blacklist_and_lift_toggle_suppressed():
     assert employer.suppressed is True
     employer.lift_blacklist()
     assert employer.suppressed is False
+
+
+# --- last_retrieved_at vs. updated_at, at the ORM layer (ADR-0012) ----------
+#
+# Two columns, deliberately kept apart: `last_retrieved_at` means "a board
+# last confirmed this posting exists" and is written only by `observe()`;
+# `updated_at` means "this row was last written to, for any reason" and is
+# generic bookkeeping, same as SearchProfile.updated_at / AppSetting.updated_at.
+# A column `onupdate` fires when SQLAlchemy emits the UPDATE, not when a
+# Python attribute is merely mutated, so a detached `Posting()` never
+# triggers it — only a flush reveals whether a column actually moves.
+
+# Naive on purpose: SQLite has no native datetime, so DateTime(timezone=True)
+# round-trips without a tzinfo and a tz-aware constant would never compare equal.
+OBSERVED = datetime(2020, 1, 1)
+
+
+@pytest.fixture
+def session():
+    engine = create_engine(
+        "sqlite://",
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    with sessionmaker(bind=engine, expire_on_commit=False, future=True)() as s:
+        yield s
+
+
+def test_transition_does_not_advance_last_retrieved_at_through_a_flush(session):
+    """A triage transition is not an observation and must not look like one
+    (ADR-0012) — only `observe()` may move `last_retrieved_at`."""
+    employer = Employer(name="Acme", normalised_name="acme")
+    session.add(employer)
+    session.flush()
+
+    posting = Posting(
+        fingerprint="f" * 64,
+        employer_id=employer.id,
+        title="Data Engineer",
+        normalised_title="data engineer",
+        sources={},
+        first_seen_at=OBSERVED,
+        last_retrieved_at=OBSERVED,
+    )
+    session.add(posting)
+    session.commit()
+
+    posting.transition_to(STATUS_SHORTLIST, now=NOW)
+    session.commit()
+    session.refresh(posting)
+
+    assert posting.last_retrieved_at == OBSERVED
+
+
+def test_transition_advances_updated_at_through_a_flush(session):
+    """The opposite invariant, on the other column: `updated_at` is generic
+    row-modified bookkeeping and is *supposed* to move on any write, a
+    triage transition included — restored deliberately (ADR-0012) after this
+    session's first pass mistakenly stripped it from the (then only) column
+    doing both jobs at once."""
+    employer = Employer(name="Acme", normalised_name="acme")
+    session.add(employer)
+    session.flush()
+
+    posting = Posting(
+        fingerprint="f" * 64,
+        employer_id=employer.id,
+        title="Data Engineer",
+        normalised_title="data engineer",
+        sources={},
+        first_seen_at=OBSERVED,
+        updated_at=OBSERVED,
+    )
+    session.add(posting)
+    session.commit()
+
+    posting.transition_to(STATUS_SHORTLIST, now=NOW)
+    session.commit()
+    session.refresh(posting)
+
+    assert posting.updated_at != OBSERVED
+
+
+def test_observe_advances_last_retrieved_at_through_a_flush(session):
+    """The other half of the `last_retrieved_at` invariant: a real
+    re-observation *must* move it, so the fix above cannot be 'never write
+    the column'."""
+    employer = Employer(name="Acme", normalised_name="acme")
+    session.add(employer)
+    session.flush()
+
+    posting = Posting(
+        fingerprint="f" * 64,
+        employer_id=employer.id,
+        title="Data Engineer",
+        normalised_title="data engineer",
+        sources={},
+        first_seen_at=OBSERVED,
+        last_retrieved_at=OBSERVED,
+    )
+    session.add(posting)
+    session.commit()
+
+    posting.observe(
+        site="indeed",
+        provenance={"url": "https://x", "job_id": "1"},
+        description=None,
+        now=datetime(2026, 7, 27, 9, 0),
+    )
+    session.commit()
+    session.refresh(posting)
+
+    assert posting.last_retrieved_at == datetime(2026, 7, 27, 9, 0)

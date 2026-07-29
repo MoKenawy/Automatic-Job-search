@@ -79,7 +79,7 @@
         <dt>Job type</dt><dd>{{ p.job_type or '—' }}</dd>
         <dt>Posted</dt><dd>{{ p.date_posted.strftime('%d %b %Y') if p.date_posted else '—' }}</dd>
         <dt>First seen</dt><dd>{{ p.first_seen_at.strftime('%d %b %Y, %H:%M') }}</dd>
-        <dt>Last seen</dt><dd>{{ p.last_seen_at.strftime('%d %b %Y, %H:%M') }}</dd>
+        <dt>Last seen</dt><dd>{{ p.last_retrieved_at.strftime('%d %b %Y, %H:%M') }}</dd>
         <dt>Filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
         <dt>Fingerprint</dt><dd class="muted" style="font-size:11px">{{ p.fingerprint[:24] }}…</dd>
       </dl>

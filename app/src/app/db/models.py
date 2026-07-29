@@ -258,19 +258,38 @@ class Posting(Base):
         String(16), default=STATUS_NEW, nullable=False, index=True
     )
     # When `status` last changed via an operator or suppression transition.
-    # Distinct from last_seen_at, which also moves on a board re-surfacing the
-    # same posting — conflating the two made it impossible for transition_to()
-    # to say honestly what it had stamped (refactor-plan.md §5).
+    # Distinct from last_retrieved_at, which moves on a board re-surfacing the
+    # same posting, and from updated_at, which moves on any write at all —
+    # conflating any two of these three made it impossible for transition_to()
+    # to say honestly what it had stamped (refactor-plan.md §5, ADR-0012).
     status_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     first_seen_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    last_seen_at: Mapped[datetime] = mapped_column(
+    # A board last confirmed this posting still exists. Written nowhere but
+    # `observe()` — no `onupdate`, so nothing else can move it. This is the
+    # column report R2 (posting longevity) reads; `updated_at` below cannot
+    # serve that purpose because it moves on every write for any reason, not
+    # only a re-observation (ADR-0012).
+    last_retrieved_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # Generic "row last modified" bookkeeping — moves on any UPDATE, the same
+    # meaning SearchProfile.updated_at and AppSetting.updated_at already carry.
+    # Not a signal of anything specific happening to this posting; do not read
+    # it as observation tracking (that was this column's original name and
+    # bug, before ADR-0012 split the two meanings apart).
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )
 
     employer: Mapped["Employer"] = relationship(back_populates="postings")
+    status_history: Mapped[list["PostingStatusHistory"]] = relationship(
+        back_populates="posting",
+        order_by="PostingStatusHistory.changed_at",
+        cascade="all, delete-orphan",
+    )
 
     @classmethod
     def create(
@@ -325,7 +344,7 @@ class Posting(Base):
         else:
             sources[site] = {**sources[site], "url": provenance["url"]}
         self.sources = sources
-        self.last_seen_at = now
+        self.last_retrieved_at = now
         self.merge_description(description)
 
     def merge_description(self, description: str | None) -> None:
@@ -334,7 +353,14 @@ class Posting(Base):
         if not self.description and description:
             self.description = description
 
-    def transition_to(self, status: str, *, now: datetime) -> None:
+    def transition_to(
+        self,
+        status: str,
+        *,
+        now: datetime,
+        actor: str = "system",
+        reason: str | None = None,
+    ) -> None:
         """Move to a new triage status.
 
         Any status may move to any other, including back out of Rejected —
@@ -342,13 +368,28 @@ class Posting(Base):
         the suppression sweep's own use of it, which never resurfaces a
         suppressed employer's posting on its own). Entering Rejected always
         un-publishes, since a rejected posting must not remain published.
+
+        Every transition appends a `PostingStatusHistory` row on the same
+        object graph, so it is written in whatever transaction the caller
+        eventually commits — there is no path that changes `status` without
+        also recording why.
         """
         if status not in STATUSES:
             raise ValueError(f"unknown status: {status}")
+        previous = self.status
         self.status = status
         self.status_changed_at = now
         if status == STATUS_REJECTED:
             self.published = False
+        self.status_history.append(
+            PostingStatusHistory(
+                previous_status=previous,
+                new_status=status,
+                changed_at=now,
+                actor=actor,
+                reason=reason,
+            )
+        )
 
     def reject_for_suppression(self, *, now: datetime) -> bool:
         """Reject due to employer suppression (D9), idempotently.
@@ -358,8 +399,46 @@ class Posting(Base):
         """
         if self.status == STATUS_REJECTED:
             return False
-        self.transition_to(STATUS_REJECTED, now=now)
+        self.transition_to(STATUS_REJECTED, now=now, actor="system", reason="employer suppressed")
         return True
+
+
+class PostingStatusHistory(Base):
+    """Append-only audit trail of triage status transitions.
+
+    One row per call to `Posting.transition_to` — the row IS the transition,
+    written into the same session/transaction as the `postings` update it
+    accompanies (`Posting.transition_to` appends it to `status_history`), so
+    a flush or commit either writes both or neither. Never updated or
+    deleted: correcting a mistaken transition means recording a further
+    transition, not editing history.
+    """
+
+    __tablename__ = "posting_status_history"
+    __table_args__ = (
+        Index("ix_posting_status_history_posting_id_changed_at", "posting_id", "changed_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    posting_id: Mapped[int] = mapped_column(
+        ForeignKey("postings.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    # Null only for the synthetic baseline row backfilled for postings that
+    # already existed when this table was introduced — every transition
+    # recorded from here on always knows what it moved from.
+    previous_status: Mapped[str | None] = mapped_column(String(16))
+    new_status: Mapped[str] = mapped_column(String(16), nullable=False)
+
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    # 'operator' (web UI action), 'system' (suppression sweep), or 'migration'
+    # (synthetic baseline row backfilled from status_changed_at).
+    actor: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str | None] = mapped_column(Text)
+
+    posting: Mapped["Posting"] = relationship(back_populates="status_history")
 
 
 class SearchProfile(Base):
