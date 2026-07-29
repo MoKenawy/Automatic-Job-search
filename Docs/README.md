@@ -32,6 +32,7 @@ earlier record is retained.
 | [0003](ADRs/0003-build-collection-and-scoring.md) | Build collection and scoring | Accepted |
 | [0004](ADRs/0004-web-app-replaces-notion.md) | Web application replaces Notion | Accepted |
 | [0005](ADRs/0005-ui-config-and-db-search-profiles.md) | UI config & DB-backed search profiles | Accepted |
+| [0012](ADRs/0012-retrieval-date-column-split.md) | Split `last_seen_at` into `updated_at` and `last_retrieved_at` | Accepted |
 
 ## Project structure
 
