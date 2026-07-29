@@ -167,7 +167,7 @@ Build the discovery and scoring layers; deliver output into the existing Notion 
 | D5 | Score using a locally hosted model via Ollama | Zero marginal cost; no data leaves the machine; full prompt control |
 | D6 | Apply a regular-expression title filter as a coarse pre-filter only | Reduces model invocations; unsuitable for requirement analysis, where unstructured phrasing produces false negatives |
 | D7 | Publication threshold set at 60 of 100 | Deliberately permissive at outset; to be tightened after one week of calibration |
-| D8 | Use a 7–8 billion parameter instruction-tuned model | Adequate for structured scoring; JSON validity to be verified on twenty postings before the scorer is trusted |
+| D8 | Use a 7–8 billion parameter instruction-tuned model | Adequate for structured scoring; JSON validity to be verified on twenty postings before the scorer is trusted. Selection method, training approach (prompt-only, no fine-tuning) and the judgement-agreement test built on this same twenty-posting set are recorded in ADR-0006 |
 | D9 | Retain rejected postings indefinitely | Serves as a permanent suppression list preventing resurfacing |
 | D10 | Defer ATS board polling and vector matching to phase 2 | Scope control |
 | D11 | Collect from Indeed and LinkedIn only at outset | The only two sources measured to work (§4.3). Bayt, Glassdoor and Google recorded as known-broken rather than silently retried |
