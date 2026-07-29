@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.services import queries
 from app.web.deps import TEMPLATES, get_db
-from app.web.routes import employers, postings, profiles, settings
+from app.web.routes import employers, postings, profiles, reports, settings
 
 app = FastAPI(title="Job discovery", docs_url=None, redoc_url=None)
 
@@ -24,6 +24,7 @@ app.include_router(postings.router)
 app.include_router(employers.router)
 app.include_router(profiles.router)
 app.include_router(settings.router)
+app.include_router(reports.router)
 
 
 @app.get("/", response_class=HTMLResponse)

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% set active = 'reports' %}
+{% block content %}
+
+<h1>Reports</h1>
+<p class="sub">
+  Analysis over what the pipeline has collected. Which reports exist, and which
+  were considered and deferred, is recorded in ADR-0008.
+</p>
+
+<div class="panel">
+  <table>
+    <tbody>
+      {% for href, title, blurb in reports %}
+      <tr>
+        <td>
+          <a href="{{ href }}"><strong>{{ title }}</strong></a><br>
+          <span class="muted">{{ blurb }}</span>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td class="empty">No reports available.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

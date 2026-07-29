@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% set active = 'reports' %}
+{% block content %}
+
+<h1>Source coverage and overlap</h1>
+{% include "reports/_caveat.html" %}
+
+<div class="cards">
+  <div class="card"><div class="n">{{ overlap.total }}</div><div class="k">Postings</div></div>
+  <div class="card"><div class="n">{{ overlap.contested }}</div><div class="k">On 2+ boards</div></div>
+  <div class="card"><div class="n">{{ overlap.ties }}</div><div class="k">Same-run ties</div></div>
+</div>
+
+<h2>Per board</h2>
+<div class="panel scroll-x">
+  <table>
+    <thead><tr><th>Board</th><th class="num">Postings</th><th class="num">Share</th></tr></thead>
+    <tbody>
+      {% for site, count in overlap.per_site.items() %}
+      <tr>
+        <td>{{ site }}</td>
+        <td class="num">{{ count }}</td>
+        <td class="num">{{ (count / overlap.total * 100) | round | int if overlap.total else 0 }}%</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">No postings collected yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Board combinations</h2>
+<p class="sub">
+  How often a role was carried by exactly this set of boards. A board appearing
+  alone is unique coverage &mdash; the roles you would lose by dropping it.
+</p>
+<div class="panel scroll-x">
+  <table>
+    <thead><tr><th>Boards</th><th class="num">Postings</th></tr></thead>
+    <tbody>
+      {% for combo, count in overlap.combinations %}
+      <tr>
+        <td>{{ combo | join(' + ') }}{% if combo | length == 1 %} <span class="muted">(only)</span>{% endif %}</td>
+        <td class="num">{{ count }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="2" class="empty">No postings collected yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Which board surfaced it first</h2>
+<p class="sub">
+  Over the {{ overlap.contested }} posting{{ '' if overlap.contested == 1 else 's' }}
+  carried by more than one board. Boards collected in the same run record the same
+  instant, so a tie means both had the role at that collection &mdash; not that
+  neither won.
+</p>
+<div class="panel scroll-x">
+  <table>
+    <thead><tr><th>Board</th><th class="num">First</th></tr></thead>
+    <tbody>
+      {% for site, count in overlap.first_by.items() %}
+      <tr><td>{{ site }}</td><td class="num">{{ count }}</td></tr>
+      {% endfor %}
+      <tr>
+        <td class="muted">tie &mdash; same collection</td>
+        <td class="num muted">{{ overlap.ties }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2>Boards queried recently</h2>
+<p class="sub">
+  Coverage above is only comparable across boards that were actually asked. A
+  board absent here explains its own low share.
+</p>
+<div class="panel scroll-x">
+  <table>
+    <thead><tr><th>Board</th><th style="width:55%">Recent runs</th><th class="num">Latest</th></tr></thead>
+    <tbody>
+      {% for site in health.sites %}
+        {% set series = health.series[site] %}
+        {% set peak = (series | map(attribute=1) | max) or 1 %}
+        <tr>
+          <td>{{ site }}</td>
+          <td>
+            <div class="bars">
+              {% for _, count in series %}
+              <i class="{{ 'zero' if count == 0 }}"
+                 style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"
+                 title="{{ count }}"></i>
+              {% endfor %}
+            </div>
+          </td>
+          <td class="num">{{ series[-1][1] if series else 0 }}</td>
+        </tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">No runs recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
