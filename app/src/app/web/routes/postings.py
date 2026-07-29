@@ -1,5 +1,7 @@
 """Posting list, detail, and triage status routes (US1, US2)."""
 
+from urllib.parse import urlencode
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -12,28 +14,91 @@ from app.web.deps import TEMPLATES, get_db
 router = APIRouter()
 
 
+def _render_list(
+    request: Request,
+    db: Session,
+    *,
+    status: str | None,
+    q: str | None,
+    published: bool,
+    country: str | None,
+    source: str | None,
+    page: int,
+    flash: str | None = None,
+):
+    """Render the posting list under a set of filters.
+
+    Shared by the list route and the bulk-status route so the two cannot drift:
+    after a bulk change the operator must land back on the same filtered page
+    they acted from, which means rendering it the same way.
+    """
+    # A single "location" selector covers both axes: `country` doubles as the
+    # sentinel 'remote' (design normalise/country.py — city is not comparable
+    # across boards, so remote/country is the only location split on offer).
+    remote_filter = True if country == "remote" else None
+    country_filter = None if country == "remote" else country
+    pager = queries.list_postings(
+        db,
+        status=status,
+        search=q,
+        published_only=published,
+        country=country_filter,
+        remote=remote_filter,
+        source=source,
+        page=page,
+    )
+
+    # Pager links must carry the active filters, or paging would quietly widen
+    # the result set. Built here as a callable so the template asks for a page
+    # number and gets a whole URL, rather than concatenating one three times.
+    active = {k: v for k, v in
+              (("status", status), ("q", q), ("country", country), ("source", source))
+              if v}
+    if published:
+        active["published"] = "true"
+
+    def page_url(n: int) -> str:
+        return "/postings?" + urlencode({**active, "page": n})
+
+    return TEMPLATES.TemplateResponse(
+        request=request,
+        name="postings.html",
+        context={
+            "pager": pager,
+            "page_url": page_url,
+            "status": status,
+            "q": q or "",
+            "published": published,
+            "country": country or "",
+            "source": source or "",
+            "statuses": STATUSES,
+            "totals": queries.totals(db),
+            "facets": queries.facets(db),
+            "flash": flash,
+        },
+    )
+
+
 @router.get("/postings", response_class=HTMLResponse)
 def postings(
     request: Request,
     status: str | None = None,
     q: str | None = None,
     published: bool = False,
+    country: str | None = None,
+    source: str | None = None,
+    page: int = 1,
     db: Session = Depends(get_db),
 ):
-    rows = queries.list_postings(
-        db, status=status, search=q, published_only=published
-    )
-    return TEMPLATES.TemplateResponse(
-        request=request,
-        name="postings.html",
-        context={
-            "rows": rows,
-            "status": status,
-            "q": q or "",
-            "published": published,
-            "statuses": STATUSES,
-            "totals": queries.totals(db),
-        },
+    return _render_list(
+        request,
+        db,
+        status=status,
+        q=q,
+        published=published,
+        country=country,
+        source=source,
+        page=page,
     )
 
 
@@ -90,6 +155,16 @@ def set_status_bulk(
     request: Request,
     ids: list[int] = Form(default=[]),
     status: str = Form(...),
+    # The list's own filter and page state, echoed back by hidden inputs on the
+    # bulk form. `list_status` rather than `status` because `status` is already
+    # taken by the status being applied. Without these the re-render would drop
+    # the operator back on an unfiltered page 1 after every bulk action.
+    list_status: str | None = Form(default=None),
+    q: str | None = Form(default=None),
+    published: bool = Form(default=False),
+    country: str | None = Form(default=None),
+    source: str | None = Form(default=None),
+    page: int = Form(default=1),
     db: Session = Depends(get_db),
 ):
     """Apply one status to several postings at once (US2).
@@ -106,17 +181,14 @@ def set_status_bulk(
 
     # Re-render the full list so all changes show at once. Without HTMX the plain
     # form posts and this same render is returned as a normal page.
-    rows = queries.list_postings(db)
-    return TEMPLATES.TemplateResponse(
-        request=request,
-        name="postings.html",
-        context={
-            "rows": rows,
-            "status": None,
-            "q": "",
-            "published": False,
-            "statuses": STATUSES,
-            "totals": queries.totals(db),
-            "flash": f"{updated} posting(s) set to {status}",
-        },
+    return _render_list(
+        request,
+        db,
+        status=list_status,
+        q=q,
+        published=published,
+        country=country,
+        source=source,
+        page=page,
+        flash=f"{updated} posting(s) set to {status}",
     )
