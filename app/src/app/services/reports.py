@@ -181,6 +181,41 @@ def source_overlap(session: Session) -> SourceOverlap:
     The site vocabulary comes from `queries.known_sites`, which is also why board
     names are not enumerated from the JSON keys — though any key actually present
     is still counted, so a board missing from that list cannot go unreported.
+
+    Parameters:
+        session: Open SQLAlchemy session. It is the only input: every `postings`
+            row is read, with no status, date, or suppressed-employer filter, so
+            the figures cover the whole table rather than a triage subset.
+
+    Returns:
+        A `SourceOverlap` filled as follows.
+
+        `sites` is `queries.known_sites` plus any key observed in `sources`,
+        sorted. Keys are counted as written — nothing here normalises spelling or
+        checks them against a vocabulary. `per_site` and `first_by` are keyed by
+        that same list, carrying 0 for a site never seen. `combinations` pairs
+        each distinct sorted tuple of a posting's keys with its count, in
+        `Counter.most_common()` order, so equal counts fall back to the order the
+        combination was first encountered.
+
+        `total` counts every row scanned, including rows whose `sources` is NULL
+        or empty; those contribute to nothing else. `contested` counts only
+        postings carrying two or more boards *and* two or more parseable
+        `first_seen` stamps, and is the denominator for `first_by` and `ties` —
+        it can therefore sit below the number of multi-board postings.
+        `first_by` moves only when exactly one board holds the earliest stamp;
+        an equal earliest stamp increments `ties` instead.
+
+    Error behaviour:
+        Nothing is raised here, and malformed provenance is skipped rather than
+        reported. A `sources` entry that is not a dict, carries no `first_seen`,
+        or carries one `datetime.fromisoformat` rejects yields no stamp (see
+        `_first_seen`), so the posting drops out of `contested`, `first_by` and
+        `ties` while still counting toward `per_site`, `combinations` and
+        `total` — an under-count that leaves no trace in the output. Naive
+        stamps are read as UTC (`_aware`). An empty table returns zeroed counts
+        over whatever `known_sites` reports. Database errors propagate from the
+        session untouched.
     """
     sites = list(queries.known_sites(session))
     per_site: Counter[str] = Counter()
