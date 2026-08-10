@@ -1,0 +1,11 @@
+{#
+  ADR-0008 §1 admits every report on condition that its sampling bias is shown
+  with its output. The shared sentence lives here; each report passes its own
+  specialisation as `caveat`. tests/test_web_reports.py asserts both render —
+  without that, this is the first thing a layout change drops.
+#}
+<p class="sub caveat">
+  These figures describe the postings this system collected &mdash; two boards,
+  matching your search profiles, within the collection window. They are not a
+  measurement of the job market.{% if caveat %} {{ caveat }}{% endif %}
+</p>

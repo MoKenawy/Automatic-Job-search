@@ -1,10 +1,13 @@
 """Typed configuration, loaded from environment or .env."""
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+if TYPE_CHECKING:
+    from sqlalchemy.orm import Session
 
 # Measured working sources as of 20 July 2026 (design §4.3, D11).
 # Bayt returns 403, Glassdoor has no Egyptian coverage, Google returns no cursor.
@@ -87,3 +90,51 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+class RunConfig(BaseModel):
+    """Effective configuration for one pipeline run.
+
+    Resolved once via `resolve()` and passed down as an argument to the stages
+    that need it. Replaces the previous pattern of overlaying database
+    overrides onto the `settings` singleton and reading it back through
+    `settings.x` call sites — that overlay meant two runs could not hold
+    different configurations, and it leaked between tests (refactor-plan.md
+    §3). Frozen: a run's configuration is fixed for its duration.
+
+    Every field here is one of `services.settings.EDITABLE_KEYS`; the
+    defaults below mirror the code defaults on `Settings` so a bare
+    `RunConfig()` is a valid unresolved fallback, matching the bottom tier of
+    the DB → env → code default resolution order (ADR-0005).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    results_per_search: int = Field(default_factory=lambda: settings.results_per_search)
+    hours_old: int = Field(default_factory=lambda: settings.hours_old)
+    request_delay_seconds: float = Field(
+        default_factory=lambda: settings.request_delay_seconds
+    )
+    linkedin_fetch_description: bool = Field(
+        default_factory=lambda: settings.linkedin_fetch_description
+    )
+    proxies: list[str] = Field(default_factory=lambda: list(settings.proxies))
+    publish_threshold: int = Field(default_factory=lambda: settings.publish_threshold)
+    scoring_model: str = Field(default_factory=lambda: settings.scoring_model)
+    title_include_pattern: str = Field(
+        default_factory=lambda: settings.title_include_pattern
+    )
+    title_exclude_pattern: str = Field(
+        default_factory=lambda: settings.title_exclude_pattern
+    )
+
+    @classmethod
+    def resolve(cls, session: "Session") -> "RunConfig":
+        """DB override, else environment/.env, else code default (ADR-0005)."""
+        # Local import: services.settings imports app.config, so importing it
+        # at module scope here would be circular.
+        from app.services import settings as settings_service
+
+        return cls(
+            **{key: settings_service.get(session, key) for key in settings_service.EDITABLE_KEYS}
+        )

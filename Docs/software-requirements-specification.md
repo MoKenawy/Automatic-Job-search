@@ -321,7 +321,7 @@ the build is deferred. The pipeline justifies itself only in use. *(§11)*
 | Scoring (FR-16…20) | D5, D6, D8 | *(pending implementation)* |
 | Publication (FR-21…23) | D7, D9, ADR-0004 | *(pending implementation)* |
 | Triage (FR-24…29) | ADR-0004, §7.4, §8.1 | `tests/test_web.py` |
-| Orchestration (FR-30…32) | §7.1, §7.4 | `pipeline/run.py`; live run |
+| Orchestration (FR-30…32) | §7.1, §7.4 | `pipeline/runner.py`; live run |
 
 ---
 

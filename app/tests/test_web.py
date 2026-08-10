@@ -62,6 +62,14 @@ def client():
                 sources={"linkedin": {"url": "https://linkedin.com/z"}},
                 status=STATUS_REJECTED,
             ),
+            Posting(
+                fingerprint="c" * 64, employer_id=employer.id,
+                title="Remote Analytics Engineer",
+                normalised_title="remote analytics engineer",
+                location_raw="Egypt", country_code="EG", is_remote=True,
+                sources={"indeed": {"url": "https://indeed.com/w"}},
+                status=STATUS_NEW,
+            ),
         ])
         seed.commit()
 
@@ -107,6 +115,43 @@ def test_search_filter(client):
     r = client.get("/postings?q=junior")
     assert "Junior Data Developer" in r.text
     assert "ETIC" not in r.text
+
+
+def test_country_filter(client):
+    r = client.get("/postings?country=EG")
+    assert "ETIC" in r.text
+    assert "Remote Analytics Engineer" in r.text
+    assert "Junior Data Developer" not in r.text
+
+
+def test_unknown_country_filter(client):
+    """Junior Data Developer has no location_raw, so its country never resolved
+    (normalise/country.py returns None rather than guessing)."""
+    r = client.get("/postings?country=unknown")
+    assert "Junior Data Developer" in r.text
+    assert "ETIC" not in r.text
+    assert "Remote Analytics Engineer" not in r.text
+
+
+def test_remote_filter(client):
+    r = client.get("/postings?country=remote")
+    assert "Remote Analytics Engineer" in r.text
+    assert "ETIC" not in r.text
+    assert "Junior Data Developer" not in r.text
+
+
+def test_source_filter(client):
+    r = client.get("/postings?source=linkedin")
+    assert "ETIC" in r.text
+    assert "Junior Data Developer" in r.text
+    assert "Remote Analytics Engineer" not in r.text
+
+
+def test_source_filter_excludes_non_matching(client):
+    r = client.get("/postings?source=indeed")
+    assert "ETIC" in r.text
+    assert "Remote Analytics Engineer" in r.text
+    assert "Junior Data Developer" not in r.text
 
 
 def test_multi_board_posting_shows_both_sources(client):

@@ -15,40 +15,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import STATUS_NEW, STATUS_REJECTED, Employer, Posting, RawPosting, Run
+from app.db.models import Employer, Posting, RawPosting, Run
 from app.normalise import build_fingerprint, normalise_employer
 
 log = logging.getLogger(__name__)
-
-
-def _get_or_create_employer(session: Session, raw_name: str | None, payload: dict) -> Employer:
-    """Resolve an employer by normalised name, enriching it opportunistically."""
-    normalised = normalise_employer(raw_name)
-
-    employer = session.scalar(
-        select(Employer).where(Employer.normalised_name == normalised)
-    )
-    if employer is None:
-        employer = Employer(
-            name=(raw_name or "").strip() or "(unknown)",
-            normalised_name=normalised,
-        )
-        session.add(employer)
-        session.flush()
-
-    # Indeed carries company detail that LinkedIn does not; fill gaps only, never
-    # overwrite a value already held
-    for column, key in (
-        ("url", "company_url"),
-        ("logo_url", "company_logo"),
-        ("num_employees", "company_num_employees"),
-        ("revenue", "company_revenue"),
-        ("description", "company_description"),
-    ):
-        if getattr(employer, column) is None and payload.get(key):
-            setattr(employer, column, str(payload[key])[:1024])
-
-    return employer
 
 
 def _parse_date(value: Any):
@@ -69,13 +39,16 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
         select(RawPosting).where(RawPosting.run_id == run.id)
     ).all()
 
-    touched: set[str] = set()
-    unresolved_country = 0
     now = datetime.now(UTC)
+    unresolved_country = 0
 
+    # Fingerprint every row up front so the batch lookups below can be built
+    # from the complete set of digests and employer names this run touches,
+    # rather than querying once per row (refactor-plan.md §4.3 — this was
+    # ~2 queries x raw row count, roughly 200 round trips on a typical run).
+    parsed: list[tuple[RawPosting, Any, dict]] = []
     for raw in raw_rows:
         payload = raw.payload or {}
-
         parts = build_fingerprint(
             employer=payload.get("company"),
             title=payload.get("title"),
@@ -84,11 +57,30 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
         )
         if not parts.country_resolved and not payload.get("is_remote"):
             unresolved_country += 1
+        parsed.append((raw, parts, payload))
 
-        posting = session.scalar(
-            select(Posting).where(Posting.fingerprint == parts.digest)
-        )
+    digests = {parts.digest for _, parts, _ in parsed}
+    postings_by_fingerprint: dict[str, Posting] = {}
+    if digests:
+        postings_by_fingerprint = {
+            p.fingerprint: p
+            for p in session.scalars(select(Posting).where(Posting.fingerprint.in_(digests)))
+        }
 
+    normalised_names = {normalise_employer(payload.get("company")) for _, _, payload in parsed}
+    employers_by_name: dict[str, Employer] = {}
+    if normalised_names:
+        employers_by_name = {
+            e.normalised_name: e
+            for e in session.scalars(
+                select(Employer).where(Employer.normalised_name.in_(normalised_names))
+            )
+        }
+
+    touched: set[str] = set()
+
+    for raw, parts, payload in parsed:
+        posting = postings_by_fingerprint.get(parts.digest)
         provenance = {
             "url": payload.get("job_url"),
             "job_id": payload.get("id"),
@@ -96,41 +88,43 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
         }
 
         if posting is None:
-            employer = _get_or_create_employer(session, payload.get("company"), payload)
-            # A new posting from a blacklisted employer is born Rejected, so it is
-            # never published (US3, FR-007). The suppression pass is the general
-            # mechanism; this catches the row at creation without a second sweep.
-            born_status = STATUS_REJECTED if employer.suppressed else STATUS_NEW
-            posting = Posting(
+            normalised_name = normalise_employer(payload.get("company"))
+            employer = employers_by_name.get(normalised_name)
+            if employer is None:
+                employer = Employer(
+                    name=(payload.get("company") or "").strip() or "(unknown)",
+                    normalised_name=normalised_name,
+                )
+                session.add(employer)
+                session.flush()
+                employers_by_name[normalised_name] = employer
+            employer.enrich_from(payload)
+
+            posting = Posting.create(
                 fingerprint=parts.digest,
-                employer_id=employer.id,
-                title=(payload.get("title") or "")[:512],
-                normalised_title=parts.title[:512],
+                employer=employer,
+                title=payload.get("title") or "",
+                normalised_title=parts.title,
                 location_raw=(payload.get("location") or None),
                 country_code=(parts.location if parts.country_resolved else None),
                 is_remote=bool(payload.get("is_remote")),
                 description=payload.get("description"),
                 date_posted=_parse_date(payload.get("date_posted")),
                 job_type=(payload.get("job_type") or None),
-                sources={raw.site: provenance},
-                status=born_status,
+                site=raw.site,
+                provenance=provenance,
             )
             session.add(posting)
+            postings_by_fingerprint[parts.digest] = posting
         else:
-            # Seen again. Merge provenance without disturbing scoring or
-            # publication state, and without resetting an existing first_seen.
-            sources = dict(posting.sources or {})
-            if raw.site not in sources:
-                sources[raw.site] = provenance
-            else:
-                sources[raw.site] = {**sources[raw.site], "url": provenance["url"]}
-            posting.sources = sources
-            posting.last_seen_at = now
-
-            # Backfill a description if the board that first surfaced the role
-            # omitted one and another board supplies it
-            if not posting.description and payload.get("description"):
-                posting.description = payload["description"]
+            # Seen again. observe() merges provenance and backfills a missing
+            # description without disturbing scoring or publication state.
+            posting.observe(
+                site=raw.site,
+                provenance=provenance,
+                description=payload.get("description"),
+                now=now,
+            )
 
         touched.add(parts.digest)
 

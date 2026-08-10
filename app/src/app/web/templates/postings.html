@@ -3,7 +3,14 @@
 {% block content %}
 
 <h1>Postings</h1>
-<p class="sub">{{ rows | length }} shown, ranked by score. Unscored postings sort last.</p>
+<p class="sub">
+  {% if pager.total %}Showing {{ pager.first }}–{{ pager.last }} of {{ pager.total }}{% else %}Nothing to show{% endif %},
+  {% if status == 'rejected' %}
+    most recently rejected first.
+  {% else %}
+    ranked by score. Unscored postings sort last.
+  {% endif %}
+</p>
 
 {% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
 
@@ -13,6 +20,22 @@
   <a href="/postings?status={{ s }}" class="{{ 'on' if status == s }}">{{ s }}</a>
   {% endfor %}
   <input type="search" name="q" value="{{ q }}" placeholder="title or company">
+  <select name="country" aria-label="Location">
+    <option value="">Any location</option>
+    <option value="remote" {{ 'selected' if country == 'remote' }}>Remote</option>
+    {% for c in facets.countries %}
+    <option value="{{ c }}" {{ 'selected' if country == c }}>{{ c }}</option>
+    {% endfor %}
+    {% if facets.unknown_country %}
+    <option value="unknown" {{ 'selected' if country == 'unknown' }}>Unknown</option>
+    {% endif %}
+  </select>
+  <select name="source" aria-label="Source">
+    <option value="">Any source</option>
+    {% for s in facets.sources %}
+    <option value="{{ s }}" {{ 'selected' if source == s }}>{{ s }}</option>
+    {% endfor %}
+  </select>
   {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
   <button class="btn" type="submit">Search</button>
 </form>
@@ -23,6 +46,14 @@
    are invalid. Progressive: submits normally without HTMX. #}
 <form id="bulkform" method="post" action="/postings/status"
       hx-post="/postings/status" hx-target="body" hx-swap="innerHTML">
+  {# Echo the list state back so the re-render lands on the same filtered page.
+     `list_status` is the filter; `status` below is the status being applied. #}
+  {% if status %}<input type="hidden" name="list_status" value="{{ status }}">{% endif %}
+  {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+  {% if country %}<input type="hidden" name="country" value="{{ country }}">{% endif %}
+  {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
+  {% if published %}<input type="hidden" name="published" value="true">{% endif %}
+  <input type="hidden" name="page" value="{{ pager.number }}">
   <div class="bulkbar" id="bulkbar">
     <span class="muted" id="selcount">0 selected</span>
     <select name="status" aria-label="Bulk status">
@@ -43,11 +74,13 @@
         <th>Location</th>
         <th>Sources</th>
         <th>Posted</th>
+        {# The rejected bucket is ordered by this column, so show it there. #}
+        {% if status == 'rejected' %}<th>Rejected</th>{% endif %}
         <th>Status</th>
       </tr>
     </thead>
     <tbody>
-      {% for p, employer in rows %}
+      {% for p, employer in pager.rows %}
       <tr>
         <td><input type="checkbox" class="selrow" name="ids" value="{{ p.id }}" form="bulkform"></td>
         <td class="num score">{{ p.score if p.score is not none else '—' }}</td>
@@ -61,14 +94,31 @@
           {% if p.sources | length > 1 %}<span class="pill">×{{ p.sources | length }}</span>{% endif %}
         </td>
         <td class="muted">{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}</td>
+        {% if status == 'rejected' %}
+        <td class="muted">{{ p.status_changed_at.strftime('%d %b %Y') if p.status_changed_at else '—' }}</td>
+        {% endif %}
         <td>{% include "_row_status.html" %}</td>
       </tr>
       {% else %}
-      <tr><td colspan="8" class="empty">No postings match.</td></tr>
+      <tr><td colspan="{{ 9 if status == 'rejected' else 8 }}" class="empty">No postings match.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+{% if pager.pages > 1 %}
+<nav class="pager" aria-label="Pagination">
+  {% if pager.has_prev %}
+  <a class="btn" href="{{ page_url(1) }}" aria-label="First page">« First</a>
+  <a class="btn" href="{{ page_url(pager.number - 1) }}" rel="prev">‹ Prev</a>
+  {% endif %}
+  <span class="muted">Page {{ pager.number }} of {{ pager.pages }}</span>
+  {% if pager.has_next %}
+  <a class="btn" href="{{ page_url(pager.number + 1) }}" rel="next">Next ›</a>
+  <a class="btn" href="{{ page_url(pager.pages) }}" aria-label="Last page">Last »</a>
+  {% endif %}
+</nav>
+{% endif %}
 
 <script>
   // US2 selection UX. The bulk apply/count are conveniences layered over a form

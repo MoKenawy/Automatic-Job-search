@@ -73,7 +73,7 @@ def publish() -> None:
 @app.command("run-all")
 def run_all() -> None:
     """Run every stage in order, recording per-stage counts."""
-    from app.pipeline.orchestrate import run_all_profiles
+    from app.pipeline.runner import run_all_profiles
 
     result = run_all_profiles()
     typer.echo(
@@ -123,7 +123,7 @@ def serve() -> None:
 
     Each enabled search profile runs on its own schedule (US4, ADR-0005).
     """
-    from app.pipeline.orchestrate import run_one_profile
+    from app.pipeline.runner import run_one_profile
     from app.scheduler import build_scheduler
 
     scheduler = build_scheduler(run_one_profile)

@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.collect import collect_all
-from app.config import SearchSpec
+from app.config import RunConfig, SearchSpec
 from app.db.models import RawPosting, Run
 
 log = logging.getLogger(__name__)
@@ -53,19 +53,30 @@ def _jsonable(value: Any) -> Any:
     return str(value)
 
 
-def run_collect(session: Session, run: Run, specs: list[SearchSpec] | None = None) -> int:
+def run_collect(
+    session: Session,
+    run: Run,
+    specs: list[SearchSpec] | None = None,
+    config: RunConfig | None = None,
+) -> int:
     """Collect across configured searches and land every row in `raw_postings`.
 
     Specs come from enabled search profiles (US4, ADR-0005). If none are provided
     and no profiles exist, fall back to the environment `SEARCHES` so a fresh,
     un-migrated deployment still works.
+
+    `config` is resolved here if the caller has not already done so (e.g. the
+    CLI `collect` command, which runs this stage on its own).
     """
     if specs is None:
-        from app.settings_store import profiles
+        from app.services import profiles
 
         specs = profiles.enabled_specs(session) or None
 
-    result = collect_all(specs)
+    if config is None:
+        config = RunConfig.resolve(session)
+
+    result = collect_all(specs, config)
 
     for record in result.records:
         payload = {k: _jsonable(v) for k, v in record.items()}

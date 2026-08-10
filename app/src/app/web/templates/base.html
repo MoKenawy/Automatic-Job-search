@@ -121,6 +121,12 @@
     dl.meta dt { color: var(--muted); }
     dl.meta dd { margin: 0; word-break: break-word; }
     .scroll-x { overflow-x: auto; }
+    .pager {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      margin-top: 14px; font-size: 13px;
+    }
+    .pager a { text-decoration: none; }
+    .pager a:hover { color: var(--ink); border-color: var(--ink); }
   </style>
 </head>
 <body>
@@ -129,6 +135,7 @@
       <span class="brand">Job discovery</span>
       <a href="/" class="{{ 'on' if active == 'index' }}">Overview</a>
       <a href="/postings" class="{{ 'on' if active == 'postings' }}">Postings</a>
+      <a href="/reports" class="{{ 'on' if active == 'reports' }}">Reports</a>
       <a href="/blacklist" class="{{ 'on' if active == 'blacklist' }}">Blacklist</a>
       <a href="/profiles" class="{{ 'on' if active == 'profiles' }}">Schedules</a>
       <a href="/settings" class="{{ 'on' if active == 'settings' }}">Settings</a>

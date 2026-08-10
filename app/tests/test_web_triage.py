@@ -140,3 +140,63 @@ def test_list_has_select_all_and_bulk_controls(client):
     assert 'id="selall"' in html
     assert 'id="bulkapply"' in html
     assert 'name="ids"' in html
+
+
+# --- Pagination --------------------------------------------------------------
+
+
+def test_pagination_splits_results_across_pages(client, monkeypatch):
+    from app.services import queries
+
+    monkeypatch.setattr(queries, "PAGE_SIZE", 2)
+    r = client.get("/postings")
+    assert "Page 1 of 2" in r.text
+    assert "Data Engineer 0" in r.text
+    assert "Data Engineer 1" in r.text
+    assert "Data Engineer 2" not in r.text
+
+    r2 = client.get("/postings?page=2")
+    assert "Data Engineer 2" in r2.text
+    assert "Data Engineer 3" in r2.text
+    assert "Data Engineer 0" not in r2.text
+
+
+def test_pagination_clamps_out_of_range_page(client, monkeypatch):
+    from app.services import queries
+
+    monkeypatch.setattr(queries, "PAGE_SIZE", 2)
+    r = client.get("/postings?page=99")
+    assert "Page 2 of 2" in r.text
+
+
+def test_bulk_status_change_preserves_filter_and_page(client, monkeypatch):
+    from app.services import queries
+
+    monkeypatch.setattr(queries, "PAGE_SIZE", 2)
+    r = client.post(
+        "/postings/status",
+        data={
+            "ids": [3],
+            "status": STATUS_SHORTLIST,
+            "page": 2,
+        },
+        headers={"HX-Request": "true"},
+    )
+    assert r.status_code == 200
+    assert "Page 2 of 2" in r.text
+
+
+# --- Rejected default ordering ------------------------------------------------
+
+
+def test_rejected_filter_orders_by_status_changed_at_desc(client):
+    """Rejected is a log, not a ranking: most recently rejected sorts first."""
+    client.post("/postings/1/status", data={"status": STATUS_REJECTED})
+    client.post("/postings/3/status", data={"status": STATUS_REJECTED})
+    client.post("/postings/2/status", data={"status": STATUS_REJECTED})
+
+    html = client.get("/postings?status=rejected").text
+    pos0 = html.index("Data Engineer 1")  # rejected last -> first
+    pos1 = html.index("Data Engineer 2")
+    pos2 = html.index("Data Engineer 0")  # rejected first -> last
+    assert pos0 < pos1 < pos2

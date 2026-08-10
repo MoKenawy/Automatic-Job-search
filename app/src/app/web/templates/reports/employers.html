@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set active = 'reports' %}
+{% block content %}
+
+<h1>Employer hiring activity</h1>
+{% include "reports/_caveat.html" %}
+
+<p class="sub">
+  <strong>Roles</strong> counts distinct real-world roles, not board listings &mdash;
+  the fingerprint already merges a role surfaced by both boards.
+  <strong>Titles</strong> is how many distinct titles those roles span: twelve roles
+  across three titles is an employer refilling the same three seats, which is a
+  different signal from twelve different openings.
+</p>
+
+<div class="filters">
+  <a href="/reports/employers" class="{{ 'on' if not show_suppressed }}">Active only</a>
+  <a href="/reports/employers?show_suppressed=true" class="{{ 'on' if show_suppressed }}">Include blacklisted</a>
+</div>
+
+<div class="panel scroll-x">
+  <table>
+    <thead>
+      <tr>
+        <th>Employer</th>
+        <th class="num">Roles</th>
+        <th class="num">Titles</th>
+        <th class="num">Days quiet</th>
+        <th>First seen</th>
+        <th>Triage</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>
+          {{ row.employer.name }}
+          {% if row.employer.suppressed %}
+            <span class="pill rejected">blacklisted</span>
+          {% endif %}
+        </td>
+        <td class="num">{{ row.postings }}</td>
+        <td class="num">{{ row.titles }}</td>
+        <td class="num">{{ row.days_quiet }}</td>
+        <td class="muted">{{ row.first_seen.strftime('%d %b %Y') if row.first_seen }}</td>
+        <td>
+          {% for status, count in row.by_status.items() %}
+            <span class="pill {{ status }}">{{ status }} {{ count }}</span>
+          {% endfor %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="empty">No employers collected yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

@@ -1,16 +1,20 @@
-"""Employer blacklist suppression (US3).
+"""Suppression sweep (US3) — the bulk pipeline stage.
 
 An operator can blacklist an employer (`employers.suppressed`). Every posting from
 a suppressed employer is set to Rejected and un-published, but **retained** — never
 deleted (design D9). Rejected already carries the "never resurfaces" guarantee, so
 no separate posting flag is needed.
 
-This runs as an idempotent pass: after normalisation in `run-all`, and immediately
-when an employer is blacklisted, so existing postings are caught at once and
-mid-run additions are caught on the next pass.
+This is the idempotent, whole-corpus pass run after normalisation in `run-all`,
+catching any posting a mid-run addition or a stale blacklist might have missed.
+The single-employer, blacklist-time sweep lives in `app.services.blacklist`
+instead — it is a business operation triggered by an operator action, not a
+pipeline stage, and `services/` must not be a dependency of `pipeline/`
+(refactor-plan.md §7.2).
 """
 
 import logging
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -26,38 +30,15 @@ def run_suppress(session: Session) -> int:
     Returns the number of postings newly rejected. Idempotent: a second call over
     unchanged data rejects nothing.
     """
+    now = datetime.now(UTC)
     stmt = (
         select(Posting)
         .join(Employer, Employer.id == Posting.employer_id)
         .where(Employer.suppressed.is_(True), Posting.status != STATUS_REJECTED)
     )
-    count = 0
-    for posting in session.scalars(stmt):
-        posting.status = STATUS_REJECTED
-        posting.published = False
-        count += 1
+    count = sum(1 for posting in session.scalars(stmt) if posting.reject_for_suppression(now=now))
 
     session.commit()
     if count:
         log.info("suppression: rejected %d posting(s) from blacklisted employers", count)
-    return count
-
-
-def suppress_employer(session: Session, employer_id: int) -> int:
-    """Reject all postings of one employer immediately (called on blacklist).
-
-    Does not itself set the suppressed flag — the caller does that first — so this
-    is safe to call for a targeted re-sweep.
-    """
-    stmt = select(Posting).where(
-        Posting.employer_id == employer_id, Posting.status != STATUS_REJECTED
-    )
-    count = 0
-    for posting in session.scalars(stmt):
-        posting.status = STATUS_REJECTED
-        posting.published = False
-        count += 1
-
-    session.commit()
-    log.info("suppression: rejected %d posting(s) for employer %d", count, employer_id)
     return count
