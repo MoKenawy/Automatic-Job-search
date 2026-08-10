@@ -31,7 +31,7 @@ def session():
     """Four postings across two employers, shaped for the assertions below.
 
     Acme holds three roles spanning only two normalised titles, so volume and
-    breadth differ — the distinction the report exists to draw. Ghost is
+    breadth differ — the distinction the report exists to draw. Blacklisted is
     suppressed, so it must not appear unless asked for.
     """
     engine = create_engine(
@@ -44,8 +44,8 @@ def session():
 
     with sessionmaker(bind=engine, expire_on_commit=False, future=True)() as s:
         acme = Employer(name="Acme", normalised_name="acme")
-        ghost = Employer(name="Ghost", normalised_name="ghost", suppressed=True)
-        s.add_all([acme, ghost])
+        blacklisted = Employer(name="Blacklisted", normalised_name="blacklisted", suppressed=True)
+        s.add_all([acme, blacklisted])
         s.flush()
 
         s.add_all([
@@ -77,7 +77,7 @@ def session():
                 },
             ),
             Posting(
-                fingerprint="d" * 64, employer_id=ghost.id,
+                fingerprint="d" * 64, employer_id=blacklisted.id,
                 title="Junior Dev", normalised_title="junior dev",
                 first_seen_at=datetime(2026, 7, 5), status=STATUS_NEW,
                 sources={"linkedin": {"url": "https://l/4", "first_seen": SAME_RUN}},
@@ -105,7 +105,7 @@ def test_suppressed_employers_are_excluded_by_default(session):
 
 def test_suppressed_employers_are_available_on_request(session):
     rows = reports.employer_activity(session, now=NOW, include_suppressed=True)
-    assert {r.employer.name for r in rows} == {"Acme", "Ghost"}
+    assert {r.employer.name for r in rows} == {"Acme", "Blacklisted"}
 
 
 def test_days_quiet_is_measured_from_the_most_recent_new_role(session):
