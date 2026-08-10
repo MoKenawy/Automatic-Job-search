@@ -33,8 +33,10 @@ def client():
         seed.add(Run(status="success", collected_count=12, deduplicated_count=9,
                      counts_by_site={"indeed": 7, "linkedin": 5}))
         acme = Employer(name="Acme", normalised_name="acme")
-        ghost = Employer(name="Ghost Corp", normalised_name="ghost corp", suppressed=True)
-        seed.add_all([acme, ghost])
+        blacklisted = Employer(
+            name="Blacklisted Corp", normalised_name="blacklisted corp", suppressed=True
+        )
+        seed.add_all([acme, blacklisted])
         seed.flush()
 
         seed.add_all([
@@ -47,7 +49,7 @@ def client():
                 },
             ),
             Posting(
-                fingerprint="b" * 64, employer_id=ghost.id,
+                fingerprint="b" * 64, employer_id=blacklisted.id,
                 title="Junior Dev", normalised_title="junior dev",
                 sources={"linkedin": {"url": "https://l/2", "first_seen": SAME_RUN}},
             ),
@@ -84,11 +86,11 @@ def test_employer_report_renders(client):
 
 
 def test_employer_report_hides_blacklisted_employers_by_default(client):
-    assert "Ghost Corp" not in client.get("/reports/employers").text
+    assert "Blacklisted Corp" not in client.get("/reports/employers").text
 
 
 def test_employer_report_shows_blacklisted_employers_on_request(client):
-    assert "Ghost Corp" in client.get("/reports/employers?show_suppressed=true").text
+    assert "Blacklisted Corp" in client.get("/reports/employers?show_suppressed=true").text
 
 
 def test_source_report_renders(client):
