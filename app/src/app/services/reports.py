@@ -23,7 +23,15 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Employer, Posting
+from app.db.models import (
+    RawPosting,
+    RawPostingNormalization,
+    Run,
+    STATUSES,
+    Employer,
+    Posting,
+    SearchProfile,
+)
 from app.services import queries
 
 
@@ -273,3 +281,65 @@ def source_overlap(session: Session) -> SourceOverlap:
         contested=contested,
         total=total,
     )
+
+
+# --- R?: triage status per search profile --------------------------------------
+
+
+@dataclass
+class ProfileStatusBreakdown:
+    """One profile's postings, split by triage status."""
+
+    profile: SearchProfile
+    by_status: dict[str, int]
+    total: int
+
+
+def postings_by_profile_status(
+    session: Session, *, include_disabled: bool = False
+) -> list[ProfileStatusBreakdown]:
+    """Triage status split for each search profile's postings.
+
+    A `Posting` carries no direct link to `SearchProfile` — it is reached only
+    via `Posting -> RawPostingNormalization -> RawPosting -> Run -> SearchProfile`
+    (design §8, RawPostingNormalization docstring), and a posting can be
+    surfaced by more than one profile's runs (or by none, via a profile-less
+    manual run-all). Rather than pick one profile to credit, every matching
+    profile counts the posting — so a posting seen by two profiles appears in
+    both pie charts, and totals summed across profiles can exceed the number
+    of distinct postings collected. That trade-off is the caveat the route
+    surfaces (ADR-0008 §1); `func.count(distinct(...))` below only prevents a
+    posting being double-counted *within* one profile's own multiple runs.
+    """
+    profiles_stmt = select(SearchProfile).order_by(SearchProfile.name)
+    if not include_disabled:
+        profiles_stmt = profiles_stmt.where(SearchProfile.enabled.is_(True))
+    profiles = session.scalars(profiles_stmt).all()
+    if not profiles:
+        return []
+
+    ids = [p.id for p in profiles]
+    counts_stmt = (
+        select(Run.profile_id, Posting.status, func.count(func.distinct(Posting.id)))
+        .select_from(Run)
+        .join(RawPosting, RawPosting.run_id == Run.id)
+        .join(
+            RawPostingNormalization,
+            RawPostingNormalization.raw_posting_id == RawPosting.id,
+        )
+        .join(Posting, Posting.id == RawPostingNormalization.posting_id)
+        .where(Run.profile_id.in_(ids))
+        .group_by(Run.profile_id, Posting.status)
+    )
+    by_profile: dict[int, dict[str, int]] = defaultdict(dict)
+    for profile_id, status, count in session.execute(counts_stmt).all():
+        by_profile[profile_id][status] = count
+
+    return [
+        ProfileStatusBreakdown(
+            profile=profile,
+            by_status={s: by_profile.get(profile.id, {}).get(s, 0) for s in STATUSES},
+            total=sum(by_profile.get(profile.id, {}).values()),
+        )
+        for profile in profiles
+    ]
