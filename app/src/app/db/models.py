@@ -186,6 +186,39 @@ class RawPosting(Base):
     )
 
     run: Mapped["Run"] = relationship(back_populates="raw_postings")
+    posting_link: Mapped["RawPostingNormalization | None"] = relationship(
+        back_populates="raw_posting", uselist=False
+    )
+
+
+class RawPostingNormalization(Base):
+    """Links a raw landing-zone row to the posting it was folded into.
+
+    A separate, insert-only table rather than a column on `raw_postings`:
+    that table is append-only (design §8) and the link is only known once
+    Stage 2 runs, asynchronously and later than the Stage 1 insert, so
+    recording it would otherwise mean updating an already-written raw row.
+    One raw row folds into exactly one posting; a posting may accumulate
+    links from many raw rows (re-scrapes, other boards) over time.
+    """
+
+    __tablename__ = "raw_posting_normalizations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    raw_posting_id: Mapped[int] = mapped_column(
+        ForeignKey("raw_postings.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False,
+    )
+    posting_id: Mapped[int] = mapped_column(
+        ForeignKey("postings.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    linked_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    raw_posting: Mapped["RawPosting"] = relationship(back_populates="posting_link")
+    posting: Mapped["Posting"] = relationship(back_populates="raw_posting_links")
 
 
 class Posting(Base):
@@ -271,6 +304,10 @@ class Posting(Base):
     )
 
     employer: Mapped["Employer"] = relationship(back_populates="postings")
+    
+    raw_posting_links: Mapped[list["RawPostingNormalization"]] = relationship(
+        back_populates="posting"
+    )
 
     @classmethod
     def create(

@@ -15,7 +15,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import Employer, Posting, RawPosting, Run
+from app.db.models import Employer, Posting, RawPosting, RawPostingNormalization, Run
 from app.normalise import build_fingerprint, normalise_employer
 
 log = logging.getLogger(__name__)
@@ -126,6 +126,10 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
                 now=now,
             )
 
+        # `posting` here relies on SQLAlchemy's relationship-based FK resolution:
+        # a newly created posting has no `id` yet until flush, so the link is
+        # made via the `posting` relationship rather than `posting_id` directly.
+        session.add(RawPostingNormalization(raw_posting_id=raw.id, posting=posting))
         touched.add(parts.digest)
 
     run.deduplicated_count = len(touched)

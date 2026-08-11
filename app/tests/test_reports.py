@@ -16,7 +16,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.db.models import STATUS_NEW, STATUS_SHORTLIST, Base, Employer, Posting
+from app.db.models import (
+    STATUS_APPLIED,
+    STATUS_NEW,
+    STATUS_SHORTLIST,
+    Base,
+    Employer,
+    Posting,
+    RawPosting,
+    RawPostingNormalization,
+    Run,
+    SearchProfile,
+)
 from app.services import reports
 
 # Two boards collected in the same run share one timestamp; a later run differs.
@@ -194,3 +205,116 @@ def test_empty_database_does_not_divide_by_zero(session):
     assert overlap.total == 0
     assert overlap.contested == 0
     assert reports.employer_activity(session, now=NOW) == []
+
+
+# --- Triage status per search profile -------------------------------------
+
+
+@pytest.fixture
+def profile_session():
+    """A posting can only be reached from a profile via
+    Posting -> RawPostingNormalization -> RawPosting -> Run -> SearchProfile, so
+    this fixture builds that whole chain rather than postings directly.
+
+    "backend" gets two postings from two separate runs. "data" gets one of its
+    own, plus a *second* link to "backend"'s first posting — the same role
+    surfaced by both profiles — to exercise double-counting across profiles.
+    A third, disabled profile has no postings and no runs.
+    """
+    engine = create_engine(
+        "sqlite://",
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+
+    with sessionmaker(bind=engine, expire_on_commit=False, future=True)() as s:
+        employer = Employer(name="Acme", normalised_name="acme")
+        s.add(employer)
+        s.flush()
+
+        backend = SearchProfile(name="backend", term="backend engineer")
+        data = SearchProfile(name="data", term="data engineer")
+        disabled = SearchProfile(name="archived", term="old search", enabled=False)
+        s.add_all([backend, data, disabled])
+        s.flush()
+
+        shared = Posting(
+            fingerprint="a" * 64, employer_id=employer.id,
+            title="Backend Engineer", normalised_title="backend engineer",
+            status=STATUS_NEW,
+        )
+        backend_only = Posting(
+            fingerprint="b" * 64, employer_id=employer.id,
+            title="Senior Backend Engineer", normalised_title="senior backend engineer",
+            status=STATUS_SHORTLIST,
+        )
+        data_only = Posting(
+            fingerprint="c" * 64, employer_id=employer.id,
+            title="Data Engineer", normalised_title="data engineer",
+            status=STATUS_APPLIED,
+        )
+        s.add_all([shared, backend_only, data_only])
+        s.flush()
+
+        backend_run = Run(profile_id=backend.id, status="success")
+        data_run = Run(profile_id=data.id, status="success")
+        s.add_all([backend_run, data_run])
+        s.flush()
+
+        raw_shared_via_backend = RawPosting(run_id=backend_run.id, site="indeed", payload={})
+        raw_backend_only = RawPosting(run_id=backend_run.id, site="indeed", payload={})
+        raw_shared_via_data = RawPosting(run_id=data_run.id, site="linkedin", payload={})
+        raw_data_only = RawPosting(run_id=data_run.id, site="linkedin", payload={})
+        s.add_all([raw_shared_via_backend, raw_backend_only, raw_shared_via_data, raw_data_only])
+        s.flush()
+
+        s.add_all([
+            RawPostingNormalization(raw_posting_id=raw_shared_via_backend.id, posting_id=shared.id),
+            RawPostingNormalization(raw_posting_id=raw_backend_only.id, posting_id=backend_only.id),
+            RawPostingNormalization(raw_posting_id=raw_shared_via_data.id, posting_id=shared.id),
+            RawPostingNormalization(raw_posting_id=raw_data_only.id, posting_id=data_only.id),
+        ])
+        s.commit()
+        yield s
+
+
+def test_each_enabled_profile_appears(profile_session):
+    rows = reports.postings_by_profile_status(profile_session)
+    assert {r.profile.name for r in rows} == {"backend", "data"}
+
+
+def test_disabled_profiles_are_excluded_by_default(profile_session):
+    rows = reports.postings_by_profile_status(profile_session)
+    assert "archived" not in {r.profile.name for r in rows}
+
+
+def test_disabled_profiles_are_available_on_request(profile_session):
+    rows = reports.postings_by_profile_status(profile_session, include_disabled=True)
+    assert "archived" in {r.profile.name for r in rows}
+
+
+def test_a_profile_with_no_postings_shows_zero_counts(profile_session):
+    rows = reports.postings_by_profile_status(profile_session, include_disabled=True)
+    (archived,) = [r for r in rows if r.profile.name == "archived"]
+    assert archived.total == 0
+    assert archived.by_status[STATUS_NEW] == 0
+
+
+def test_a_posting_shared_by_two_profiles_is_counted_under_both(profile_session):
+    """The recorded trade-off (services/reports.py docstring): a posting is not
+    arbitrarily credited to one profile, so it is fully counted in each."""
+    rows = {r.profile.name: r for r in reports.postings_by_profile_status(profile_session)}
+    assert rows["backend"].by_status[STATUS_NEW] == 1
+    assert rows["data"].by_status[STATUS_NEW] == 1
+
+
+def test_status_totals_are_not_inflated_by_a_profiles_own_repeat_runs(profile_session):
+    """The shared posting has two raw rows within `backend` alone (only one of
+    its two RawPostingNormalization links belongs to backend here, but a
+    profile could plausibly re-surface the same posting across its own
+    repeat runs) — distinct posting id, not raw-row count, must be summed."""
+    rows = {r.profile.name: r for r in reports.postings_by_profile_status(profile_session)}
+    assert rows["backend"].total == 2  # shared + backend_only, not double-counted
+    assert rows["data"].total == 2  # shared + data_only
