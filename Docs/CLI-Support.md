@@ -73,18 +73,64 @@ Only **B1** genuinely blocks integration. **B2** and **B3** are correctness trap
 that would cause silent data loss if a CLI naively reused the existing service
 signatures. **B4**–**B6** are defects the new surface must not inherit.
 
+**B1–B4 are decided**; each carries its **Decision** inline below. **B5** and
+**B6** are resolved in §3.4 and §3.2 respectively.
+
 #### B1 — No session seam for the CLI, and the engine is built at import time
 
 `db/session.py` instantiates `create_engine(settings.database_url)` and
-`SessionFactory` at module import. CLI commands call `session_scope()` directly,
-so there is no CLI analogue of `app.dependency_overrides[get_db]` and no way to
-run a command against a test database. This is why zero CLI tests exist today.
+`SessionFactory` at module import (`session.py:11-18`). `session_scope()` takes
+no arguments: it draws from that one module-level factory, so every call — from
+the web, the scheduler, the pipeline, or a CLI command — reaches the same
+database. There is no CLI analogue of `app.dependency_overrides[get_db]`, which
+is why zero CLI tests exist today.
 
-**B1a.** `runner.run_all_profiles()` and `run_one_profile()` open their *own*
-`session_scope()` internally. A CLI-level session provider cannot reach inside
-them, so `run-all` and `profiles run` must be tested by patching
-`app.pipeline.runner.session_scope` instead. Worth designing for explicitly
-rather than discovering during step 6.
+**Decision — per-command database selection is out of scope.**
+
+*Not supported, and not proposed:* passing a session bound to a caller-chosen
+database configuration into a CLI command. No command takes a session parameter,
+no command takes a `--database-url`, and `cli_session()` is **not** an injection
+point for arbitrary connection settings.
+
+*Supported:* every command resolves its database from the process environment,
+through `settings.database_url` — the single value `db/session.py` read at
+import time. One process, one database, fixed before the process starts. This is
+exactly how the web and the scheduler behave today, and what `docker-compose.yml`
+already relies on.
+
+`cli/deps.py::cli_session()` therefore exists for one reason: to give the CLI a
+**single patchable name** so tests can redirect it to in-memory SQLite. It is a
+test seam, not a production capability. That distinction must stay explicit in
+the code, or the next reader will build a `--database-url` flag on top of it.
+
+**Future work, deliberately not in this plan.** A command that selects the
+database — most plausibly a root `--env-file` / `--db-profile` option that
+adjusts `settings.database_url` before the engine exists — is a reasonable
+extension. Two constraints bind it, and both must be honoured:
+
+1. **It must run before `app.db.session` is imported.** Rebinding the variable
+   after import does nothing: `engine` is already built from the old value. The
+   existing deferred-import discipline makes this achievable — `__main__.py`
+   imports stage modules *inside* command bodies, so a root `@app.callback()`
+   still executes while `app.db.session` is unimported. Any such feature must
+   preserve that discipline, or it silently no-ops against the wrong database.
+2. **It must never accept a credential-bearing URL as an argument** (§3.6). The
+   option names an env file or an alias; the URL itself stays in the
+   environment.
+
+**B1a — the pipeline owns its own sessions, and that does not change.**
+`runner.run_all_profiles()` and `run_one_profile(profile_id)` take no session
+parameter; each opens its own `session_scope()` internally (`runner.py:84`,
+`runner.py:94`) because each must own the run-tracking transaction. A CLI-level
+session provider cannot reach inside them.
+
+Consequence for tests: `run-all` and `profiles run` are covered by patching
+`app.pipeline.runner.session_scope`, not `app.cli.deps.session_scope`. Because
+`runner.py` does `from app.db import session_scope`, that name is bound into the
+runner's own namespace at import, so patching `app.db.session.session_scope`
+afterwards has no effect. `tests/test_scheduler.py` already uses precisely this
+pattern for `app.scheduler.session_scope`. Two seams, not one — designed for
+here rather than discovered in step 6.
 
 #### B2 — `services.profiles.update()` is a full-record replace, not a partial update
 
@@ -94,9 +140,43 @@ rather than discovering during step 6.
 06:00, and set `enabled` to `False`.
 
 This is safe for the web, whose form always posts every field, and unsafe for a
-CLI, where an unspecified option must mean "leave alone". **Requires an additive
-service function** — merging in the CLI adapter would put a business rule in the
-wrong layer.
+CLI, where an unspecified option must mean "leave alone".
+
+**Decision — the service exposes a `patch()` method.** `update()` is the PUT and
+keeps its semantics unchanged; `patch(session, profile_id, **changed)` is the
+PATCH counterpart. Merging current values with the caller's changes is a
+business rule and belongs in `services/`: doing it in the CLI adapter would
+require the adapter to know the full field set and every default.
+
+```python
+# services/profiles.py — additive; update() is not touched
+_FIELDS = (
+    "name", "term", "location", "country", "is_remote",
+    "sites", "experience", "schedule_hour", "schedule_minute", "enabled",
+)
+
+def patch(session: Session, profile_id: int, **changed) -> SearchProfile:
+    """Update only the named fields. Omitted fields keep their current value."""
+    profile = session.get(SearchProfile, profile_id)
+    if profile is None:
+        raise ProfileError("profile not found")
+    unknown = set(changed) - set(_FIELDS)
+    if unknown:
+        raise ProfileError(f"unknown field(s): {', '.join(sorted(unknown))}")
+    current = {k: getattr(profile, k) for k in _FIELDS}
+    merged = current | {k: v for k, v in changed.items() if v is not None}
+    return update(session, profile_id, **merged)
+```
+
+Delegating to `update()` is deliberate: `_clean`, `_validate`, the
+duplicate-name check and the commit are all reused unchanged, so `patch` cannot
+drift from `update`'s rules. The round-trip through `_clean` is safe for every
+field — `_as_bool(True)` returns `True`, `sites` is already a list, and the two
+nullable fields map `None → None`.
+
+`None` means "unspecified", which is what a Typer option defaults to. Clearing a
+nullable field is therefore `--location ""`: the empty string, which `_clean`
+maps back to `None`. Stated in the command's help text.
 
 #### B3 — `services.settings` has no single-key write, and `coerce_form` would discard DB overrides
 
@@ -106,16 +186,67 @@ key from the `Settings` singleton, i.e. from **env/code defaults**. A CLI
 `settings set` built on `coerce_form` would therefore reset the other eight keys
 to their env defaults, wiping stored overrides.
 
-The CLI must instead read `all_effective(session)`, apply one typed value, and
-call `set_many` — which keeps whole-set validation intact. **Requires a small
-additive coercion helper** so per-key string parsing does not live in the CLI.
+**Decision — the same shape as B2: the service exposes `patch()`, plus a
+per-key coercion helper.** Read-modify-write is a business rule for exactly the
+reason profile merging is, so it does not live in the CLI adapter.
+
+**Scope of change: one service module, two new public functions, ~40 lines,
+plus tests.**
+
+| Change | Kind | Size | Alters existing behaviour |
+|---|---|---|---|
+| `settings.coerce_value(key, raw)` | New | ~20 lines | No |
+| `settings.patch(session, changes)` | New | ~14 lines | No |
+| `_upsert(session, key, value)`, extracted from `set_many`'s loop | Refactor | ~6 lines | No — `set_many` behaves identically |
+| `__all__` | Edit | 2 entries | No |
+| Cases in `tests/test_settings.py` | New | ~60 lines | No existing case modified |
+
+Nothing else moves. `_EditableModel`, `EDITABLE_KEYS`, `get`, `all_effective`,
+`set_many`'s signature and semantics, and `coerce_form` are all unchanged, so
+the web settings page is unaffected. No schema change, no migration, and
+`test_every_editable_key_is_consumed_or_pending` is untouched.
+
+```python
+def patch(session: Session, changes: dict[str, Any]) -> dict[str, Any]:
+    """Write some editable settings; the rest keep their current resolution."""
+    unknown = set(changes) - set(EDITABLE_KEYS)
+    if unknown:
+        raise ValueError(f"not an editable setting: {', '.join(sorted(unknown))}")
+    merged = all_effective(session) | changes
+    validated = _EditableModel(**merged).model_dump()   # whole-set validation
+    for key in changes:                                 # write only what changed
+        _upsert(session, key, validated[key])
+    session.commit()
+    return validated
+```
+
+**One semantic decision sits inside that snippet.** Validation runs over the
+whole merged set, so `_EditableModel`'s rules — and any future cross-field rule
+— keep working. But only the *changed* keys are written. The shorter
+alternative, delegating to `set_many(merged)`, is what the web already does and
+upserts all nine rows: after a single `settings set hours_old 48`, the other
+eight keys would become explicit DB overrides, permanently pinned against the
+environment. That silently breaks the ADR-0005 resolution order for keys the
+operator never mentioned, so the `_upsert` extraction earns its six lines.
+
+`coerce_value` parses one string into the type `_EditableModel` declares for
+that key. It deliberately does **not** reuse `coerce_form`'s nested `_as_list`,
+which splits on newlines for a textarea; the CLI splits `proxies` on commas.
+Six lines of divergence beats widening the web's parser.
 
 #### B4 — The existing `config` command does not mask `proxies`
 
 `_mask()` is applied to `database_url` only. `settings.proxies` legitimately
 carries `http://user:pass@host` credentials and is printed nowhere today — but a
-`settings show` command reading `all_effective()` would print it verbatim. Any
-new command must mask both.
+`settings show` command reading `all_effective()` would print it verbatim.
+
+**Decision — accepted, and unconditional.** Every new command that can print a
+settings value masks both `proxies` and `database_url`. There is no
+`--show-secrets` flag and no per-invocation override (§3.6). Applied in step 4
+and regression-tested in `test_cli_settings.py`, which asserts the output
+carries neither the proxy credential nor the database password. Masking the
+`proxies` textarea in the *web* settings template stays optional (§6.2): it is a
+pre-existing exposure, not one this plan introduces.
 
 #### B5 — No exit-code convention
 
@@ -214,7 +345,7 @@ caller, not a new capability.
 |---|---|---|---|---|---|---|
 | `profiles list` | All saved profiles and their schedules | — | `profiles.list_all` | id · name · enabled · term · location · country · remote · sites · `HH:MM` | 0 | no |
 | `profiles create` | Define a new profile | `--name`\*, `--term`\*, `--location`, `--country`, `--remote/--no-remote`, `--site` (repeatable), `--experience`, `--hour`, `--minute`, `--enabled/--disabled` | `profiles.create` — **unchanged**; `_clean()` already accepts typed values | `Created profile 'Cairo DE' (id 4).` | **1** on `ProfileError` (blank name/term, no sites, unsupported site, duplicate name, hour/minute out of range); **2** on a non-integer `--hour` | no |
-| `profiles update` | Change named fields only; unspecified options are left alone | `PROFILE_ID` + every `create` option, all defaulting to `None` | `profiles.update_fields` **(new)** — see B2 | `Updated profile 4: term, sites.` | **1** on validation; **3** when absent | no |
+| `profiles update` | Change named fields only; unspecified options are left alone. `--location ""` clears a nullable field | `PROFILE_ID` + every `create` option, all defaulting to `None` | `profiles.patch` **(new)** — see B2 | `Updated profile 4: term, sites.` | **1** on validation; **3** when absent | no |
 | `profiles enable` / `disable` | Toggle whether the scheduler picks the profile up | `PROFILE_ID` | `profiles.set_enabled` | `Profile 4 enabled.` The scheduler re-registers within 5 minutes via its `updated_at` poll | **3** — `ProfileError` here can only mean "not found" | no |
 | `profiles delete` | Remove a profile permanently | `PROFILE_ID`, `--yes` | `profiles.delete` | Confirmation copy should note that run history survives — `runs.profile_id` is `ON DELETE SET NULL` | **3** when absent | **yes** — hard delete |
 | `profiles run` | Run one profile's full pipeline now, as the web "run now" button does | `PROFILE_ID` | `pipeline.runner.run_one_profile` | Progress to stderr; final counts to stdout. Warn when `collected == 0` — that is the design §7.4 decay signal | **3** on `ValueError("profile … not found")`; **4** if the database is unreachable. Collector failures are recorded on `run.error`, not raised, so they stay exit 0 | no — long-running automation target |
@@ -228,7 +359,7 @@ through correctly.
 | Command | Purpose | Arguments / options | Service | Output | Exit / errors | Confirm |
 |---|---|---|---|---|---|---|
 | `settings show` | Effective values resolved DB → env → code default | — | `settings.all_effective` + `READONLY_KEYS` | key · value · source. **Masks `proxies` and `database_url`** (B4) | **4** if the database is unreachable | no |
-| `settings set` | Override one editable key | `KEY` (Choice of `EDITABLE_KEYS`), `VALUE` | `settings.coerce_value` **(new)** → `all_effective` → `set_many` — see B3 | `results_per_search: 50 → 100` | **2** on an unknown key (Choice); **1** on `ValidationError` — prior values stand (FR-015) | no |
+| `settings set` | Override one editable key | `KEY` (Choice of `EDITABLE_KEYS`), `VALUE` | `settings.coerce_value` → `settings.patch` **(both new)** — see B3 | `results_per_search: 50 → 100` | **2** on an unknown key (Choice); **1** on `ValidationError` — prior values stand (FR-015) | no |
 
 **`settings show` does not replace `config`, and `config` is not aliased to it.**
 The two answer different questions: `config` reads the environment only and needs
@@ -236,10 +367,10 @@ no database, which is exactly what an operator wants during an outage;
 `settings show` reads the DB-resolved effective values. Both keep their own help
 text stating the distinction. This resolves the second half of B6.
 
-`settings set` performs a read-modify-write across the nine keys. The race that
-implies is acceptable here — the SRS scopes the system to a single technical
-operator — and the command echoes the before → after value so the change is
-visible in a CI log.
+`settings.patch` performs a read-modify-write across the nine keys to validate,
+even though it writes only the one. The race that implies is acceptable here —
+the SRS scopes the system to a single technical operator — and the command
+echoes the before → after value so the change is visible in a CI log.
 
 #### `runs` and `reports` — observability
 
@@ -303,7 +434,9 @@ and it means no new Pydantic models are needed anywhere.
 
 - **No secret is ever a CLI argument.** `DATABASE_URL` stays env-only; no
   `--database-url` flag is proposed. Arguments land in shell history and in `ps`
-  output.
+  output. This is the security half of the B1 decision: the database is chosen
+  by the environment before the process starts, never by a command argument. If
+  the future `--env-file` option is ever built, it names a file, never a URL.
 - **No `--show-secrets` escape hatch.** `settings show` masks `proxies` and
   `database_url` unconditionally. Anyone entitled to the raw values can read
   `.env`.
@@ -368,16 +501,22 @@ therefore exactly one thing: a session provider.
 
 @contextmanager
 def cli_session() -> Iterator[Session]:
-    """Session for one CLI command. Patched in tests, as the web patches
-    app.dependency_overrides[get_db]."""
+    """Session for one CLI command, against the process's configured database.
+
+    The database comes from settings.database_url, resolved once at import in
+    db/session.py. This is NOT an injection point for per-command connection
+    settings (B1) — it takes no parameters by design. It exists so tests can
+    patch one name, as the web patches app.dependency_overrides[get_db].
+    """
     with session_scope() as session:
         yield session
 ```
 
-One indirection, patchable at `app.cli.deps.session_scope`, and
-`db/session.py` is left untouched — changing it would put the web and the
-scheduler at risk for no gain. Commands that reach `pipeline.runner` keep owning
-their own session inside it (B1a) and are tested by patching
+One indirection, patchable at `app.cli.deps.session_scope`, and `db/session.py`
+is left untouched — changing it would put the web and the scheduler at risk for
+no gain. The provider takes no arguments, and per-command database selection is
+out of scope (B1). Commands that reach `pipeline.runner` keep owning their own
+session inside it (B1a) and are tested by patching
 `app.pipeline.runner.session_scope`.
 
 ---
@@ -432,11 +571,11 @@ additions in step 5 land before the writes in step 6 that need them.
 
 | | |
 |---|---|
-| **Objective** | Make partial profile updates and single-key setting writes expressible without duplicating business rules in the CLI (B2, B3). |
-| **Files** | *Modified, additive only:* `services/profiles.py`, `services/settings.py`. |
-| **Changes** | `profiles.update_fields(session, profile_id, **changed)`: load the profile, merge `changed` onto its current values, then delegate to the existing `_clean`/`_validate`/commit path so validation and the duplicate-name check are unchanged. `update()` itself is not touched, so the web is unaffected. `settings.coerce_value(key, raw)`: parse one string to the type `_EditableModel` declares for that key (comma-splitting for `proxies`); add both names to `__all__`. |
-| **Tests** | New cases appended to `tests/test_profiles.py` and `tests/test_settings.py`: a partial update leaves other fields intact and still rejects a duplicate name; `coerce_value` round-trips each of the nine keys and raises on garbage. **No existing test is modified.** |
-| **Risk** | **Medium** — the only step touching shared service modules. Keeping both functions strictly additive, with `update()` and `set_many()` unchanged, is what holds the web's behaviour constant. `tests/test_settings.py::test_every_editable_key_is_consumed_or_pending` must still pass. |
+| **Objective** | Give both services a PATCH counterpart, so partial profile updates and single-key setting writes are expressible without duplicating business rules in the CLI (B2, B3). |
+| **Files** | *Modified:* `services/profiles.py`, `services/settings.py`. |
+| **Changes** | `profiles.patch(session, profile_id, **changed)`: load the profile, merge `changed` onto its current values, then delegate to `update()` so `_clean`, `_validate`, the duplicate-name check and the commit are all reused. `update()` itself is not touched. `settings.coerce_value(key, raw)`: parse one string to the type `_EditableModel` declares for that key (comma-splitting for `proxies`). `settings.patch(session, changes)`: merge over `all_effective`, validate the whole set through `_EditableModel`, write only the changed keys via a private `_upsert()` extracted from `set_many`'s loop. Add the three public names to `__all__`. |
+| **Tests** | New cases appended to `tests/test_profiles.py` and `tests/test_settings.py`: a partial profile update leaves other fields intact and still rejects a duplicate name; `settings.patch` changes one key, leaves the other eight resolving as before, and rejects an unknown key; `coerce_value` round-trips each of the nine keys and raises on garbage. **No existing test is modified.** |
+| **Risk** | **Medium** — the only step touching shared service modules. Everything is additive except the `_upsert` extraction, which is a pure move of `set_many`'s upsert loop with no behaviour change; `set_many`, `update()` and `coerce_form()` keep their signatures and semantics, which is what holds the web constant. `tests/test_settings.py::test_every_editable_key_is_consumed_or_pending` must still pass. |
 
 ### Step 6 — Mutating commands and confirmation
 
@@ -469,7 +608,7 @@ listed.
 |---|---|---|---|
 | `src/app/cli/__init__.py` | **New** — empty package marker | Makes `cli/` a top-level adapter beside `web/` | Low |
 | `src/app/cli/main.py` | **New** — root Typer app, group registration, root callback for `--log-level`/`--quiet`/`--traceback`/`--version` | Single entry point; moves `basicConfig` off module scope | Low |
-| `src/app/cli/deps.py` | **New** — `cli_session()` | The CLI's `get_db`. Resolves **B1** and makes CLI tests possible | Low |
+| `src/app/cli/deps.py` | **New** — `cli_session()`, no parameters | The CLI's `get_db`. Resolves **B1** and makes CLI tests possible; not a per-command DB selector | Low |
 | `src/app/cli/errors.py` | **New** — `@handle_errors` + exit-code constants | Resolves **B5**; keeps tracebacks off the operator's screen | Low |
 | `src/app/cli/output.py` | **New** — `OutputFormat`, `emit()` | One table/JSON implementation; explicit projections decouple JSON from the ORM | Low |
 | `src/app/cli/stages.py` | **New** — the nine existing commands, moved verbatim | Preserves the compose and docs contract while emptying `__main__.py` | Medium |
@@ -481,8 +620,8 @@ listed.
 | `src/app/cli/reports.py` | **New** — `employers`, `sources` | Over `services.reports`, carrying the ADR-0008 caveat | Low |
 | `src/app/__main__.py` | **Reduce** to a two-line shim importing `cli.main:app` | `python -m app` is the container invocation path and must not change | Medium |
 | `pyproject.toml` | **Edit one line:** `job-discovery = "app.cli.main:app"` | Console script follows the module. No new dependency — `typer>=0.12` already present | Low |
-| `src/app/services/profiles.py` | **Add** `update_fields()` — additive only | Resolves **B2**. `update()` untouched, so the web is unaffected | Medium |
-| `src/app/services/settings.py` | **Add** `coerce_value()` + `__all__` entry — additive only | Resolves **B3**. `set_many()`/`coerce_form()` untouched | Medium |
+| `src/app/services/profiles.py` | **Add** `patch()` + `_FIELDS` — additive only | Resolves **B2**. `update()` untouched, so the web is unaffected | Medium |
+| `src/app/services/settings.py` | **Add** `patch()`, `coerce_value()`, `__all__` entries; **extract** `_upsert()` from `set_many` | Resolves **B3**. `set_many()`/`coerce_form()` keep identical behaviour | Medium |
 | `tests/conftest.py` | **Add** a shared SQLite `StaticPool` factory fixture | Every CLI test module needs one; existing modules keep their local fixtures and are not edited | Low |
 | `tests/test_cli_*.py` | **New** — six modules | See §7 | Low |
 | `tests/test_profiles.py`, `tests/test_settings.py` | **Append** cases for the two new service functions | Service behaviour is proven at the service level, not only through the CLI | Low |
@@ -493,8 +632,9 @@ listed.
 ### 6.1 Required
 
 The eleven new `cli/` modules, the `__main__.py` shim, the `pyproject.toml`
-entry-point line, the two additive service functions, the conftest fixture, the
-CLI tests, and the `development-guide.md` §6 table.
+entry-point line, the three new service functions (`profiles.patch`,
+`settings.patch`, `settings.coerce_value`) and the `_upsert` extraction, the
+conftest fixture, the CLI tests, and the `development-guide.md` §6 table.
 
 ### 6.2 Optional refactoring, explicitly off the critical path
 
@@ -504,18 +644,25 @@ CLI tests, and the `development-guide.md` §6 table.
 - Correcting `normalise`'s `run_id` annotation to `int | None`.
 - The root `health` and `--version` commands, and the compose healthcheck.
 - Masking `proxies` in the web settings template.
+- A root `--env-file` / `--db-profile` option for selecting the database before
+  `app.db.session` is imported — the B1 future-work item, subject to the two
+  constraints recorded there.
 
 ### 6.3 Backward compatibility
 
 No route, response, or redirect changes. No Pydantic model changes —
 `SearchSpec`, `Settings`, `RunConfig`, and `_EditableModel` are untouched. No
-change to `update()`, `set_many()`, `coerce_form()`, or any other existing
-service function; the two additions are new names. No `db/models.py` edit, no
-migration, no `alembic` run. Configuration semantics are unchanged: the CLI reads
-the same `Settings` singleton and the same DB → env → default order, and
-introduces no configuration system of its own. All 224 existing tests are
-expected to pass unmodified; the only edits to existing test files are appended
-cases.
+behavioural change to `update()`, `set_many()`, `coerce_form()`, or any other
+existing service function; the three additions are new names. The one edit to an
+existing function body is mechanical: `set_many`'s upsert loop moves into a
+private `_upsert()` that `settings.patch` also calls, leaving `set_many`'s
+signature, validation, commit, and log line exactly as they are. No
+`db/models.py` edit, no migration, no `alembic` run. Configuration semantics are
+unchanged: the CLI reads the same `Settings` singleton, resolves its database
+from the same `settings.database_url` as the web and the scheduler (B1), and
+follows the same DB → env → default order, introducing no configuration system
+of its own. All 224 existing tests are expected to pass unmodified; the only
+edits to existing test files are appended cases.
 
 ---
 
@@ -524,7 +671,9 @@ cases.
 `typer.testing.CliRunner`, following the house pattern: in-memory SQLite with
 `StaticPool`, seeded per module, no Docker. The CLI equivalent of
 `app.dependency_overrides[get_db]` is monkeypatching
-`app.cli.deps.session_scope` to the test factory.
+`app.cli.deps.session_scope` to the test factory. Monkeypatching is the *only*
+way a test redirects the database — no command accepts a connection argument
+(B1), so a test that forgets to patch runs against `settings.database_url`.
 
 **Two seams, not one.** Commands that call services go through `cli.deps`.
 Commands that call `pipeline.runner` — `run-all` and `profiles run` — open their
@@ -544,7 +693,7 @@ lets the tests assert log output never contaminates JSON.
 | `test_cli_postings.py` | `list` under each filter and its pager footer; `get` success and missing → 3; `set-status` single and bulk; bad status → 2; bulk confirmation declined leaves status unchanged; `--yes` proceeds unprompted; `--output json` parses and carries the expected keys. |
 | `test_cli_employers.py` | `blacklisted` listing; `blacklist` rejects the employer's postings and reports the count; missing id → 3; `unblacklist` does **not** reinstate previously rejected postings (FR-011); `resweep` is idempotent on a second call; confirmation behaviour. |
 | `test_cli_profiles.py` | `create` success and each `ProfileError` path → 1; non-integer `--hour` → 2; **`update` leaves unspecified fields untouched** — the direct regression test for B2; `enable`/`disable`; `delete` confirmation and `--yes`; `run` with `collect_all` stubbed. |
-| `test_cli_settings.py` | `show` resolves DB over env; **output contains neither the proxy credential nor the database password** — the regression test for B4; `set` changes one key and **leaves the other eight untouched** — the regression test for B3; invalid value → 1 with prior values intact; unknown key → 2. |
+| `test_cli_settings.py` | `show` resolves DB over env; **output contains neither the proxy credential nor the database password** — the regression test for B4; `set` changes one key and **leaves the other eight untouched, still resolving from env rather than pinned as overrides** — the regression test for B3; invalid value → 1 with prior values intact; unknown key → 2. |
 | `test_cli_reports.py` | Both report commands against the seeded corpus; **the ADR-0008 sampling-bias caveat appears in table output and in the JSON payload**, mirroring what `test_web_reports.py` asserts for the templates. |
 
 ### 7.1 Required coverage
@@ -572,10 +721,11 @@ CLI tests assert wiring, presentation, and exit codes.
 |---|---|
 | **Framework** | Typer — already a dependency at 0.27.0 on Click 8.4.2, already the declared CLI in `tech-stack.md`. No framework is added. |
 | **Architecture** | CLI as a first-class application adapter: `app/cli/` beside `app/web/`, both over the same services. Nothing imports from `cli/`. |
-| **Business logic** | Shared application services in `app/services/`, unchanged except for two additive functions. Commands parse, resolve a session, call one service, format, return a code. |
+| **Business logic** | Shared application services in `app/services/`, unchanged except for three new functions — `profiles.patch`, `settings.patch`, `settings.coerce_value`. Merging partial input is a service concern, not an adapter one (B2, B3). Commands parse, resolve a session, call one service, format, return a code. |
 | **HTTP dependency** | None. The CLI never calls the FastAPI app; `uvicorn` appears only inside the pre-existing `web` command, which starts the server rather than calling it. |
 | **Validation** | Typer type hints and `Choice` for CLI input, exiting 2 via Click. Business rules stay in `services/` — `_validate`, `_EditableModel`, `Posting.transition_to` — and surface as exit 1. |
-| **Dependency injection** | No container and no application factory. Services take a `Session`; the composition root is the single `cli_session()` provider, mirroring `web/deps.py::get_db`. |
+| **Dependency injection** | No container and no application factory. Services take a `Session`; the composition root is the single parameterless `cli_session()` provider, mirroring `web/deps.py::get_db`. |
+| **Database selection** | Process-wide, from `settings.database_url` in the environment, fixed before the process starts — as for the web and the scheduler. Per-command database configuration is **not supported** and no command accepts a connection argument (B1). A root `--env-file` option is recorded as future work in §6.2. |
 | **Configuration** | The existing system, unchanged: `app.config.settings` plus the ADR-0005 DB → env → default order. No CLI-specific configuration, no secrets as arguments. |
 | **Output** | Human-readable tables on stdout by default; `--output json` where automation benefits, projected from explicit dicts. Logging stays on stderr. |
 | **Testing** | `typer.testing.CliRunner` over in-memory SQLite with `StaticPool`, matching the existing suite. Existing application tests are extended, never rewritten. |
