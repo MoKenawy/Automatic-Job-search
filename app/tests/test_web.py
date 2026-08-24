@@ -38,39 +38,57 @@ def client():
     factory = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 
     with factory() as seed:
-        run = Run(status="success", collected_count=53, deduplicated_count=36,
-                  counts_by_site={"indeed": 30, "linkedin": 23})
+        run = Run(
+            status="success",
+            collected_count=53,
+            deduplicated_count=36,
+            counts_by_site={"indeed": 30, "linkedin": 23},
+        )
         employer = Employer(name="PwC", normalised_name="pwc")
         seed.add_all([run, employer])
         seed.flush()
 
-        seed.add_all([
-            Posting(
-                fingerprint="a" * 64, employer_id=employer.id,
-                title="ETIC, Data Engineer, Senior Associate",
-                normalised_title="etic data engineer senior associate",
-                location_raw="القاهرة, C, EG", country_code="EG",
-                sources={"indeed": {"url": "https://eg.indeed.com/x"},
-                         "linkedin": {"url": "https://linkedin.com/y"}},
-                score=78, rationale="Strong overlap", matched_skills=["SQL"],
-                gaps=["Scala"], published=True, status=STATUS_NEW,
-            ),
-            Posting(
-                fingerprint="b" * 64, employer_id=employer.id,
-                title="Junior Data Developer",
-                normalised_title="junior data developer",
-                sources={"linkedin": {"url": "https://linkedin.com/z"}},
-                status=STATUS_REJECTED,
-            ),
-            Posting(
-                fingerprint="c" * 64, employer_id=employer.id,
-                title="Remote Analytics Engineer",
-                normalised_title="remote analytics engineer",
-                location_raw="Egypt", country_code="EG", is_remote=True,
-                sources={"indeed": {"url": "https://indeed.com/w"}},
-                status=STATUS_NEW,
-            ),
-        ])
+        seed.add_all(
+            [
+                Posting(
+                    fingerprint="a" * 64,
+                    employer_id=employer.id,
+                    title="ETIC, Data Engineer, Senior Associate",
+                    normalised_title="etic data engineer senior associate",
+                    location_raw="القاهرة, C, EG",
+                    country_code="EG",
+                    sources={
+                        "indeed": {"url": "https://eg.indeed.com/x"},
+                        "linkedin": {"url": "https://linkedin.com/y"},
+                    },
+                    score=78,
+                    rationale="Strong overlap",
+                    matched_skills=["SQL"],
+                    gaps=["Scala"],
+                    published=True,
+                    status=STATUS_NEW,
+                ),
+                Posting(
+                    fingerprint="b" * 64,
+                    employer_id=employer.id,
+                    title="Junior Data Developer",
+                    normalised_title="junior data developer",
+                    sources={"linkedin": {"url": "https://linkedin.com/z"}},
+                    status=STATUS_REJECTED,
+                ),
+                Posting(
+                    fingerprint="c" * 64,
+                    employer_id=employer.id,
+                    title="Remote Analytics Engineer",
+                    normalised_title="remote analytics engineer",
+                    location_raw="Egypt",
+                    country_code="EG",
+                    is_remote=True,
+                    sources={"indeed": {"url": "https://indeed.com/w"}},
+                    status=STATUS_NEW,
+                ),
+            ]
+        )
         seed.commit()
 
     def override():
@@ -193,9 +211,7 @@ def test_status_transition_via_htmx(client):
 
 def test_status_transition_without_htmx_redirects(client):
     """Progressive enhancement: the plain form must work if HTMX never loads."""
-    r = client.post(
-        "/postings/1/status", data={"status": STATUS_SHORTLIST}, follow_redirects=False
-    )
+    r = client.post("/postings/1/status", data={"status": STATUS_SHORTLIST}, follow_redirects=False)
     assert r.status_code == 303
     assert r.headers["location"] == "/postings/1"
 

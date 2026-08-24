@@ -56,12 +56,7 @@ def set_status_bulk(session: Session, posting_ids: list[int], status: str) -> in
         raise UnknownStatusError(status)
 
     now = datetime.now(UTC)
-    stmt = (
-        select(Posting)
-        .where(Posting.id.in_(posting_ids))
-        .order_by(Posting.id)
-        .with_for_update()
-    )
+    stmt = select(Posting).where(Posting.id.in_(posting_ids)).order_by(Posting.id).with_for_update()
     updated = 0
     for posting in session.scalars(stmt).all():
         posting.transition_to(status, now=now, actor="operator")

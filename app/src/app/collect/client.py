@@ -120,6 +120,8 @@ def collect_all(specs: list[SearchSpec] | None, config: RunConfig) -> Collection
 
     log.info(
         "collection complete: %d records, by_site=%s, errors=%s",
-        merged.total, merged.counts_by_site, merged.errors or "none",
+        merged.total,
+        merged.counts_by_site,
+        merged.errors or "none",
     )
     return merged

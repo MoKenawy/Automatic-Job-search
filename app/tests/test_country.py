@@ -12,9 +12,9 @@ from app.normalise.country import NAME_TO_ISO2, parse_country
 @pytest.mark.parametrize(
     "location_raw",
     [
-        "القاهرة, C, EG",       # OBSERVED — Indeed, city localised to Arabic
-        "Cairo, Egypt",          # OBSERVED — LinkedIn
-        "Cairo, Cairo, Egypt",   # OBSERVED — LinkedIn, governorate repeated
+        "القاهرة, C, EG",  # OBSERVED — Indeed, city localised to Arabic
+        "Cairo, Egypt",  # OBSERVED — LinkedIn
+        "Cairo, Cairo, Egypt",  # OBSERVED — LinkedIn, governorate repeated
     ],
 )
 def test_observed_egyptian_forms_all_resolve_to_eg(location_raw):
