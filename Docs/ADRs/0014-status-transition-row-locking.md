@@ -1,6 +1,6 @@
 # ADR-0014: `SELECT ... FOR UPDATE` for concurrent status transitions
 
-* Status: under review
+* Status: Accepted, partly superseded by [ADR-0015](0015-employer-level-suppression.md)
 * Deciders: Mohammed
 * Date: 29 July 2026
 
@@ -9,6 +9,25 @@ transactional history table for triage transitions; this record captures the
 concurrency analysis behind the locking (and, on revision, the
 transaction-boundary fix) that accompanied it —
 `app/src/app/services/triage.py`, `app/src/app/services/blacklist.py`.
+
+**Superseded by ADR-0015.** ADR-0015 removes the materialised suppression
+copy this ADR's case 2 was written to defend. What survives:
+
+- `SELECT ... FOR UPDATE` in `triage.set_status` — the single-operator
+  duplicate-request race (double-click, two tabs) is orthogonal to
+  suppression and remains real.
+- `FOR UPDATE ... ORDER BY id` in `triage.set_status_bulk`.
+
+What is moot: ADR-0014's case 2 in full — the suppression sweep's
+linearizability, the reader-visibility gap, and the single-transaction fix
+for `blacklist()`. **This half was superseded before it was ever
+committed**: the working tree held an uncommitted fix implementing it
+(extracting `_reject_employer_postings`, collapsing `blacklist()`'s two
+commits into one), and ADR-0015 made it unnecessary before it landed. A
+reader searching `main`'s history for that implementation will find none —
+not because it was reverted, but because it was never shipped. See
+[ADR-0015 research R6](../../specs/002-employer-suppression-derived/research.md#r6--what-to-do-with-the-uncommitted-adr-0014-sweep-atomicity-work)
+for the full account.
 
 ## Context and Problem Statement
 

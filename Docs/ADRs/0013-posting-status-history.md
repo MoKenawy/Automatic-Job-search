@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Under review |
+| **Status** | Accepted |
 | **Date** | 29 July 2026 |
 | **Decision maker** | Mohammed |
 | **Related** | [ADR-0012](0012-retrieval-date-column-split.md); [db/models.py](../../app/src/app/db/models.py); [services/triage.py](../../app/src/app/services/triage.py); [services/blacklist.py](../../app/src/app/services/blacklist.py); migration `64c8f2ca9cfe` |
