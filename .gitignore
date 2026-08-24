@@ -1,0 +1,71 @@
+# Repository-wide ignore rules.
+#
+# This file is tracked deliberately. A previous revision listed `.gitignore`
+# among its own patterns, which meant the file never entered the repository and
+# every clone started with no rules at all — the personal data and scan output
+# below were then one `git add -A` away from being published. See SECURITY.md.
+#
+# `app/.gitignore` holds the rules that are specific to the Python project;
+# keep application concerns there and repository concerns here.
+
+# --- Personal data ----------------------------------------------------------
+# The operator's CV, the collected postings, and any exported extract of them.
+# These are personal data under the operator's control (see NOTICE.md) and must
+# never be committed, on any branch.
+data/
+*.cv.txt
+cv.txt
+
+# Environment files carry the local database credentials and paths. Only the
+# template is tracked.
+.env
+.env.*
+!.env.example
+
+# --- Raw AI transcripts -----------------------------------------------------
+# Docs/AI-LOGS holds unredacted model conversation logs kept for local
+# provenance. The whole directory is excluded, summaries included: a summary
+# written alongside a transcript has not been reviewed for disclosure. To
+# publish one of those notes, move it into Docs/design/ as reviewed prose.
+AI-LOGS/
+*.jsonl
+
+# --- Secret-scanning output -------------------------------------------------
+# TruffleHog writes findings, including the matched secret values, to disk.
+# Committing a scan report publishes exactly what the scan exists to catch.
+trufflehog-out.json
+trufflehog-*.json
+.trufflehog-report/
+
+# --- Local agent and scaffolding tooling ------------------------------------
+# Not shipped: `.claude/skills/` vendors third-party skill copies, and CLAUDE.md
+# plus `.specify/` describe one maintainer's local workflow. The conventions
+# they encode are published in CONTRIBUTING.md instead, which is the file
+# contributors are expected to read.
+.claude/
+CLAUDE.md
+.specify/
+
+# --- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# --- Tooling caches ---------------------------------------------------------
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Scratch output ---------------------------------------------------------
+*.csv
+
+# --- Editors and operating systems ------------------------------------------
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
