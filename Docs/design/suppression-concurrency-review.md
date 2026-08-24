@@ -394,14 +394,18 @@ after every collection to catch up.
 
 ## 8. Next steps
 
-- Commit the §4 working-tree fixes — the `set_status` / `set_status_bulk`
+- [x] Commit the §4 working-tree fixes — the `set_status` / `set_status_bulk`
   locking and `actor="operator"` threading survive ADR-0015 unchanged.
-- Implement ADR-0015: delete `pipeline/suppress_stage.py`, reduce `blacklist()`
+- [x] Implement ADR-0015: delete `pipeline/suppress_stage.py`, reduce `blacklist()`
   and `lift()` to flag flips, remove `_reject_employer_postings` /
   `reject_employer_postings`, and route every read path through one filtered seam.
-- Update `specs/001-ui-self-service/data-model.md` and FR-011 in the SRS to
+- [x] Update `specs/001-ui-self-service/data-model.md` and FR-011 in the SRS to
   match — the reversal must be recorded, not left as drift.
-- Draft `System-modeling.md` from §6, revised for the derived model: the
+- [x] Draft `System-modeling.md` from §6, revised for the derived model: the
   liveness property ("eventually suppressed") is replaced by a safety property
   ("never visible"), since nothing has to converge any more.
-- Move ADR-0013 to *Accepted*; mark ADR-0014 *partly superseded by ADR-0015*.
+- [x] Move ADR-0013 to *Accepted*; mark ADR-0014 *partly superseded by ADR-0015*.
+
+All items complete — see
+[002-employer-suppression-derived](../../specs/002-employer-suppression-derived/spec.md)
+for the implemented feature.

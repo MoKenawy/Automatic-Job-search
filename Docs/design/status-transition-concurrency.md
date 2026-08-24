@@ -5,8 +5,14 @@
 |---|---|
 | **Version** | 1.0 |
 | **Date** | 11 August 2026 |
-| **Status** | Draft |
+| **Status** | Draft — **superseded by [ADR-0015](../ADRs/0015-employer-level-suppression.md)** |
 | **Related** | [ADR-0012](../ADRs/0012-retrieval-date-column-split.md), [ADR-0013](../ADRs/0013-posting-status-history.md), [ADR-0014](../ADRs/0014-status-transition-row-locking.md), [db/models.py](../../app/src/app/db/models.py), [services/triage.py](../../app/src/app/services/triage.py), [services/blacklist.py](../../app/src/app/services/blacklist.py) |
+
+> **Superseded.** ADR-0015 removes the materialised suppression copy this
+> document's sweep-vs-triage sequences analyse — the suppression sweep no
+> longer exists, so the races it describes no longer occur. Left unedited
+> below as the record of *why* the sweep's atomicity mattered before it was
+> removed; do not read the sequence diagrams as current behaviour.
 
 ---
 

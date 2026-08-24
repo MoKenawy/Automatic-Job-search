@@ -68,10 +68,10 @@ one is committed; see research R6.
 > `main`** — there is no `_reject_employer_postings`, and `blacklist()` still
 > commits twice.
 
-- [ ] T001 Commit the row-locking and `actor="operator"` changes in `app/src/app/services/triage.py` (`FOR UPDATE`, `ORDER BY id`) — the only part of the ADR-0014 work that survives ADR-0015. The double-click / two-tabs race it guards is orthogonal to suppression and stays real
-- [ ] T002 [P] Set status to *Accepted* in `Docs/ADRs/0013-posting-status-history.md`
-- [ ] T003 [P] Set status to *Accepted, partly superseded by ADR-0015* in `Docs/ADRs/0014-status-transition-row-locking.md`, copying the surviving/moot split from ADR-0015 §Relationship into its header. **State explicitly that case 2 was superseded before it was committed** — its single-transaction `blacklist()` fix has no implementation in `main`'s history, and a reader who searches for one needs to know none exists rather than assume they have missed it (research R6)
-- [ ] T004 Verify baseline: `uv run pytest` green, behaviour unchanged
+- [X] T001 Commit the row-locking and `actor="operator"` changes in `app/src/app/services/triage.py` (`FOR UPDATE`, `ORDER BY id`) — the only part of the ADR-0014 work that survives ADR-0015. The double-click / two-tabs race it guards is orthogonal to suppression and stays real
+- [X] T002 [P] Set status to *Accepted* in `Docs/ADRs/0013-posting-status-history.md`
+- [X] T003 [P] Set status to *Accepted, partly superseded by ADR-0015* in `Docs/ADRs/0014-status-transition-row-locking.md`, copying the surviving/moot split from ADR-0015 §Relationship into its header. **State explicitly that case 2 was superseded before it was committed** — its single-transaction `blacklist()` fix has no implementation in `main`'s history, and a reader who searches for one needs to know none exists rather than assume they have missed it (research R6)
+- [X] T004 Verify baseline: `uv run pytest` green, behaviour unchanged
 
 **Checkpoint**: Commits 1–2 of the sequence at the foot of this file are in place.
 
@@ -83,9 +83,9 @@ one is committed; see research R6.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T005 Create `app/tests/test_visibility.py` with the three cases from [contracts/visibility-seam.md](contracts/visibility-seam.md) — normal employer's posting selected; suppressed employer's posting rejected; **suppressed employer's posting whose `status` is still `new`** rejected. Run it and confirm the third case FAILS — it is the assertion this whole feature exists to make true, and it must be seen failing before the seam exists
-- [ ] T006 Create `app/src/app/db/visibility.py` with `not_suppressed() -> ColumnElement[bool]` as a correlated `NOT EXISTS` over `Employer`, per [contracts/visibility-seam.md](contracts/visibility-seam.md). The module docstring carries the FR-010 obligation — it is the deliverable, not decoration
-- [ ] T007 Verify `uv run pytest tests/test_visibility.py` green
+- [X] T005 Create `app/tests/test_visibility.py` with the three cases from [contracts/visibility-seam.md](contracts/visibility-seam.md) — normal employer's posting selected; suppressed employer's posting rejected; **suppressed employer's posting whose `status` is still `new`** rejected. Run it and confirm the third case FAILS — it is the assertion this whole feature exists to make true, and it must be seen failing before the seam exists
+- [X] T006 Create `app/src/app/db/visibility.py` with `not_suppressed() -> ColumnElement[bool]` as a correlated `NOT EXISTS` over `Employer`, per [contracts/visibility-seam.md](contracts/visibility-seam.md). The module docstring carries the FR-010 obligation — it is the deliverable, not decoration
+- [X] T007 Verify `uv run pytest tests/test_visibility.py` green
 
 **Checkpoint**: The seam exists and is proven in isolation. Nothing uses it yet.
 
@@ -114,23 +114,23 @@ rows shown, and the rows are still on disk.
 > against a `not_suppressed()` that returned `false` and hid the entire corpus —
 > the seam would be catastrophically wrong and the suite would be green.
 
-- [ ] T008 [US1] Test in `app/tests/test_blacklist.py`: a suppressed employer's `status='new'` posting is absent from `queries.list_postings` rows **and** from `Page.total`, while a normal employer's posting is present in both. Asserted together, because a total that disagrees with the page makes the pager claim results the operator cannot reach
-- [ ] T009 [US1] Test in `app/tests/test_blacklist.py`: a `published=True` posting of a suppressed employer is absent from `list_postings(published_only=True)`, while a normal employer's published posting is present — this is FR-009's enforcement now
-- [ ] T010 [US1] Test in `app/tests/test_blacklist.py`: a suppressed employer's postings are excluded from `queries.totals` `postings`, `published`, `scored`, and every `by_status` bucket, while a normal employer's postings are still counted in each
-- [ ] T011 [US1] Test in `app/tests/test_blacklist.py`: a blacklisted employer is excluded from `queries.totals().employers`, while a non-blacklisted employer is still counted
-- [ ] T012 [US1] Test in `app/tests/test_blacklist.py`: a country whose only posting belongs to a suppressed employer is absent from `queries.facets().countries`, a country with a normal employer's posting is still offered, and `unknown_country` is False when only suppressed postings lack a country
-- [ ] T013 [US1] Test in `app/tests/test_blacklist.py`: after blacklisting, the employer's postings are absent from the list **but still present in the `postings` table** (FR-014, design D9). This is the direct successor to `test_postings_are_preserved_not_deleted`, which T023 removes — invisibility is not retention, and without this task the suite would accept a future change that deleted suppressed postings outright
+- [X] T008 [US1] Test in `app/tests/test_blacklist.py`: a suppressed employer's `status='new'` posting is absent from `queries.list_postings` rows **and** from `Page.total`, while a normal employer's posting is present in both. Asserted together, because a total that disagrees with the page makes the pager claim results the operator cannot reach
+- [X] T009 [US1] Test in `app/tests/test_blacklist.py`: a `published=True` posting of a suppressed employer is absent from `list_postings(published_only=True)`, while a normal employer's published posting is present — this is FR-009's enforcement now
+- [X] T010 [US1] Test in `app/tests/test_blacklist.py`: a suppressed employer's postings are excluded from `queries.totals` `postings`, `published`, `scored`, and every `by_status` bucket, while a normal employer's postings are still counted in each
+- [X] T011 [US1] Test in `app/tests/test_blacklist.py`: a blacklisted employer is excluded from `queries.totals().employers`, while a non-blacklisted employer is still counted
+- [X] T012 [US1] Test in `app/tests/test_blacklist.py`: a country whose only posting belongs to a suppressed employer is absent from `queries.facets().countries`, a country with a normal employer's posting is still offered, and `unknown_country` is False when only suppressed postings lack a country
+- [X] T013 [US1] Test in `app/tests/test_blacklist.py`: after blacklisting, the employer's postings are absent from the list **but still present in the `postings` table** (FR-014, design D9). This is the direct successor to `test_postings_are_preserved_not_deleted`, which T023 removes — invisibility is not retention, and without this task the suite would accept a future change that deleted suppressed postings outright
 
 ### Implementation for User Story 1
 
 > All in `app/src/app/services/queries.py` — sequential, no `[P]`. Verdicts and
 > line references: [contracts/read-path-inventory.md](contracts/read-path-inventory.md).
 
-- [ ] T014 [US1] Apply `not_suppressed()` to both `list_postings` statements — the count (`queries.py:184-189`) and the page (`queries.py:193-200`). Both, or the pager lies
-- [ ] T015 [US1] Apply `not_suppressed()` to all four posting figures in `queries.totals` — `postings`, `published`, `scored`, and the `by_status` grouping (`queries.py:37-50`)
-- [ ] T016 [US1] Apply `Employer.suppressed.is_(False)` — **not** `not_suppressed()` — to the employer count in `queries.totals` (`queries.py:52`); the predicate is over `postings` and does not apply to a count of employers
-- [ ] T017 [US1] Apply `not_suppressed()` to both `queries.facets` statements — the country `distinct` and the unknown-country count (`queries.py:225-235`)
-- [ ] T018 [US1] Run `uv run pytest` — green
+- [X] T014 [US1] Apply `not_suppressed()` to both `list_postings` statements — the count (`queries.py:184-189`) and the page (`queries.py:193-200`). Both, or the pager lies
+- [X] T015 [US1] Apply `not_suppressed()` to all four posting figures in `queries.totals` — `postings`, `published`, `scored`, and the `by_status` grouping (`queries.py:37-50`)
+- [X] T016 [US1] Apply `Employer.suppressed.is_(False)` — **not** `not_suppressed()` — to the employer count in `queries.totals` (`queries.py:52`); the predicate is over `postings` and does not apply to a count of employers
+- [X] T017 [US1] Apply `not_suppressed()` to both `queries.facets` statements — the country `distinct` and the unknown-country count (`queries.py:225-235`)
+- [X] T018 [US1] Run `uv run pytest` — green
 
 **Checkpoint**: US1 complete and shippable. Suppression is now enforced **twice**
 — stamped *and* filtered. This is commit 3 (`feat(db): add the suppression read
@@ -152,10 +152,10 @@ The page loads, shows the blacklist state, offers removal.
 > adoptions in one commit and exemptions in another is, in between, an inventory
 > with unexplained gaps.
 
-- [ ] T019 [US4] Test in `app/tests/test_blacklist.py`: the detail route for a posting whose employer is suppressed returns 200 and renders the blacklist banner and the "Remove from blacklist" control
-- [ ] T020 [US4] Comment the deliberate opt-out at `queries.get_posting` (`app/src/app/services/queries.py:261`) citing ADR-0015 and FR-015 — this page is the operator's route back out, so filtering it would make lifting unreachable from the posting that prompted it
-- [ ] T021 [US4] Comment the deliberate opt-out at `reports.source_overlap` (`app/src/app/services/reports.py:193`) citing ADR-0015 and FR-017 — it measures what the collector returned, so filtering would understate a board's coverage
-- [ ] T022 [US4] Reword the `reports.employer_activity` docstring (`app/src/app/services/reports.py:83-112`) — its "their postings are auto-rejected (D9)" becomes false. Behaviour and the `include_suppressed` opt-out are unchanged; only the claim is wrong
+- [X] T019 [US4] Test in `app/tests/test_blacklist.py`: the detail route for a posting whose employer is suppressed returns 200 and renders the blacklist banner and the "Remove from blacklist" control
+- [X] T020 [US4] Comment the deliberate opt-out at `queries.get_posting` (`app/src/app/services/queries.py:261`) citing ADR-0015 and FR-015 — this page is the operator's route back out, so filtering it would make lifting unreachable from the posting that prompted it
+- [X] T021 [US4] Comment the deliberate opt-out at `reports.source_overlap` (`app/src/app/services/reports.py:193`) citing ADR-0015 and FR-017 — it measures what the collector returned, so filtering would understate a board's coverage
+- [X] T022 [US4] Reword the `reports.employer_activity` docstring (`app/src/app/services/reports.py:83-112`) — its "their postings are auto-rejected (D9)" becomes false. Behaviour and the `include_suppressed` opt-out are unchanged; only the claim is wrong
 
 **Checkpoint**: [contracts/read-path-inventory.md](contracts/read-path-inventory.md)
 is discharged for all inventoried paths — SC-005 satisfied.
@@ -170,22 +170,22 @@ posting. **Blocking prerequisite for US2 and US3.**
 **⚠️ Must not land before Phase 3.** Removing the stamp while the filter is
 absent is the one sequence that exposes blacklisted employers.
 
-- [ ] T023 **First in this phase, before any symbol it imports is deleted.** In `app/tests/test_blacklist.py`: drop the `run_suppress` and `reject_employer_postings` imports (`:24-25`), delete the four `run_suppress` tests (`:65-96`) and `test_suppress_employer_targeted` (`:177`), and rewrite the module docstring. These are module-level imports of symbols T024 and T028 delete — run in the other order and the file fails to **collect**, which is not the same as failing: a collection error silently takes every other test in the file with it, and Phase 5's checkpoint then cannot distinguish expected failures from real defects. Successors: T008–T012 for the invisibility assertions, **T013 for the retention assertion**
-- [ ] T024 Delete `app/src/app/pipeline/suppress_stage.py`
-- [ ] T025 Drop the `run_suppress` import and its `__all__` entry from `app/src/app/pipeline/__init__.py`
-- [ ] T026 Drop the import, the `run_suppress(session)` call, and the `"suppressed"` result key from `_run` in `app/src/app/pipeline/runner.py`
-- [ ] T027 Drop `suppressed={result['suppressed']}` from the `run-all` echo in `app/src/app/__main__.py:81`, which would otherwise `KeyError` after T026
-- [ ] T028 Rewrite `app/src/app/services/blacklist.py` — **as it stands on `main`**, since the ADR-0014 atomicity work was stashed rather than committed (research R6). Delete `reject_employer_postings` (`:24-38`) and reduce `blacklist()` to a flag flip returning `None`. **Four pieces of prose must go with the code, or they survive as false claims** — the same class of drift T030 sweeps in `models.py`, and easier to miss here because the function around them is being deleted rather than edited:
+- [X] T023 **First in this phase, before any symbol it imports is deleted.** In `app/tests/test_blacklist.py`: drop the `run_suppress` and `reject_employer_postings` imports (`:24-25`), delete the four `run_suppress` tests (`:65-96`) and `test_suppress_employer_targeted` (`:177`), and rewrite the module docstring. These are module-level imports of symbols T024 and T028 delete — run in the other order and the file fails to **collect**, which is not the same as failing: a collection error silently takes every other test in the file with it, and Phase 5's checkpoint then cannot distinguish expected failures from real defects. Successors: T008–T012 for the invisibility assertions, **T013 for the retention assertion**
+- [X] T024 Delete `app/src/app/pipeline/suppress_stage.py`
+- [X] T025 Drop the `run_suppress` import and its `__all__` entry from `app/src/app/pipeline/__init__.py`
+- [X] T026 Drop the import, the `run_suppress(session)` call, and the `"suppressed"` result key from `_run` in `app/src/app/pipeline/runner.py`
+- [X] T027 Drop `suppressed={result['suppressed']}` from the `run-all` echo in `app/src/app/__main__.py:81`, which would otherwise `KeyError` after T026
+- [X] T028 Rewrite `app/src/app/services/blacklist.py` — **as it stands on `main`**, since the ADR-0014 atomicity work was stashed rather than committed (research R6). Delete `reject_employer_postings` (`:24-38`) and reduce `blacklist()` to a flag flip returning `None`. **Four pieces of prose must go with the code, or they survive as false claims** — the same class of drift T030 sweeps in `models.py`, and easier to miss here because the function around them is being deleted rather than edited:
   - the module docstring (`:1-7`), which points at `suppress_stage.run_suppress` as "the bulk sweep" and describes blacklisting's "immediate sweep"
   - `blacklist()`'s docstring (`:42-46`) — *"immediately reject their postings"*, *"Returns the number of postings newly rejected"*. Nothing is rejected and the return becomes `None`
   - **`lift()`'s docstring (`:56-61`)** — *"Future postings are no longer auto-rejected; previously rejected postings are NOT reinstated (US3, FR-011)"*. **Both clauses invert.** Nothing was auto-rejected, and postings **are** reinstated with their prior status. This is the service-layer twin of the `Employer.lift_blacklist` docstring T030 fixes, and it is the one a caller actually reads. Reword against spec FR-012
   - the `log.info("suppression: rejected %d posting(s)…")` call — nothing is rejected
 
   Ruff (T042) will catch the imports the deletion orphans (`datetime`, `UTC`, `select`, `STATUS_REJECTED`, `Posting`); it will not catch any of the above
-- [ ] T029 In `app/src/app/db/models.py`: delete `Posting.reject_for_suppression` (`:394-403`) and make `Posting.create` (`:329`) always birth `STATUS_NEW`, dropping the born-Rejected rationale from its docstring
-- [ ] T030 Comment sweep in `app/src/app/db/models.py` — five sites now assert something false: `STATUS_REJECTED`'s "doubles as the D9 suppression signal" (`:46`); `Posting.status`'s "suppression-driven rejection" note (`:252-256`); `transition_to`'s suppression-sweep parenthetical (`:369`); `Employer.lift_blacklist`'s FR-011 docstring (`:116-119`, now **inverted** — postings *do* return); `PostingStatusHistory.actor`'s "'system' (suppression sweep)" (`:436`). `'system'` stays a valid actor value for future automated paths; it simply has no writer today
-- [ ] T031 Reword `_ordering`'s docstring in `app/src/app/services/queries.py:104-122` — no posting is born Rejected any more, so the NULL `status_changed_at` case survives only for rows predating this change. Reword rather than delete: the `nullslast()` is still load-bearing for them
-- [ ] T032 Update both route docstrings in `app/src/app/web/routes/employers.py:30,49` — both currently promise rejection and non-reinstatement. The `blacklist()` return value was already ignored, so no call-site change is needed
+- [X] T029 In `app/src/app/db/models.py`: delete `Posting.reject_for_suppression` (`:394-403`) and make `Posting.create` (`:329`) always birth `STATUS_NEW`, dropping the born-Rejected rationale from its docstring
+- [X] T030 Comment sweep in `app/src/app/db/models.py` — five sites now assert something false: `STATUS_REJECTED`'s "doubles as the D9 suppression signal" (`:46`); `Posting.status`'s "suppression-driven rejection" note (`:252-256`); `transition_to`'s suppression-sweep parenthetical (`:369`); `Employer.lift_blacklist`'s FR-011 docstring (`:116-119`, now **inverted** — postings *do* return); `PostingStatusHistory.actor`'s "'system' (suppression sweep)" (`:436`). `'system'` stays a valid actor value for future automated paths; it simply has no writer today
+- [X] T031 Reword `_ordering`'s docstring in `app/src/app/services/queries.py:104-122` — no posting is born Rejected any more, so the NULL `status_changed_at` case survives only for rows predating this change. Reword rather than delete: the `nullslast()` is still load-bearing for them
+- [X] T032 Update both route docstrings in `app/src/app/web/routes/employers.py:30,49` — both currently promise rejection and non-reinstatement. The `blacklist()` return value was already ignored, so no call-site change is needed
 
 **Checkpoint**: `uv run pytest` **fails here by design** — the failures are the
 tests asserting the old mechanism as behaviour. Anything failing that is *not* in
@@ -204,11 +204,11 @@ having run.
 confirm the posting is `new`, invisible through the seam, and that no
 system-authored history row was written.
 
-- [ ] T033 [US2] Invert `test_new_posting_from_blacklisted_employer_is_born_rejected` at `app/tests/test_blacklist.py:102` — the posting is born `new` and is invisible through the seam **with no pass having run**. This is the test that proves ADR-0015 §Decision 1: "covers postings not yet seen", satisfied structurally
-- [ ] T034 [P] [US2] Invert the born-rejected assertion at `app/tests/test_models.py:52` to born-`new`
-- [ ] T035 [P] [US2] Delete the three `reject_for_suppression` tests at `app/tests/test_models.py:176-185` and `:226-231` — target method is gone
-- [ ] T036 [P] [US2] In `app/tests/test_posting_status_history.py`: delete the `reason == "employer suppressed"` assertion and its test (`:216`), and fix the module docstring's reference to `blacklist.reject_employer_postings`. ADR-0013's history contract is otherwise untouched
-- [ ] T037 [US2] Add a test asserting `posting_status_history` gains **zero** `actor='system'` rows across a full blacklist → collect → lift cycle (SC-004), in `app/tests/test_posting_status_history.py`
+- [X] T033 [US2] Invert `test_new_posting_from_blacklisted_employer_is_born_rejected` at `app/tests/test_blacklist.py:102` — the posting is born `new` and is invisible through the seam **with no pass having run**. This is the test that proves ADR-0015 §Decision 1: "covers postings not yet seen", satisfied structurally
+- [X] T034 [P] [US2] Invert the born-rejected assertion at `app/tests/test_models.py:52` to born-`new`
+- [X] T035 [P] [US2] Delete the three `reject_for_suppression` tests at `app/tests/test_models.py:176-185` and `:226-231` — target method is gone
+- [X] T036 [P] [US2] In `app/tests/test_posting_status_history.py`: delete the `reason == "employer suppressed"` assertion and its test (`:216`), and fix the module docstring's reference to `blacklist.reject_employer_postings`. ADR-0013's history contract is otherwise untouched
+- [X] T037 [US2] Add a test asserting `posting_status_history` gains **zero** `actor='system'` rows across a full blacklist → collect → lift cycle (SC-004), in `app/tests/test_posting_status_history.py`
 
 **Checkpoint**: US2 complete. The catch-up pass is gone and nothing needs it.
 
@@ -222,11 +222,11 @@ each posting's prior triage status intact.
 **Independent Test**: Record statuses, blacklist, un-blacklist, confirm every
 posting is visible again carrying its original status.
 
-- [ ] T038 [US3] Invert `test_blacklist_endpoint_suppresses_and_rejects` at `app/tests/test_blacklist.py:149` — the endpoint sets the flag and the postings' statuses are **untouched**, while being invisible
-- [ ] T039 [US3] Invert `test_unblacklist_stops_future_but_does_not_reinstate` at `app/tests/test_blacklist.py:160` — **this is the visible behaviour change**: after blacklist-then-lift, postings are visible again with prior status intact across all four statuses (`new` stays `new`, `shortlist` stays `shortlist`, an operator-rejected posting stays `rejected`). Rename to match. Covers FR-012 and SC-003
-- [ ] T040 [US3] Add the FR-013 standing note to `app/src/app/web/templates/blacklist.html` — blacklists applied before this change do not restore their postings on removal. A view-level note, not a per-posting distinction, which is not recoverable
-- [ ] T041 [US3] Test in `app/tests/test_blacklist.py` that `/blacklist` renders the FR-013 note
-- [ ] T042 [US3] Run `uv run ruff check src tests --fix`, then `uv run ruff format src tests`, then `uv run pytest`
+- [X] T038 [US3] Invert `test_blacklist_endpoint_suppresses_and_rejects` at `app/tests/test_blacklist.py:149` — the endpoint sets the flag and the postings' statuses are **untouched**, while being invisible
+- [X] T039 [US3] Invert `test_unblacklist_stops_future_but_does_not_reinstate` at `app/tests/test_blacklist.py:160` — **this is the visible behaviour change**: after blacklist-then-lift, postings are visible again with prior status intact across all four statuses (`new` stays `new`, `shortlist` stays `shortlist`, an operator-rejected posting stays `rejected`). Rename to match. Covers FR-012 and SC-003
+- [X] T040 [US3] Add the FR-013 standing note to `app/src/app/web/templates/blacklist.html` — blacklists applied before this change do not restore their postings on removal. A view-level note, not a per-posting distinction, which is not recoverable
+- [X] T041 [US3] Test in `app/tests/test_blacklist.py` that `/blacklist` renders the FR-013 note
+- [X] T042 [US3] Run `uv run ruff check src tests --fix`, then `uv run ruff format src tests`, then `uv run pytest`
 
 **Checkpoint**: **Suite green. First point at which the change is complete and
 correct.** This is commit 4 — the breaking one, carrying a `BREAKING CHANGE:`
@@ -242,26 +242,26 @@ so this phase is not optional tidying.
 
 ### Verification
 
-- [ ] T043 Run `uv run alembic revision --autogenerate -m "verify adr-0015 is schema-neutral"`. An empty `upgrade()` confirms schema neutrality — then **delete the generated file**. A non-empty body means T029/T030 changed more than a comment: fix at the source, do not keep the migration
-- [ ] T044 Walk [quickstart.md](quickstart.md)'s manual scenario against a populated database, especially step 7 — the shortlisted posting returns *still shortlisted*
+- [ ] T043 **Blocked.** Run `uv run alembic revision --autogenerate -m "verify adr-0015 is schema-neutral"`. An empty `upgrade()` confirms schema neutrality — then **delete the generated file**. A non-empty body means T029/T030 changed more than a comment: fix at the source, do not keep the migration. *The dev Postgres container's `alembic_version` is stamped to a revision (`b2c3d4e5f6a7`) absent from any committed migration file — likely left over from an abandoned branch. It holds 466 real postings, so this needs the developer's own judgement rather than an automated fix; resolve that mismatch first, then run this check.*
+- [ ] T044 **Blocked on T043** — same DB. Walk [quickstart.md](quickstart.md)'s manual scenario against a populated database, especially step 7 — the shortlisted posting returns *still shortlisted*
 
 ### Carry the obligation forward
 
-- [ ] T045 Record the FR-011 seam obligation for the unbuilt stages in `Docs/design/system-architecture.md`: stage 3 (scoring) and stage 4 (publication) must apply `db.visibility.not_suppressed()` when selecting postings to work on and when writing their run counts, and stage 4 is where FR-009 now lives. Without this the obligation exists only in `specs/002-*/contracts/`, which a future stage-3 author has no reason to open — and inheriting it by accident is the failure ADR-0015 names as permanent
+- [X] T045 Record the FR-011 seam obligation for the unbuilt stages in `Docs/design/system-architecture.md`: stage 3 (scoring) and stage 4 (publication) must apply `db.visibility.not_suppressed()` when selecting postings to work on and when writing their run counts, and stage 4 is where FR-009 now lives. Without this the obligation exists only in `specs/002-*/contracts/`, which a future stage-3 author has no reason to open — and inheriting it by accident is the failure ADR-0015 names as permanent
 
 ### Specification corrections
 
-- [ ] T046 [P] Rewrite FR-007, FR-009, FR-011 in `specs/001-ui-self-service/spec.md` against ADR-0015, per the mapping table in [spec.md](spec.md#superseded-requirements-from-001-ui-self-service). FR-011 becomes the display decision
-- [ ] T047 [P] Annotate `specs/001-ui-self-service/data-model.md:113-125` as superseded, linking ADR-0015 — this is the passage that introduced the materialisation without an ADR
-- [ ] T048 [P] Mark superseded (do not delete) in `specs/001-ui-self-service/`: research.md D-A and D-B; plan.md:105,109 (the `suppress_stage.py` tree entry); tasks.md **001's** T020-T022 and T026 (that feature's IDs, not this one's). 001's T026 note "satisfied at the write layer" is now specifically wrong and is worth correcting in place rather than only flagging
-- [ ] T049 [P] Update FR-011 and any suppression-pass language in `Docs/software-requirements-specification.md`
+- [X] T046 [P] Rewrite FR-007, FR-009, FR-011 in `specs/001-ui-self-service/spec.md` against ADR-0015, per the mapping table in [spec.md](spec.md#superseded-requirements-from-001-ui-self-service). FR-011 becomes the display decision
+- [X] T047 [P] Annotate `specs/001-ui-self-service/data-model.md:113-125` as superseded, linking ADR-0015 — this is the passage that introduced the materialisation without an ADR
+- [X] T048 [P] Mark superseded (do not delete) in `specs/001-ui-self-service/`: research.md D-A and D-B; plan.md:105,109 (the `suppress_stage.py` tree entry); tasks.md **001's** T020-T022 and T026 (that feature's IDs, not this one's). 001's T026 note "satisfied at the write layer" is now specifically wrong and is worth correcting in place rather than only flagging
+- [X] T049 [P] Update FR-011 and any suppression-pass language in `Docs/software-requirements-specification.md`
 
 ### Design records
 
-- [ ] T050 [P] Add a superseded header to `Docs/design/status-transition-concurrency.md` pointing at ADR-0015, rather than editing its sweep sequence diagrams — they describe deleted code but remain the record of *why*
-- [ ] T051 [P] Tick §8's next steps as done in `Docs/design/suppression-concurrency-review.md`
-- [ ] T052 [P] Sweep `Docs/design/data-model.md`, `Docs/development-guide.md`, and `CLAUDE.md`'s architecture tree for suppression-stage references (`Docs/design/system-architecture.md` is covered by T045)
-- [ ] T053 Draft `Docs/design/System-modeling.md` from review §6, revised: the liveness property ("every posting of a suppressed employer *eventually* reaches suppressed, bounded by the next pipeline run") is replaced by a **safety** property ("no posting of a suppressed employer is ever visible"). Nothing converges any more, so nothing needs a convergence bound
+- [X] T050 [P] Add a superseded header to `Docs/design/status-transition-concurrency.md` pointing at ADR-0015, rather than editing its sweep sequence diagrams — they describe deleted code but remain the record of *why*
+- [X] T051 [P] Tick §8's next steps as done in `Docs/design/suppression-concurrency-review.md`
+- [X] T052 [P] Sweep `Docs/design/data-model.md`, `Docs/development-guide.md`, and `CLAUDE.md`'s architecture tree for suppression-stage references (`Docs/design/system-architecture.md` is covered by T045)
+- [X] T053 Draft `Docs/design/System-modeling.md` from review §6, revised: the liveness property ("every posting of a suppressed employer *eventually* reaches suppressed, bounded by the next pipeline run") is replaced by a **safety** property ("no posting of a suppressed employer is ever visible"). Nothing converges any more, so nothing needs a convergence bound
 
 **Checkpoint**: Commit 5 (`docs: record the ADR-0015 reversal across specs and
 design records`).

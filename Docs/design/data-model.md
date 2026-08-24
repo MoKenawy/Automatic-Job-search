@@ -219,7 +219,7 @@ column. Full detail in [specs/001-ui-self-service/data-model.md](../../specs/001
 |---|---|
 | **`search_profiles`** | Named, individually scheduled job surveys; supersede the `SEARCHES` env list. Seeded from `SEARCHES` on migration |
 | **`app_settings`** | Runtime-editable operational settings; resolution order `app_settings → env → code default` |
-| `employers.suppressed` | Now the blacklist flag (was dormant): a suppressed employer's postings are auto-rejected and retained |
+| `employers.suppressed` | Now the blacklist flag (was dormant): a suppressed employer's postings are hidden at read time and retained ([ADR-0015](../ADRs/0015-employer-level-suppression.md) — was "auto-rejected" under 001's original design, reversed) |
 | `runs.profile_id` | Nullable FK attributing a run to the profile that triggered it |
 
 ## 7. Migrations

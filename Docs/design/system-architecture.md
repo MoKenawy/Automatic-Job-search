@@ -160,11 +160,22 @@ hosted instruction-tuned model via Ollama. Output — score, matched skills, gap
 rationale — is validated against a Pydantic schema before storage; malformed
 output is rejected. The producing model is recorded with the score.
 
+**Seam obligation (ADR-0015):** the candidate query must apply
+`db.visibility.not_suppressed()` when selecting postings to score, and the
+scored-count written to `runs` must be scoped the same way. Scoring a
+blacklisted employer's postings is wasted model time.
+
 ### 5.4 Stage 4 — Publish **(planned)**
 
 Marks postings at or above the threshold as published, which is what surfaces
 them in the interface. After ADR-0004 this is a database state transition, not a
 write to any external service.
+
+**Seam obligation (ADR-0015):** this is where FR-009 (a blacklisted employer's
+postings are never published) now lives. `db.visibility.not_suppressed()`
+must be applied both when selecting candidates for publication and when
+writing `run.published_count` — nothing else in the pipeline excludes a
+suppressed employer's postings from this stage.
 
 ---
 
