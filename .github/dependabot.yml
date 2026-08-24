@@ -1,0 +1,83 @@
+# Dependabot.
+#
+# Grouped and monthly on purpose. This is a single-maintainer project; a daily
+# stream of individual bumps gets ignored, and an ignored security update is
+# worse than a slower cadence that actually gets read. Security advisories are
+# raised by Dependabot immediately regardless of this schedule.
+#
+# Note the nested layout: the Python project's manifests live in /app, not at
+# the repository root.
+
+version: 2
+
+updates:
+  # --- Python dependencies -------------------------------------------------
+  # uv is supported through the pip ecosystem: Dependabot reads
+  # app/pyproject.toml and updates app/uv.lock alongside it.
+  #
+  # Every PR here must pass CI's `uv sync --frozen`, which fails if the lock
+  # and the manifest disagree — so a bump that updates only one of the two is
+  # caught rather than merged.
+  - package-ecosystem: pip
+    directory: /app
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      # Patch and minor updates rarely need individual review; batching them
+      # into one PR makes the test suite the arbiter.
+      python-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # --- GitHub Actions ------------------------------------------------------
+  # Workflow actions are pinned by major tag (actions/checkout@v4). This keeps
+  # those tags current.
+  #
+  # It does NOT cover the TruffleHog binary in trufflehog.yml, which is pinned
+  # by version AND sha256 inside the workflow's `env:` block. Bumping that is
+  # manual and deliberate: the version must be re-verified against
+  # .trufflehog/config.yaml, and the new sha256 taken from the release's
+  # published checksums file.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - '*'
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: ci
+
+  # --- Container base image ------------------------------------------------
+  # Tracks `FROM python:3.12-slim` in app/Dockerfile.
+  #
+  # The interpreter is pinned to 3.12 by app/.python-version and constrained by
+  # `requires-python = ">=3.12,<3.13"`, so ignore major and minor bumps: a PR
+  # moving the image to 3.13 would build an image whose interpreter the project
+  # explicitly does not support. Patch bumps (3.12.x) carry the security fixes
+  # and are what we want.
+  - package-ecosystem: docker
+    directory: /app
+    schedule:
+      interval: monthly
+    ignore:
+      - dependency-name: python
+        update-types:
+          - version-update:semver-major
+          - version-update:semver-minor
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: chore
