@@ -1,0 +1,125 @@
+# Secret scanning.
+#
+# Every flag used here was verified against TruffleHog 3.96.0 before being
+# committed (`trufflehog --help`, `trufflehog git --help`). Two notes that cost
+# time to discover and are easy to get wrong again:
+#
+#   * `--fail` exits with code **183**, not 1, when results are found.
+#   * `fetch-depth: 0` is an `actions/checkout` input, not a TruffleHog flag.
+#     Without it the runner gets a shallow clone and a history scan silently
+#     covers one commit.
+#
+# The binary is pinned by version AND sha256 rather than installed by piping a
+# remote script into a shell. A gate that exists to catch supply-chain problems
+# should not introduce one.
+
+name: Secret scan
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Doc-only edits still run this. Secrets get pasted into Markdown as often as
+# into code — the CLI review note that this repository's own scan flagged was
+# in a .md file. This workflow is ~30s, so there is nothing to save by skipping.
+
+permissions:
+  contents: read
+
+concurrency:
+  group: secret-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRUFFLEHOG_VERSION: 3.96.0
+  TRUFFLEHOG_SHA256: 7105f1cd6577f058a9e39d0578f1a99c8a1e481e4d3512cd8a09acfe22a0fdc0
+  # Detector exclusions, with the reason each one is off:
+  #
+  #   lob — Lob's test API keys are the literal prefix `test_` followed by a
+  #         long lowercase-and-underscore string, which is also the shape of
+  #         every pytest function name in app/tests/. The detector matched
+  #         ~100 test names across 10+ files and reported them as VERIFIED,
+  #         so the scan failed loudly with "7 verified secrets" that were all
+  #         function names. This project does not use Lob.
+  TRUFFLEHOG_EXCLUDED_DETECTORS: lob
+
+jobs:
+  scan:
+    name: TruffleHog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the full history
+        uses: actions/checkout@v4
+        with:
+          # Required: TruffleHog scans commits, so it needs them present.
+          fetch-depth: 0
+
+      - name: Install TruffleHog ${{ env.TRUFFLEHOG_VERSION }}
+        run: |
+          set -euo pipefail
+          asset="trufflehog_${TRUFFLEHOG_VERSION}_linux_amd64.tar.gz"
+          curl -sSfL -o "$asset" \
+            "https://github.com/trufflesecurity/trufflehog/releases/download/v${TRUFFLEHOG_VERSION}/${asset}"
+          echo "${TRUFFLEHOG_SHA256}  ${asset}" | sha256sum --check --strict
+          tar -xzf "$asset" trufflehog
+          sudo install -m 0755 trufflehog /usr/local/bin/trufflehog
+          trufflehog --version
+
+      # On a pull request, scan only what the PR adds. base.sha is the commit
+      # the PR branched from, so --since-commit gives exactly the PR range and
+      # the job does not re-report anything already on main.
+      - name: Scan the pull request range
+        if: github.event_name == 'pull_request'
+        run: |
+          trufflehog git "file://$PWD" \
+            --since-commit "${{ github.event.pull_request.base.sha }}" \
+            --branch "${{ github.event.pull_request.head.sha }}" \
+            --config .trufflehog/config.yaml \
+            --include-paths .trufflehog/includes.txt \
+            --exclude-paths .trufflehog/excludes.txt \
+            --exclude-detectors "${TRUFFLEHOG_EXCLUDED_DETECTORS}" \
+            --results verified,unknown,unverified \
+            --no-update \
+            --github-actions \
+            --fail
+
+      # On main, scan everything. A secret committed and then "removed" in a
+      # later commit is still in the history and still compromised; only a full
+      # scan finds it. Verified clean against this repository's history at the
+      # time of writing.
+      - name: Scan the full history
+        if: github.event_name == 'push'
+        run: |
+          trufflehog git "file://$PWD" \
+            --config .trufflehog/config.yaml \
+            --include-paths .trufflehog/includes.txt \
+            --exclude-paths .trufflehog/excludes.txt \
+            --exclude-detectors "${TRUFFLEHOG_EXCLUDED_DETECTORS}" \
+            --results verified,unknown,unverified \
+            --no-update \
+            --github-actions \
+            --fail
+
+      - name: Explain a failure
+        if: failure()
+        run: |
+          cat <<'MSG'
+          The secret scan reported findings (TruffleHog exits 183 when it does).
+
+          Do not "fix" this by deleting the detector or adding the file to
+          .trufflehog/excludes.txt — excluding a path removes it from every
+          detector's view, not just the one that fired.
+
+          If it is a real credential: rotate it first. It is in the git
+          history, so removing the line does not make it safe again.
+
+          If it is a placeholder in documentation: write it in a form that is
+          not a parseable credential, e.g. http://<user>:<pass>@<host>.
+
+          If it is a legitimate local default: add it to the relevant
+          exclude_regexes_match list in .trufflehog/config.yaml with a comment
+          explaining why it is not a secret.
+
+          Reproduce locally — see CONTRIBUTING.md, "Running the secret scan".
+          MSG
