@@ -78,7 +78,7 @@ def run_all() -> None:
     result = run_all_profiles()
     typer.echo(
         f"run {result['run_id']}: collected={result['collected']} raw={result['raw']} "
-        f"distinct={result['distinct']} suppressed={result['suppressed']}"
+        f"distinct={result['distinct']}"
     )
     # Stages 3 and 4 join here once the CV is supplied
     typer.echo("stages 3-4 outstanding (scoring, publication)")
@@ -98,9 +98,7 @@ def status(limit: int = typer.Option(10, help="How many recent runs to show.")) 
     from app.db.models import Run
 
     with session_scope() as session:
-        runs = session.scalars(
-            select(Run).order_by(Run.started_at.desc()).limit(limit)
-        ).all()
+        runs = session.scalars(select(Run).order_by(Run.started_at.desc()).limit(limit)).all()
         if not runs:
             typer.echo("no runs recorded")
             return
@@ -159,13 +157,17 @@ def config() -> None:
     typer.echo(f"scoring_model     {settings.scoring_model}")
     typer.echo(f"publish_threshold {settings.publish_threshold}")
     typer.echo(f"web               {settings.web_host}:{settings.web_port}")
-    typer.echo(f"schedule          {settings.schedule_hour:02d}:"
-               f"{settings.schedule_minute:02d} {settings.timezone}")
+    typer.echo(
+        f"schedule          {settings.schedule_hour:02d}:"
+        f"{settings.schedule_minute:02d} {settings.timezone}"
+    )
     typer.echo(f"searches          {len(settings.searches)}")
     for spec in settings.searches:
         remote = " remote" if spec.is_remote else ""
-        typer.echo(f"  {spec.term!r} @ {spec.location!r} [{spec.country}]"
-                   f"{remote} via {','.join(spec.sites)}")
+        typer.echo(
+            f"  {spec.term!r} @ {spec.location!r} [{spec.country}]"
+            f"{remote} via {','.join(spec.sites)}"
+        )
 
 
 def _unimplemented(stage: str) -> int:

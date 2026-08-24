@@ -43,7 +43,9 @@ class Base(DeclarativeBase):
     pass
 
 
-# Triage states (design §8.1). REJECTED doubles as the D9 suppression signal.
+# Triage states (design §8.1). Operator judgement only — suppression is
+# never stamped on a posting (ADR-0015); a suppressed employer's postings
+# are filtered out at read time instead, whatever their status.
 STATUS_NEW = "new"
 STATUS_SHORTLIST = "shortlist"
 STATUS_APPLIED = "applied"
@@ -110,12 +112,14 @@ class Employer(Base):
                 setattr(self, column, str(payload[key])[:1024])
 
     def blacklist(self) -> None:
-        """Exclude this employer's postings from publication (US3)."""
+        """Exclude this employer's postings from every operator-facing view,
+        derived at read time (ADR-0015)."""
         self.suppressed = True
 
     def lift_blacklist(self) -> None:
-        """Future postings are no longer auto-rejected; previously rejected
-        postings are NOT reinstated (US3, FR-011)."""
+        """Restore this employer's postings to visibility with their prior
+        triage status intact — nothing was overwritten, so nothing needs
+        reinstating (ADR-0015, FR-012)."""
         self.suppressed = False
 
 
@@ -204,13 +208,9 @@ class Posting(Base):
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    fingerprint: Mapped[str] = mapped_column(
-        String(64), unique=True, index=True, nullable=False
-    )
+    fingerprint: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
 
-    employer_id: Mapped[int] = mapped_column(
-        ForeignKey("employers.id"), index=True, nullable=False
-    )
+    employer_id: Mapped[int] = mapped_column(ForeignKey("employers.id"), index=True, nullable=False)
 
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     normalised_title: Mapped[str] = mapped_column(String(512), nullable=False)
@@ -244,19 +244,14 @@ class Posting(Base):
 
     # Stage 4 — publication. After D15 this is a state transition rather than a
     # write to an external service.
-    published: Mapped[bool] = mapped_column(
-        Boolean, default=False, nullable=False, index=True
-    )
+    published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    # Triage state (design §8.1). Suppression-driven rejection (D9) is
-    # retained indefinitely and never resurfaces via the suppression sweep;
-    # separately, an operator may move a posting between any two statuses via
+    # Triage state (design §8.1). Operator judgement only (ADR-0015) — an
+    # operator may move a posting between any two statuses via
     # transition_to() below, including back out of Rejected — confirmed as
     # existing behaviour, not changed by this model (refactor-plan.md §6.1).
-    status: Mapped[str] = mapped_column(
-        String(16), default=STATUS_NEW, nullable=False, index=True
-    )
+    status: Mapped[str] = mapped_column(String(16), default=STATUS_NEW, nullable=False, index=True)
     # When `status` last changed via an operator or suppression transition.
     # Distinct from last_retrieved_at, which moves on a board re-surfacing the
     # same posting, and from updated_at, which moves on any write at all —
@@ -308,11 +303,11 @@ class Posting(Base):
         site: str,
         provenance: dict,
     ) -> "Posting":
-        """A posting from a suppressed employer is born Rejected (US3, FR-007).
+        """Always born `new` — operator judgement only (ADR-0015).
 
-        The suppression sweep is the general mechanism; this catches the row
-        at creation so it never surfaces even for the instant before the next
-        sweep runs (was normalise_stage.py:103).
+        Whether this posting is out of play because its employer is
+        suppressed is answered at read time by `db.visibility.not_suppressed()`,
+        not stamped here.
         """
         return cls(
             fingerprint=fingerprint,
@@ -326,7 +321,7 @@ class Posting(Base):
             date_posted=date_posted,
             job_type=job_type,
             sources={site: provenance},
-            status=STATUS_REJECTED if employer.suppressed else STATUS_NEW,
+            status=STATUS_NEW,
         )
 
     def observe(
@@ -364,10 +359,9 @@ class Posting(Base):
         """Move to a new triage status.
 
         Any status may move to any other, including back out of Rejected —
-        Rejected is not terminal for operator triage (confirmed; distinct from
-        the suppression sweep's own use of it, which never resurfaces a
-        suppressed employer's posting on its own). Entering Rejected always
-        un-publishes, since a rejected posting must not remain published.
+        Rejected is not terminal for operator triage (confirmed). Entering
+        Rejected always un-publishes, since a rejected posting must not
+        remain published.
 
         Every transition appends a `PostingStatusHistory` row on the same
         object graph, so it is written in whatever transaction the caller
@@ -390,17 +384,6 @@ class Posting(Base):
                 reason=reason,
             )
         )
-
-    def reject_for_suppression(self, *, now: datetime) -> bool:
-        """Reject due to employer suppression (D9), idempotently.
-
-        Returns True if this call changed anything, so callers can count
-        postings newly rejected without a separate query.
-        """
-        if self.status == STATUS_REJECTED:
-            return False
-        self.transition_to(STATUS_REJECTED, now=now, actor="system", reason="employer suppressed")
-        return True
 
 
 class PostingStatusHistory(Base):
@@ -433,8 +416,10 @@ class PostingStatusHistory(Base):
     changed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    # 'operator' (web UI action), 'system' (suppression sweep), or 'migration'
-    # (synthetic baseline row backfilled from status_changed_at).
+    # 'operator' (web UI action) or 'migration' (synthetic baseline row
+    # backfilled from status_changed_at). 'system' stays a valid value,
+    # reserved for future automated paths — the suppression sweep that used
+    # to write it is gone (ADR-0015).
     actor: Mapped[str] = mapped_column(String(32), nullable=False)
     reason: Mapped[str | None] = mapped_column(Text)
 

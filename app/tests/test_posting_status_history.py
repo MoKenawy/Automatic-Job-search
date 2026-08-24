@@ -2,8 +2,7 @@
 
 Covers what test_models.py's in-memory Posting tests cannot: persistence
 through a real session/transaction, rollback on failure, and the service
-layer's use of the history table (triage.set_status / set_status_bulk,
-blacklist.reject_employer_postings).
+layer's use of the history table (triage.set_status / set_status_bulk).
 """
 
 from datetime import UTC, datetime
@@ -22,7 +21,10 @@ from app.db.models import (
     Employer,
     Posting,
     PostingStatusHistory,
+    RawPosting,
+    Run,
 )
+from app.pipeline.normalise_stage import run_normalise
 from app.services import blacklist as blacklist_service
 from app.services import triage as triage_service
 
@@ -102,14 +104,11 @@ def test_repeated_transitions_each_leave_their_own_row(session):
     triage_service.set_status(session, posting.id, STATUS_APPLIED)
     triage_service.set_status(session, posting.id, STATUS_REJECTED)
 
-    rows = (
-        session.scalars(
-            select(PostingStatusHistory)
-            .where(PostingStatusHistory.posting_id == posting.id)
-            .order_by(PostingStatusHistory.id)
-        )
-        .all()
-    )
+    rows = session.scalars(
+        select(PostingStatusHistory)
+        .where(PostingStatusHistory.posting_id == posting.id)
+        .order_by(PostingStatusHistory.id)
+    ).all()
     assert [r.new_status for r in rows] == [STATUS_SHORTLIST, STATUS_APPLIED, STATUS_REJECTED]
     assert [r.previous_status for r in rows] == [STATUS_NEW, STATUS_SHORTLIST, STATUS_APPLIED]
 
@@ -199,21 +198,42 @@ def test_bulk_status_change_records_one_history_row_per_posting(session):
     assert all(r.new_status == STATUS_APPLIED and r.actor == "operator" for r in rows)
 
 
-# --- Suppression sweep — actor is 'system', reason recorded -------------------
+# --- Suppression writes no history at all (ADR-0015, SC-004) -----------------
 
 
-def test_blacklist_rejection_records_system_actor(session):
+def test_blacklist_collect_lift_cycle_writes_zero_system_actor_rows(session):
+    """A full blacklist -> collect -> lift cycle leaves posting_status_history
+    untouched by suppression — it is derived, never written (SC-004)."""
     employer = _employer(session)
     posting = _posting(session, employer)
 
     blacklist_service.blacklist(session, employer.id)
 
-    row = session.scalars(
-        select(PostingStatusHistory).where(PostingStatusHistory.posting_id == posting.id)
-    ).one()
-    assert row.new_status == STATUS_REJECTED
-    assert row.actor == "system"
-    assert row.reason == "employer suppressed"
+    run = Run(status="running")
+    session.add(run)
+    session.flush()
+    session.add(
+        RawPosting(
+            run_id=run.id,
+            site="linkedin",
+            payload={
+                "company": "Acme",
+                "title": "Data Engineer",
+                "location": "Cairo, Egypt",
+                "job_url": "https://x",
+            },
+        )
+    )
+    session.commit()
+    run_normalise(session, run)
+
+    blacklist_service.lift(session, employer.id)
+
+    assert session.get(Posting, posting.id).status == STATUS_NEW
+    system_rows = session.scalars(
+        select(PostingStatusHistory).where(PostingStatusHistory.actor == "system")
+    ).all()
+    assert system_rows == []
 
 
 # --- Cascade delete — history is removed with its posting ---------------------

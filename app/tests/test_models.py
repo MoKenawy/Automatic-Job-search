@@ -49,7 +49,9 @@ def test_posting_is_born_new_for_an_unsuppressed_employer():
     assert posting.status == STATUS_NEW
 
 
-def test_posting_is_born_rejected_for_a_suppressed_employer():
+def test_posting_is_born_new_for_a_suppressed_employer():
+    """Born `new` even under a suppressed employer (ADR-0015) — visibility is
+    derived at read time, never stamped at creation."""
     posting = Posting.create(
         fingerprint="f" * 64,
         employer=_employer(suppressed=True),
@@ -64,7 +66,7 @@ def test_posting_is_born_rejected_for_a_suppressed_employer():
         site="linkedin",
         provenance={"url": "https://x", "job_id": "1", "first_seen": NOW.isoformat()},
     )
-    assert posting.status == STATUS_REJECTED
+    assert posting.status == STATUS_NEW
 
 
 def test_create_truncates_title_and_normalised_title_to_column_width():
@@ -170,22 +172,6 @@ def test_transition_to_stamps_status_changed_at_but_not_last_retrieved_at():
     assert posting.last_retrieved_at is None
 
 
-# --- Posting.reject_for_suppression — idempotent -----------------------------
-
-
-def test_reject_for_suppression_changes_a_non_rejected_posting():
-    posting = Posting(status=STATUS_NEW, published=True)
-    assert posting.reject_for_suppression(now=NOW) is True
-    assert posting.status == STATUS_REJECTED
-    assert posting.published is False
-
-
-def test_reject_for_suppression_is_a_noop_when_already_rejected():
-    posting = Posting(status=STATUS_REJECTED, published=False, status_changed_at=None)
-    assert posting.reject_for_suppression(now=NOW) is False
-    assert posting.status_changed_at is None  # untouched — nothing changed
-
-
 # --- Posting.transition_to — history recording -------------------------------
 
 
@@ -221,14 +207,6 @@ def test_multiple_transitions_accumulate_history_in_order():
     posting.transition_to(STATUS_APPLIED, now=NOW)
     assert [h.new_status for h in posting.status_history] == [STATUS_SHORTLIST, STATUS_APPLIED]
     assert posting.status_history[1].previous_status == STATUS_SHORTLIST
-
-
-def test_reject_for_suppression_records_system_actor_and_reason():
-    posting = Posting(status=STATUS_NEW)
-    posting.reject_for_suppression(now=NOW)
-    entry = posting.status_history[-1]
-    assert entry.actor == "system"
-    assert entry.reason == "employer suppressed"
 
 
 # --- Employer.enrich_from / blacklist / lift_blacklist -----------------------
