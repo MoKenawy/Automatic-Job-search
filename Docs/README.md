@@ -38,6 +38,9 @@ earlier record is retained.
 | [0010](ADRs/0010-r2-span-computation-strategy.md) | Where R2's span arithmetic runs — Python, SQL, or the write path | Accepted |
 | [0011](ADRs/0011-job-type-taxonomy-for-arrangement-mix.md) | `job_type` taxonomy for the work-arrangement-mix report | Accepted |
 | [0012](ADRs/0012-retrieval-date-column-split.md) | Split `last_seen_at` into `updated_at` and `last_retrieved_at` | Accepted |
+| [0013](ADRs/0013-posting-status-history.md) | Transactional audit table for triage status transitions | Accepted |
+| [0014](ADRs/0014-status-transition-row-locking.md) | `SELECT ... FOR UPDATE` for concurrent status transitions | Accepted; case 2 superseded by 0015 |
+| [0015](ADRs/0015-employer-level-suppression.md) | Employer-level suppression, derived at read time | Accepted |
 
 ## Project structure
 
