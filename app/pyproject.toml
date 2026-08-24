@@ -2,9 +2,27 @@
 name = "job-discovery"
 version = "0.1.0"
 description = "Automated job discovery and screening pipeline"
-authors = [{ name = "Mohammed" }]
+authors = [{ name = "Mohammed Kenawy" }]
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
+license = "Apache-2.0"
+# No `license-files` entry: the licence lives at the repository root, one level
+# above this project, and Hatchling silently ignores a path that escapes the
+# project directory — it produced no error and bundled nothing. Anyone
+# redistributing a built artifact must include ../LICENSE themselves
+# (Apache-2.0 §4(a)); see NOTICE.md.
+keywords = ["jobs", "scraping", "deduplication", "self-hosted", "ollama"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    # Deployment is from a git checkout, not a package index (SECURITY.md).
+    # This classifier makes an accidental `uv publish` fail rather than
+    # publishing a personal job-search tool to PyPI.
+    "Private :: Do Not Upload",
+]
 
 dependencies = [
     "python-jobspy>=1.1.80",
@@ -23,6 +41,12 @@ dependencies = [
     "jinja2>=3.1",
     "python-multipart>=0.0.9",
 ]
+
+[project.urls]
+Homepage = "https://github.com/MoKenawy/Automatic-Job-search"
+Documentation = "https://github.com/MoKenawy/Automatic-Job-search/blob/main/Docs/README.md"
+Source = "https://github.com/MoKenawy/Automatic-Job-search"
+Issues = "https://github.com/MoKenawy/Automatic-Job-search/issues"
 
 [project.scripts]
 job-discovery = "app.__main__:app"
