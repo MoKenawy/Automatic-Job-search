@@ -61,32 +61,74 @@ unbuilt behaviour are marked **(planned)**.
 Four stages run in order, each independently invocable against stored data, and
 each idempotent — re-running against the same input converges on the same state.
 
+```mermaid
+flowchart TD
+    boards(["Job boards<br>Indeed, LinkedIn, ..."])
+    ollama(["Ollama<br>local model, on the host"])
+
+    collect["1 — collect<br>query boards, land raw rows"]
+    normalise["2 — normalise<br>fingerprint, dedupe"]
+    score["3 — score (planned)<br>title pre-filter, then CV match"]
+    publish["4 — publish (planned)<br>flag above-threshold postings"]
+    ui["Triage UI<br>FastAPI + Jinja2"]
+
+    raw[("raw_postings")]
+    postings[("postings, employers<br>one row per real-world role")]
+
+    boards -- JobSpy --> collect
+    collect --> raw
+    raw --> normalise
+    normalise --> postings
+    postings --> score
+    score -. "prompt, then score" .-> ollama
+    score -- "postings.score" --> publish
+    publish -- "postings.published" --> ui
+    ui -- "triage status only" --> postings
+
+    classDef planned stroke-dasharray: 5 5
+    class score,publish planned
 ```
-     boards                  ┌───────────────┐
-   (Indeed,     ──JobSpy──▶  │  1. collect   │  raw_postings
-    LinkedIn)                └───────┬───────┘
-                                     ▼
-                             ┌───────────────┐
-                             │  2. normalise │  postings, employers
-                             │  fingerprint  │  (one row per real role)
-                             └───────┬───────┘
-                                     ▼
-                             ┌───────────────┐
-      Ollama (host) ◀────────│  3. score     │  (planned)
-                             └───────┬───────┘
-                                     ▼
-                             ┌───────────────┐
-                             │  4. publish   │  (planned)
-                             └───────┬───────┘
-                                     ▼
-                             ┌───────────────┐
-                             │  triage UI    │  FastAPI + Jinja2
-                             └───────────────┘
-```
+
+Stages 3 and 4 write columns on `postings` (`score`, `scored_by_model`,
+`published`) rather than tables of their own, so scoring a posting again
+overwrites rather than accumulates. Each run records its per-stage counts in
+`runs`, which is what `status` reads back.
 
 ### Dependency direction
 
-This is strict, load-bearing, and enforced in review:
+This is strict, load-bearing, and enforced in review. An arrow means *imports*:
+
+```mermaid
+flowchart TD
+    subgraph app["app.config — depends on nothing; everything below rests on it"]
+        web["web/<br>reads the DB, writes triage status"]
+        pipeline["pipeline/<br>the only layer that persists"]
+        services["services/<br>settings, profiles, blacklist,<br>triage, queries, reports"]
+        db["db/<br>models, session"]
+        collect["collect/<br>pure transform"]
+        normalise["normalise/<br>pure transform"]
+    end
+
+    pipeline --> collect
+    pipeline --> normalise
+    pipeline --> services
+    pipeline --> db
+    web --> services
+    web --> db
+    services --> db
+```
+
+Note what is absent: nothing points *into* `collect/` or `normalise/` except
+`pipeline/`, and neither of them points at `db/`.
+
+Every module in the box also imports `config.py` directly — that fan-in is
+omitted above since it would just be an edge from every box to one, and it
+adds nothing past the label. The one exception is `config.py` itself:
+`RunConfig.resolve()` imports `services/settings.py` inside the function body
+(not at module scope) so it can read the database before falling back to
+environment or code default (ADR-0005). The local import is what keeps that
+from being a real cycle — it's deliberate, and the comment at
+[config.py:126](app/src/app/config.py#L126) says so.
 
 - **`config.py` depends on nothing; everything depends on it.** Never read
   `os.environ` directly anywhere else — add a field to `Settings` instead.
