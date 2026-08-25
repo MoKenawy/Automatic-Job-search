@@ -1,0 +1,36 @@
+# TruffleHog --exclude-paths (-x)
+#
+# ONE REGULAR EXPRESSION PER LINE, NOT A GLOB — see includes.txt for the full
+# explanation. `**/__pycache__/` is a glob and would not work; the regex below
+# achieves the same by matching the segment anywhere in the path.
+#
+# Every line must be a real pattern: a blank line compiles to a regex that
+# matches every path and would silently exclude the entire repository from the
+# scan. Comment lines are safe only because no path here contains a `#`.
+#
+# What is excluded and why:
+#
+#   uv.lock          100k lines of pinned hashes. Every sha256 is a
+#                    high-entropy string that generic detectors flag, and the
+#                    file is machine-generated from pyproject.toml — a
+#                    credential cannot enter here without entering there first.
+#   .venv            Third-party installed code. Vendored test fixtures in
+#                    dependencies contain deliberate example keys.
+#   __pycache__      Compiled bytecode; unreadable and derived.
+#   caches           Ruff and pytest scratch state.
+#   app/data         The operator's CV and collected postings. Gitignored, so
+#                    this only matters for filesystem scans of a working tree.
+#   Docs/AI-LOGS     Raw model transcripts. Gitignored; same reasoning.
+#   scan output      A previous report contains the findings verbatim.
+#
+# Note the asymmetry with includes.txt: app/migrations is NOT excluded here.
+^app/uv\.lock$
+^app/\.venv/
+(^|/)__pycache__/
+(^|/)\.ruff_cache/
+(^|/)\.pytest_cache/
+(^|/)\.mypy_cache/
+^app/data/
+^Docs/AI-LOGS/
+(^|/)trufflehog-[^/]*\.json$
+\.(png|jpg|jpeg|gif|ico|pdf|woff2?|ttf)$

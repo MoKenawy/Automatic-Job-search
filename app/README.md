@@ -1,48 +1,30 @@
-# Job Discovery Pipeline
+# app/ — the Python project
 
-Automated job discovery and screening. Collects postings from multiple boards,
-deduplicates them into one record per real-world role, scores them against a CV
-using a locally hosted model, and presents the ranked results in a local web
-interface for triage. No data leaves the machine and there is no recurring cost.
+This directory holds the application: `pyproject.toml`, `src/app/`, `tests/`,
+the Dockerfile, the Compose file, and the Alembic migrations. **All development
+commands run from here.**
 
-## Documentation
+The project's front page is the [repository README](../README.md) — what the
+system is, the architecture, the dependency direction, and the quick start.
+This file exists only so the directory is not silently undocumented; the
+canonical content is one level up, and it is deliberately not repeated here.
 
-Full documentation is in [../Docs/](../Docs/):
-
-- [Documentation index](../Docs/README.md)
-- [Software Requirements Specification](../Docs/software-requirements-specification.md)
-- [System Architecture](../Docs/design/system-architecture.md) · [Data Model](../Docs/design/data-model.md)
-- [Deployment](../Docs/deployment-guide.md) · [Development](../Docs/development-guide.md) · [Operations](../Docs/operations-guide.md)
-- [Design record](../Docs/job-discovery-pipeline-design.md) · [Technology stack](../Docs/tech-stack.md)
-
-## Requirements
-
-- Python 3.12 (managed by uv)
-- Docker (PostgreSQL + application containers)
-- Ollama on the host (for scoring)
-
-## Quick start
+## The commands, in short
 
 ```bash
-cp .env.example .env      # then edit
-docker compose up -d      # postgres, migrate, web, scheduler
+uv sync                              # install the locked dependency graph
+docker compose up -d postgres        # database only, for host-side development
+uv run pytest                        # full suite — no Docker required
+uv run ruff check src tests          # lint
+uv run ruff format src tests         # format
+uv run python -m app --help          # the CLI entry point
+uv run python -m app web --reload    # triage UI with autoreload
 ```
 
-Then open <http://localhost:8000>. For development against a host-side
-environment:
+## Where to read next
 
-```bash
-uv sync
-docker compose up -d postgres
-uv run pytest
-uv run python -m app web --reload
-```
-
-See the [Deployment Guide](../Docs/deployment-guide.md) for the full procedure.
-
-## Status
-
-Stages 1–2 (collection, deduplication) and the triage interface are implemented
-and operating. Stages 3–4 (scoring, publication) are specified and pending — they
-require a CV at `data/cv.txt` and a model pulled into Ollama. See design record
-§12.
+- [Repository README](../README.md) — architecture, structure, quick start
+- [CONTRIBUTING](../CONTRIBUTING.md) — conventions and review rules
+- [Development guide](../Docs/development-guide.md) — the fuller treatment
+- [Deployment guide](../Docs/deployment-guide.md) — standing the system up
+- [Documentation index](../Docs/README.md) — everything else

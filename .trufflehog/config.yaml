@@ -1,0 +1,108 @@
+# TruffleHog configuration — custom detectors for this repository's shapes.
+#
+# Passed via `--config .trufflehog/config.yaml`. These run IN ADDITION to
+# TruffleHog's ~800 built-in detectors, which already cover the generic cases
+# (AWS keys, GitHub tokens, Slack webhooks). What they cannot know is this
+# project's own configuration surface, which is where a credential would
+# realistically appear here: a DATABASE_URL, a PROXIES entry, or an OLLAMA_HOST.
+#
+# All three detectors are unverifiable by design. There is no endpoint to
+# authenticate against that would not mean sending a candidate credential to a
+# third party, so they emit unverified results. Unverified results still trip
+# `--fail`, which is the intended behaviour: a human decides.
+#
+# On tuning: to suppress a NEW legitimate placeholder, add it to the relevant
+# `exclude_regexes_match` list below with a comment explaining why it is not a
+# secret. Do not silence a finding by deleting a detector or by adding the file
+# to excludes.txt — that removes the whole file from every detector's view.
+
+detectors:
+  # --- 1. Database credentials ---------------------------------------------
+  #
+  # The application's only first-party credential. `app/src/app/config.py` and
+  # `app/.env.example` both carry the documented development DSN
+  # `jobs:jobs@localhost:5432/jobs`; a real deployment overrides it via the
+  # environment. This detector exists to catch the case where someone pastes a
+  # working deployment's DSN into a file instead.
+  - name: job-discovery-database-url
+    keywords:
+      - postgresql
+      - postgres
+      - DATABASE_URL
+    regex:
+      dsn: '(?i)postgres(?:ql)?(?:\+\w+)?://[A-Za-z0-9._%+-]+:[^\s:@/"'']{3,}@[A-Za-z0-9._-]+(?::\d+)?/\w+'
+    # Allowlisted: documented local defaults, not leaks. Each is a value a
+    # reader is expected to copy verbatim into their own .env.
+    exclude_regexes_match:
+      # The development DSN. Appears in config.py:39, .env.example:5, and the
+      # deployment guide's configuration table. Username, password, host and
+      # database are all the literal string "jobs" on a loopback port.
+      - '(?i)postgres(?:ql)?(?:\+\w+)?://jobs:jobs@(localhost|127\.0\.0\.1|postgres|db)(:\d+)?/jobs'
+      # docker-compose.yml:19 interpolates the same defaults through Compose
+      # variable syntax: ${POSTGRES_USER:-jobs}:${POSTGRES_PASSWORD:-jobs}.
+      # The literal text contains no credential at all.
+      - '\$\{POSTGRES_USER[^}]*\}:\$\{POSTGRES_PASSWORD[^}]*\}'
+      # Any DSN whose credentials are self-evident placeholders.
+      - '(?i)://(user|username|youruser|admin|changeme|example|postgres):(pass|password|passwd|yourpassword|changeme|secret|example|postgres)@'
+      # CI service containers in .github/workflows use the same "jobs" values
+      # against a throwaway container that lives for one job.
+      - '(?i)postgres(?:ql)?(?:\+\w+)?://[^:@\s]+:[^@\s]+@(localhost|127\.0\.0\.1)(:\d+)?/(jobs|postgres|test)_?(ci|test)?'
+
+  # --- 2. Proxy credentials -------------------------------------------------
+  #
+  # `PROXIES` is a JSON array of proxy URLs (config.py:53). Design §9.3 makes
+  # proxy provision the last remedy for board rate-limiting, so this list is
+  # normally empty — but a paid residential proxy is exactly the kind of
+  # credentialed URL that gets pasted in "just to test" and then committed.
+  # The CLI's `config` command masks database_url and proxies for this reason.
+  - name: job-discovery-proxy-credentials
+    keywords:
+      - proxies
+      - PROXIES
+      - proxy
+    regex:
+      proxy_url: '(?i)(?:https?|socks5h?)://[A-Za-z0-9._%+-]+:[^\s:@/"'']{3,}@[A-Za-z0-9._-]+(?::\d+)?'
+    exclude_regexes_match:
+      # Docs discuss the shape of a credentialed proxy URL using this literal
+      # placeholder (e.g. the CLI review note in Docs/). It is not a credential.
+      - '(?i)://(user|username|pass|password|USER|proxyuser):(pass|password|passwd|secret|PASS|proxypass)@'
+      - '(?i)://<[^>]+>:<[^>]+>@'
+      - '(?i)://\$\{[^}]+\}:\$\{[^}]+\}@'
+
+  # --- 3. Non-local Ollama endpoints ---------------------------------------
+  #
+  # Not a credential detector. Ollama is expected on the host or, from inside
+  # a container, at host.docker.internal — the "no data leaves the machine"
+  # constraint in the README depends on that. An OLLAMA_HOST pointing anywhere
+  # else means CV text and scraped descriptions would be sent to a remote
+  # inference endpoint, which is a disclosure worth stopping in review even
+  # though nothing secret is present. A remote host with embedded credentials
+  # is caught here too.
+  - name: job-discovery-nonlocal-ollama-host
+    keywords:
+      - OLLAMA_HOST
+      - ollama_host
+    # TruffleHog compiles these with Go's regexp (RE2), which has NO lookahead.
+    # "any host that is not localhost" therefore cannot be expressed in the
+    # match regex; it is expressed as a broad match plus the exclusions below.
+    # Groups are non-capturing throughout: TruffleHog reports capture group 1
+    # when one exists, so `(https?://)` would make every finding read
+    # "http://" instead of naming the host that triggered it.
+    #
+    # The value must look like a host — a scheme, a dotted name, or a port.
+    # A bare word is rejected, because `[A-Za-z0-9._-]+` alone matched the type
+    # annotation in `ollama_host: str = "..."` and reported "ollama_host: str"
+    # as a finding. `(?:str\s*=\s*)?` then lets the Python declaration form be
+    # scanned for its actual value rather than skipped.
+    regex:
+      host: '(?i)OLLAMA_HOST["'']?\s*[:=]\s*(?:str\s*=\s*)?["'']?(?:https?://[A-Za-z0-9._-]+(?::\d+)?|[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+(?::\d+)?|[A-Za-z0-9._-]+:\d+)'
+    exclude_regexes_match:
+      # Documented defaults: config.py:60, .env.example:37 (localhost) and
+      # docker-compose.yml:21 (host.docker.internal, so the container reaches
+      # the GPU on the host).
+      #
+      # The separator fragment here must mirror the match regex above,
+      # `(?:str\s*=\s*)?` included. When it did not, the Python declaration
+      # `ollama_host: str = "http://localhost:11434"` matched but failed to
+      # exclude, and the documented default was reported as a finding.
+      - '(?i)OLLAMA_HOST["'']?\s*[:=]\s*(?:str\s*=\s*)?["'']?(?:https?://)?(?:localhost|127\.0\.0\.1|host\.docker\.internal|ollama)(?::\d+)?'

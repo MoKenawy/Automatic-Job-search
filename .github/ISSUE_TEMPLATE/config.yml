@@ -1,0 +1,34 @@
+# Issues are for defects and concrete proposals. Everything else has a better
+# home, listed below. `blank_issues_enabled: false` pushes people through a
+# template, which is what makes deduplication bugs reportable in a useful shape.
+blank_issues_enabled: false
+
+contact_links:
+  - name: Question or idea
+    url: https://github.com/MoKenawy/Automatic-Job-search/discussions
+    about: >-
+      Usage questions, "is this a bug?", setup help, and half-formed ideas
+      belong in Discussions. Bring it back as an issue once it is a concrete
+      defect or proposal.
+
+  - name: Report a security vulnerability
+    url: https://github.com/MoKenawy/Automatic-Job-search/security/advisories/new
+    about: >-
+      Do NOT open a public issue. Report privately through GitHub Security
+      Advisories. Read SECURITY.md first — the missing web authentication and
+      the default database credentials are documented, intended behaviour for a
+      local single-operator tool, not vulnerabilities.
+
+  - name: Read the design documentation
+    url: https://github.com/MoKenawy/Automatic-Job-search/blob/main/Docs/README.md
+    about: >-
+      Before proposing a change in behaviour, check whether an ADR already
+      settled it. The design record, the SRS, and ADRs 0001 onward explain why
+      the system is shaped the way it is.
+
+  - name: Problem with job board scraping itself
+    url: https://github.com/cullenwatson/JobSpy/issues
+    about: >-
+      Board layout changes, rate limiting, 403s and blocked requests usually
+      originate in JobSpy, which does the actual collection. Report those
+      upstream. See NOTICE.md on rate limits and terms of service.

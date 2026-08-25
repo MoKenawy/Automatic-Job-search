@@ -1,0 +1,31 @@
+# TruffleHog --include-paths (-i)
+#
+# ONE REGULAR EXPRESSION PER LINE, NOT A GLOB. TruffleHog compiles each line
+# with Go's regexp package and applies it unanchored against the file path as
+# git reports it (forward slashes, relative to the repository root). `*.py` is
+# not a valid filter here — it is a regex meaning "zero or more `p` characters
+# followed by `y`". Write `\.py$` instead.
+#
+# Paths are matched against the repository root, so the nested layout means
+# application files appear as `app/src/app/...`, not `src/app/...`.
+#
+# Lines beginning with `#` are treated as regexes too, so keep comments in this
+# file harmless: `#` matches only a literal hash, which no path in this
+# repository contains. The same is true of blank lines, which Go's regexp
+# matches everywhere — so this file must contain no blank lines between
+# patterns. (Both caveats are why the excludes file carries the real filtering
+# weight; see excludes.txt.)
+#
+# Included: application source, migrations, configuration templates, container
+# and CI definitions, and documentation. Migrations are deliberately IN scope —
+# a data migration is one of the few places a real credential could plausibly
+# be pasted into this repository.
+^app/src/
+^app/tests/
+^app/migrations/
+^app/(pyproject\.toml|alembic\.ini|Dockerfile|docker-compose\.yml|\.env\.example|\.dockerignore)$
+^Docs/
+^specs/
+^\.github/
+^\.trufflehog/
+^(README|CONTRIBUTING|SECURITY|NOTICE|CODE_OF_CONDUCT|LICENSE)
