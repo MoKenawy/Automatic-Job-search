@@ -35,9 +35,7 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
 
     Returns (rows processed, distinct postings touched).
     """
-    raw_rows = session.scalars(
-        select(RawPosting).where(RawPosting.run_id == run.id)
-    ).all()
+    raw_rows = session.scalars(select(RawPosting).where(RawPosting.run_id == run.id)).all()
 
     now = datetime.now(UTC)
     unresolved_country = 0
@@ -137,6 +135,8 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
 
     log.info(
         "stage 2 complete: %d raw rows -> %d distinct postings (%d unresolved country)",
-        len(raw_rows), len(touched), unresolved_country,
+        len(raw_rows),
+        len(touched),
+        unresolved_country,
     )
     return len(raw_rows), len(touched)

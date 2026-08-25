@@ -102,11 +102,15 @@ app/src/app/
 │   └── profiles.py         # CRUD for search profiles
 ├── pipeline/
 │   ├── collect_stage.py    # reads search profiles instead of settings.searches
-│   └── suppress_stage.py   # NEW: apply employer blacklist -> reject postings
+│   └── suppress_stage.py   # SUPERSEDED (ADR-0015) — never built this way;
+│                           # suppression is derived at read time, not a
+│                           # pipeline stage. See 002-employer-suppression-derived/
 ├── scheduler.py            # reschedules per enabled profile; reloads on change
 └── web/
     ├── app.py              # + routes: bulk status, blacklist, settings, profiles
-    ├── queries.py          # + suppression-aware queries, profile/settings reads
+    ├── queries.py          # + suppression-aware queries (ADR-0015: via the shared
+                             # visibility seam, not per-query discipline), profile/
+                             # settings reads
     └── templates/
         ├── postings.html          # + row status control, multi-select, bulk bar
         ├── _row_status.html       # NEW: inline list-row status control (HTMX)

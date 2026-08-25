@@ -13,12 +13,25 @@ blocked.
 
 ### D-A — The blacklist reuses `employers.suppressed`
 
+**Superseded by [ADR-0015](../../Docs/ADRs/0015-employer-level-suppression.md).**
+`employers.suppressed` is still the blacklist flag (this half stands), but the
+decision below (D-B) — reusing it as the *source for a materialised copy on
+`postings`* — was reversed. Left unedited as the record of the original
+reasoning.
+
 `Employer.suppressed` already exists and is read nowhere. It becomes the blacklist
 flag. No migration is needed for the column itself; a partial index on
 `suppressed = true` supports the suppression query. This keeps the blacklist a
 first-class employer property rather than a parallel list.
 
 ### D-B — Auto-rejection is an idempotent suppression pass
+
+**Superseded by [ADR-0015](../../Docs/ADRs/0015-employer-level-suppression.md).**
+There is no suppression pass and no materialised copy: suppression is derived
+from `employers.suppressed` at read time by
+[002-employer-suppression-derived](../002-employer-suppression-derived/spec.md)'s
+visibility seam. `suppress_stage` is deleted. Left unedited below as the
+record of the original reasoning.
 
 Suppression runs as a stage (`suppress_stage`) after normalisation and before
 scoring/publication, and also on demand when an employer is blacklisted. It sets

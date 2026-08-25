@@ -62,9 +62,7 @@ def _register_jobs(scheduler, run_profile_job) -> int:
 def _profile_signature(session) -> frozenset[tuple[int, str]]:
     """A value that changes whenever an enabled profile's schedule or
     membership changes — cheap to compare, no separate 'last checked' state."""
-    return frozenset(
-        (p.id, p.updated_at.isoformat()) for p in profiles.list_enabled(session)
-    )
+    return frozenset((p.id, p.updated_at.isoformat()) for p in profiles.list_enabled(session))
 
 
 def build_scheduler(

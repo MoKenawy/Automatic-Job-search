@@ -1,6 +1,7 @@
-"""US3 — company blacklist with automatic rejection.
+"""US1/US3/US4 — employer blacklist, derived at read time (ADR-0015).
 
-Covers the suppression pass, born-rejected new postings, and the web toggle.
+Covers born-`new` postings from a blacklisted employer, the web toggle, the
+visibility seam adopted per read path, and the detail-page route back out.
 In-memory SQLite, matching the other web/pipeline tests.
 """
 
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.models import (
+    STATUS_APPLIED,
     STATUS_NEW,
     STATUS_REJECTED,
     STATUS_SHORTLIST,
@@ -21,8 +23,7 @@ from app.db.models import (
     Run,
 )
 from app.pipeline.normalise_stage import run_normalise
-from app.pipeline.suppress_stage import run_suppress
-from app.services.blacklist import reject_employer_postings
+from app.services import queries
 from app.web.app import app, get_db
 
 
@@ -59,47 +60,12 @@ def _employer_with_postings(session: Session, name, suppressed=False, statuses=N
     return emp
 
 
-# --- suppression pass -------------------------------------------------------
+# --- US2: covers postings not yet collected, with no pass having run -------
 
 
-def test_suppress_rejects_all_postings_of_blacklisted_employer(factory):
-    with factory() as s:
-        emp = _employer_with_postings(s, "Spammer", suppressed=True)
-        n = run_suppress(s)
-        assert n == 2
-        postings = s.query(Posting).filter(Posting.employer_id == emp.id).all()
-        assert all(p.status == STATUS_REJECTED for p in postings)
-        assert all(p.published is False for p in postings)
-
-
-def test_suppress_is_idempotent(factory):
-    with factory() as s:
-        _employer_with_postings(s, "Spammer", suppressed=True)
-        assert run_suppress(s) == 2
-        assert run_suppress(s) == 0  # nothing left to change
-
-
-def test_suppress_leaves_other_employers_untouched(factory):
-    with factory() as s:
-        _employer_with_postings(s, "Spammer", suppressed=True)
-        good = _employer_with_postings(s, "Good", suppressed=False)
-        run_suppress(s)
-        good_postings = s.query(Posting).filter(Posting.employer_id == good.id).all()
-        assert all(p.status == STATUS_NEW for p in good_postings)
-
-
-def test_postings_are_preserved_not_deleted(factory):
-    """'Preserved' means retained with status Rejected (D9)."""
-    with factory() as s:
-        _employer_with_postings(s, "Spammer", suppressed=True)
-        run_suppress(s)
-        assert s.query(Posting).count() == 2  # still present
-
-
-# --- born rejected via normalise -------------------------------------------
-
-
-def test_new_posting_from_blacklisted_employer_is_born_rejected(factory):
+def test_new_posting_from_blacklisted_employer_is_born_new_and_invisible(factory):
+    """ADR-0015 §Decision 1: covers postings not yet seen, satisfied
+    structurally — no sweep runs, and yet the posting is invisible."""
     with factory() as s:
         emp = Employer(name="Spammer", normalised_name="spammer", suppressed=True)
         run = Run(status="running")
@@ -121,8 +87,10 @@ def test_new_posting_from_blacklisted_employer_is_born_rejected(factory):
 
         run_normalise(s, run)
         posting = s.query(Posting).one()
-        assert posting.status == STATUS_REJECTED
-        assert posting.published is False
+        assert posting.status == STATUS_NEW
+
+        page = queries.list_postings(s)
+        assert page.total == 0
 
 
 # --- web toggle -------------------------------------------------------------
@@ -131,8 +99,12 @@ def test_new_posting_from_blacklisted_employer_is_born_rejected(factory):
 @pytest.fixture
 def client(factory):
     with factory() as seed:
-        _employer_with_postings(seed, "Spammer", suppressed=False,
-                                statuses=[STATUS_NEW, STATUS_SHORTLIST])
+        _employer_with_postings(
+            seed,
+            "Spammer",
+            suppressed=False,
+            statuses=[STATUS_NEW, STATUS_SHORTLIST, STATUS_APPLIED, STATUS_REJECTED],
+        )
 
     def override():
         s = factory()
@@ -146,26 +118,39 @@ def client(factory):
     app.dependency_overrides.clear()
 
 
-def test_blacklist_endpoint_suppresses_and_rejects(client, factory):
-    r = client.post("/employers/1/blacklist", data={"return_to": "/blacklist"},
-                    follow_redirects=False)
+def test_blacklist_endpoint_sets_flag_and_leaves_statuses_untouched(client, factory):
+    with factory() as s:
+        before = {p.id: p.status for p in s.query(Posting).filter(Posting.employer_id == 1)}
+
+    r = client.post(
+        "/employers/1/blacklist", data={"return_to": "/blacklist"}, follow_redirects=False
+    )
     assert r.status_code == 303
     with factory() as s:
         emp = s.get(Employer, 1)
         assert emp.suppressed is True
-        postings = s.query(Posting).filter(Posting.employer_id == 1).all()
-        assert all(p.status == STATUS_REJECTED for p in postings)
+        after = {p.id: p.status for p in s.query(Posting).filter(Posting.employer_id == 1)}
+        assert after == before  # untouched (ADR-0015) ...
+        page = queries.list_postings(s)  # ... but invisible
+        assert page.total == 0
 
 
-def test_unblacklist_stops_future_but_does_not_reinstate(client, factory):
+def test_blacklist_then_lift_restores_visibility_with_prior_status_intact(client, factory):
+    """The visible behaviour change (FR-012, SC-003): a lift is a restore, not
+    a partial one — every one of the four statuses comes back exactly as it
+    was, across the whole employer, not just the ones triaged after ADR-0015."""
+    with factory() as s:
+        before = {p.id: p.status for p in s.query(Posting).filter(Posting.employer_id == 1)}
+
     client.post("/employers/1/blacklist", data={}, follow_redirects=False)
     client.post("/employers/1/unblacklist", data={}, follow_redirects=False)
     with factory() as s:
         emp = s.get(Employer, 1)
         assert emp.suppressed is False
-        # Previously rejected postings stay rejected (FR-011)
-        postings = s.query(Posting).filter(Posting.employer_id == 1).all()
-        assert all(p.status == STATUS_REJECTED for p in postings)
+        after = {p.id: p.status for p in s.query(Posting).filter(Posting.employer_id == 1)}
+        assert after == before
+        page = queries.list_postings(s)
+        assert page.total == len(before)
 
 
 def test_blacklist_page_lists_suppressed_employers(client):
@@ -174,7 +159,120 @@ def test_blacklist_page_lists_suppressed_employers(client):
     assert "Spammer" in html
 
 
-def test_suppress_employer_targeted(factory):
+def test_blacklist_page_renders_the_fr013_standing_note(client):
+    html = client.get("/blacklist").text
+    assert "FR-013" in html
+
+
+# --- US1: the seam, adopted per read path (ADR-0015) ------------------------
+#
+# Every case here is two-sided: a suppressed employer's posting is absent
+# *and* a normal employer's posting is present. An absence-only test would
+# also pass against a `not_suppressed()` that hid everything.
+
+
+def test_list_postings_hides_suppressed_employers_new_posting(factory):
     with factory() as s:
-        emp = _employer_with_postings(s, "Spammer", suppressed=True)
-        assert reject_employer_postings(s, emp.id) == 2
+        _employer_with_postings(s, "Spammer", suppressed=True, statuses=[STATUS_NEW])
+        _employer_with_postings(s, "Good", suppressed=False, statuses=[STATUS_NEW])
+
+        page = queries.list_postings(s)
+        titles = {p.title for p, _ in page.rows}
+        assert "Role 0" in titles
+        assert page.total == 1
+        assert len(page.rows) == 1
+
+
+def test_list_postings_published_only_hides_suppressed_employer(factory):
+    with factory() as s:
+        emp_bad = _employer_with_postings(
+            s, "Spammer", suppressed=True, statuses=[STATUS_SHORTLIST]
+        )
+        emp_good = _employer_with_postings(s, "Good", suppressed=False, statuses=[STATUS_SHORTLIST])
+        for emp in (emp_bad, emp_good):
+            posting = s.query(Posting).filter(Posting.employer_id == emp.id).one()
+            posting.published = True
+        s.commit()
+
+        page = queries.list_postings(s, published_only=True)
+        employer_ids = {p.employer_id for p, _ in page.rows}
+        assert employer_ids == {emp_good.id}
+
+
+def test_totals_exclude_suppressed_employers_postings(factory):
+    with factory() as s:
+        emp_bad = _employer_with_postings(
+            s, "Spammer", suppressed=True, statuses=[STATUS_NEW, STATUS_SHORTLIST]
+        )
+        for p in s.query(Posting).filter(Posting.employer_id == emp_bad.id):
+            p.published = True
+            p.score = 5
+        emp_good = _employer_with_postings(s, "Good", suppressed=False, statuses=[STATUS_NEW])
+        for p in s.query(Posting).filter(Posting.employer_id == emp_good.id):
+            p.published = True
+            p.score = 5
+        s.commit()
+
+        t = queries.totals(s)
+        assert t.postings == 1
+        assert t.published == 1
+        assert t.scored == 1
+        assert t.by_status == {STATUS_NEW: 1}
+
+
+def test_totals_employers_excludes_blacklisted(factory):
+    with factory() as s:
+        _employer_with_postings(s, "Spammer", suppressed=True)
+        _employer_with_postings(s, "Good", suppressed=False)
+
+        t = queries.totals(s)
+        assert t.employers == 1
+
+
+def test_facets_countries_excludes_suppressed_employers_only_country(factory):
+    with factory() as s:
+        emp_bad = _employer_with_postings(s, "Spammer", suppressed=True, statuses=[STATUS_NEW])
+        s.query(Posting).filter(Posting.employer_id == emp_bad.id).update({"country_code": "EG"})
+        emp_good = _employer_with_postings(s, "Good", suppressed=False, statuses=[STATUS_NEW])
+        s.query(Posting).filter(Posting.employer_id == emp_good.id).update({"country_code": "US"})
+        s.commit()
+
+        f = queries.facets(s)
+        assert f.countries == ["US"]
+        assert f.unknown_country is False
+
+
+def test_postings_of_suppressed_employer_are_retained_not_deleted(factory):
+    """Invisibility is not retention (FR-014, D9)."""
+    with factory() as s:
+        _employer_with_postings(s, "Spammer", suppressed=True, statuses=[STATUS_NEW])
+
+        page = queries.list_postings(s)
+        assert page.total == 0  # invisible...
+        assert s.query(Posting).count() == 1  # ...but still present on disk
+
+
+# --- US4: the way back out stays reachable (ADR-0015, FR-015) ---------------
+
+
+def test_detail_route_loads_for_suppressed_employers_posting(factory):
+    with factory() as s:
+        emp = _employer_with_postings(s, "Spammer", suppressed=True, statuses=[STATUS_NEW])
+        posting_id = s.query(Posting).filter(Posting.employer_id == emp.id).first().id
+
+    def override():
+        sess = factory()
+        try:
+            yield sess
+        finally:
+            sess.close()
+
+    app.dependency_overrides[get_db] = override
+    try:
+        r = TestClient(app).get(f"/postings/{posting_id}")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert r.status_code == 200
+    assert "employer blacklisted" in r.text
+    assert "Remove from blacklist" in r.text

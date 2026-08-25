@@ -110,6 +110,15 @@ call sites keep reading `settings.<name>`-style values through the store.
 
 ## Changed usage of existing entities
 
+> **Superseded by [ADR-0015](../../Docs/ADRs/0015-employer-level-suppression.md)
+> / [002-employer-suppression-derived/data-model.md](../002-employer-suppression-derived/data-model.md).**
+> This section introduced the materialised suppression copy — a posting sweep
+> that stamped `employers.suppressed` onto `postings.status` — without an ADR
+> recording the decision. ADR-0015 reverses it: `employers.suppressed` is the
+> only place blacklist state lives, and `postings.status`/`published` are
+> derived from it at read time, never written to. Left here, unedited, as the
+> record of what was originally decided and why it changed.
+
 ### `employers.suppressed` — the blacklist
 
 - **Before**: column exists, read nowhere.

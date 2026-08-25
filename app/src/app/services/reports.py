@@ -24,12 +24,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
-    RawPosting,
-    RawPostingNormalization,
-    Run,
     STATUSES,
     Employer,
     Posting,
+    RawPosting,
+    RawPostingNormalization,
+    Run,
     SearchProfile,
 )
 from app.services import queries
@@ -80,9 +80,10 @@ def employer_activity(
 ) -> list[EmployerActivity]:
     """Employers ranked by how many distinct roles they surfaced.
 
-    Suppressed employers are excluded by default — their postings are
-    auto-rejected (D9) — but remain available behind `include_suppressed`, since
-    a blacklisted employer hiring heavily is worth being able to see.
+    Suppressed employers are excluded by default — their postings are hidden
+    from every operator-facing view (ADR-0015) — but remain available behind
+    `include_suppressed`, since a blacklisted employer hiring heavily is worth
+    being able to see.
 
     `now` is injectable so `days_quiet` is testable without freezing the clock.
     """
@@ -233,6 +234,9 @@ def source_overlap(session: Session) -> SourceOverlap:
     contested = 0
     total = 0
 
+    # Deliberate opt-out from not_suppressed() (ADR-0015, FR-017): this report
+    # measures what the collector returned, not what the operator should act
+    # on. Filtering would understate a board's coverage.
     for sources in session.scalars(select(Posting.sources)):
         total += 1
         sources = sources or {}

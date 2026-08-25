@@ -38,9 +38,14 @@ def client():
     factory = sessionmaker(bind=engine, expire_on_commit=False, future=True)
 
     with factory() as seed:
-        run = Run(status="success", collected_count=12, deduplicated_count=9,
-                   counts_by_site={"indeed": 7, "linkedin": 5})
-        seed.add(run)
+        seed.add(
+            Run(
+                status="success",
+                collected_count=12,
+                deduplicated_count=9,
+                counts_by_site={"indeed": 7, "linkedin": 5},
+            )
+        )
         acme = Employer(name="Acme", normalised_name="acme")
         blacklisted = Employer(
             name="Blacklisted Corp", normalised_name="blacklisted corp", suppressed=True
@@ -50,21 +55,27 @@ def client():
         seed.flush()
 
         data_eng = Posting(
-            fingerprint="a" * 64, employer_id=acme.id,
-            title="Data Engineer", normalised_title="data engineer",
+            fingerprint="a" * 64,
+            employer_id=acme.id,
+            title="Data Engineer",
+            normalised_title="data engineer",
             sources={
                 "indeed": {"url": "https://i/1", "first_seen": SAME_RUN},
                 "linkedin": {"url": "https://l/1", "first_seen": SAME_RUN},
             },
         )
-        seed.add_all([
-            data_eng,
-            Posting(
-                fingerprint="b" * 64, employer_id=blacklisted.id,
-                title="Junior Dev", normalised_title="junior dev",
-                sources={"linkedin": {"url": "https://l/2", "first_seen": SAME_RUN}},
-            ),
-        ])
+        seed.add_all(
+            [
+                data_eng,
+                Posting(
+                    fingerprint="b" * 64,
+                    employer_id=blacklisted.id,
+                    title="Junior Dev",
+                    normalised_title="junior dev",
+                    sources={"linkedin": {"url": "https://l/2", "first_seen": SAME_RUN}},
+                ),
+            ]
+        )
         seed.flush()
 
         profile_run = Run(profile_id=profile.id, status="success")
