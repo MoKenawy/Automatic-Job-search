@@ -23,7 +23,15 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import Employer, Posting
+from app.db.models import (
+    STATUSES,
+    Employer,
+    Posting,
+    RawPosting,
+    RawPostingNormalization,
+    Run,
+    SearchProfile,
+)
 from app.services import queries
 
 
@@ -182,6 +190,41 @@ def source_overlap(session: Session) -> SourceOverlap:
     The site vocabulary comes from `queries.known_sites`, which is also why board
     names are not enumerated from the JSON keys — though any key actually present
     is still counted, so a board missing from that list cannot go unreported.
+
+    Parameters:
+        session: Open SQLAlchemy session. It is the only input: every `postings`
+            row is read, with no status, date, or suppressed-employer filter, so
+            the figures cover the whole table rather than a triage subset.
+
+    Returns:
+        A `SourceOverlap` filled as follows.
+
+        `sites` is `queries.known_sites` plus any key observed in `sources`,
+        sorted. Keys are counted as written — nothing here normalises spelling or
+        checks them against a vocabulary. `per_site` and `first_by` are keyed by
+        that same list, carrying 0 for a site never seen. `combinations` pairs
+        each distinct sorted tuple of a posting's keys with its count, in
+        `Counter.most_common()` order, so equal counts fall back to the order the
+        combination was first encountered.
+
+        `total` counts every row scanned, including rows whose `sources` is NULL
+        or empty; those contribute to nothing else. `contested` counts only
+        postings carrying two or more boards *and* two or more parseable
+        `first_seen` stamps, and is the denominator for `first_by` and `ties` —
+        it can therefore sit below the number of multi-board postings.
+        `first_by` moves only when exactly one board holds the earliest stamp;
+        an equal earliest stamp increments `ties` instead.
+
+    Error behaviour:
+        Nothing is raised here, and malformed provenance is skipped rather than
+        reported. A `sources` entry that is not a dict, carries no `first_seen`,
+        or carries one `datetime.fromisoformat` rejects yields no stamp (see
+        `_first_seen`), so the posting drops out of `contested`, `first_by` and
+        `ties` while still counting toward `per_site`, `combinations` and
+        `total` — an under-count that leaves no trace in the output. Naive
+        stamps are read as UTC (`_aware`). An empty table returns zeroed counts
+        over whatever `known_sites` reports. Database errors propagate from the
+        session untouched.
     """
     sites = list(queries.known_sites(session))
     per_site: Counter[str] = Counter()
@@ -242,3 +285,65 @@ def source_overlap(session: Session) -> SourceOverlap:
         contested=contested,
         total=total,
     )
+
+
+# --- R?: triage status per search profile --------------------------------------
+
+
+@dataclass
+class ProfileStatusBreakdown:
+    """One profile's postings, split by triage status."""
+
+    profile: SearchProfile
+    by_status: dict[str, int]
+    total: int
+
+
+def postings_by_profile_status(
+    session: Session, *, include_disabled: bool = False
+) -> list[ProfileStatusBreakdown]:
+    """Triage status split for each search profile's postings.
+
+    A `Posting` carries no direct link to `SearchProfile` — it is reached only
+    via `Posting -> RawPostingNormalization -> RawPosting -> Run -> SearchProfile`
+    (design §8, RawPostingNormalization docstring), and a posting can be
+    surfaced by more than one profile's runs (or by none, via a profile-less
+    manual run-all). Rather than pick one profile to credit, every matching
+    profile counts the posting — so a posting seen by two profiles appears in
+    both pie charts, and totals summed across profiles can exceed the number
+    of distinct postings collected. That trade-off is the caveat the route
+    surfaces (ADR-0008 §1); `func.count(distinct(...))` below only prevents a
+    posting being double-counted *within* one profile's own multiple runs.
+    """
+    profiles_stmt = select(SearchProfile).order_by(SearchProfile.name)
+    if not include_disabled:
+        profiles_stmt = profiles_stmt.where(SearchProfile.enabled.is_(True))
+    profiles = session.scalars(profiles_stmt).all()
+    if not profiles:
+        return []
+
+    ids = [p.id for p in profiles]
+    counts_stmt = (
+        select(Run.profile_id, Posting.status, func.count(func.distinct(Posting.id)))
+        .select_from(Run)
+        .join(RawPosting, RawPosting.run_id == Run.id)
+        .join(
+            RawPostingNormalization,
+            RawPostingNormalization.raw_posting_id == RawPosting.id,
+        )
+        .join(Posting, Posting.id == RawPostingNormalization.posting_id)
+        .where(Run.profile_id.in_(ids))
+        .group_by(Run.profile_id, Posting.status)
+    )
+    by_profile: dict[int, dict[str, int]] = defaultdict(dict)
+    for profile_id, status, count in session.execute(counts_stmt).all():
+        by_profile[profile_id][status] = count
+
+    return [
+        ProfileStatusBreakdown(
+            profile=profile,
+            by_status={s: by_profile.get(profile.id, {}).get(s, 0) for s in STATUSES},
+            total=sum(by_profile.get(profile.id, {}).values()),
+        )
+        for profile in profiles
+    ]

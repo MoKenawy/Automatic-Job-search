@@ -32,6 +32,11 @@ REPORTS = [
         "Source coverage and overlap",
         "What each board contributes, and which one surfaces a role first.",
     ),
+    (
+        "/reports/profiles",
+        "Triage status per search profile",
+        "Where each profile's postings sit in triage, new through rejected.",
+    ),
 ]
 
 
@@ -73,6 +78,24 @@ def sources(request: Request, db: Session = Depends(get_db)):
                 "A role missing from a board may mean the board did not have it, "
                 "or that no search profile ever queried that board — the board "
                 "list is set per profile."
+            ),
+        },
+    )
+
+
+@router.get("/profiles", response_class=HTMLResponse)
+def profiles(request: Request, show_disabled: bool = False, db: Session = Depends(get_db)):
+    return TEMPLATES.TemplateResponse(
+        request=request,
+        name="reports/profiles.html",
+        context={
+            "rows": reports.postings_by_profile_status(db, include_disabled=show_disabled),
+            "show_disabled": show_disabled,
+            "caveat": (
+                "A posting surfaced by more than one profile's runs is counted "
+                "under each of them, so totals across profiles can exceed the "
+                "number of distinct postings collected. A posting seen only via "
+                "a manual run-all, with no profile attached, is counted under none."
             ),
         },
     )
