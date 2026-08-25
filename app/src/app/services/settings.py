@@ -64,22 +64,26 @@ READONLY_KEYS: tuple[str, ...] = ("timezone", "web_host", "web_port")
 # setting that silently does nothing — `request_delay_seconds` was exactly this
 # until it was wired into app.collect.client. See test_every_editable_
 # key_is_consumed_or_pending, which fails the moment a key falls through the gap.
-CONSUMED_KEYS: frozenset[str] = frozenset({
-    "results_per_search",           # collect_one -> results_wanted
-    "hours_old",                    # collect_one -> hours_old
-    "request_delay_seconds",        # collect_one -> time.sleep between sites
-    "linkedin_fetch_description",   # collect_one -> linkedin kwarg
-    "proxies",                      # collect_one -> proxies kwarg
-})
+CONSUMED_KEYS: frozenset[str] = frozenset(
+    {
+        "results_per_search",  # collect_one -> results_wanted
+        "hours_old",  # collect_one -> hours_old
+        "request_delay_seconds",  # collect_one -> time.sleep between sites
+        "linkedin_fetch_description",  # collect_one -> linkedin kwarg
+        "proxies",  # collect_one -> proxies kwarg
+    }
+)
 
 # Declared and validated ahead of the stage that will read them (stages 3-4 are
 # not yet implemented). Listed here rather than silently unconsumed.
-PENDING_KEYS: frozenset[str] = frozenset({
-    "publish_threshold",     # stage 4 - publication
-    "scoring_model",         # stage 3 - scoring
-    "title_include_pattern",  # stage 3 - title filter
-    "title_exclude_pattern",  # stage 3 - title filter
-})
+PENDING_KEYS: frozenset[str] = frozenset(
+    {
+        "publish_threshold",  # stage 4 - publication
+        "scoring_model",  # stage 3 - scoring
+        "title_include_pattern",  # stage 3 - title filter
+        "title_exclude_pattern",  # stage 3 - title filter
+    }
+)
 
 
 def get(session: Session, key: str) -> Any:

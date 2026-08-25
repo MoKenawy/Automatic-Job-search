@@ -27,10 +27,11 @@ def blacklist_employer(
     return_to: str = Form("/blacklist"),
     db: Session = Depends(get_db),
 ):
-    """Blacklist an employer and immediately reject their postings (US3).
+    """Blacklist an employer (ADR-0015).
 
-    Rejected postings are retained (D9). Callable from the blacklist page or from
-    a posting (FR-012); `return_to` sends the operator back where they were.
+    Postings are untouched; the employer's postings become invisible through
+    the read-time visibility seam. Callable from the blacklist page or from a
+    posting (FR-015); `return_to` sends the operator back where they were.
     """
     try:
         blacklist_service.blacklist(db, employer_id)
@@ -46,8 +47,10 @@ def unblacklist_employer(
     return_to: str = Form("/blacklist"),
     db: Session = Depends(get_db),
 ):
-    """Remove a blacklist. Future postings are no longer auto-rejected; previously
-    rejected postings are NOT reinstated (US3, FR-011)."""
+    """Remove a blacklist (ADR-0015, FR-012). Nothing was overwritten, so the
+    employer's postings return to visibility with their prior triage status
+    intact — except for blacklists applied before this change, whose
+    postings stay rejected (FR-013)."""
     try:
         blacklist_service.lift(db, employer_id)
     except blacklist_service.EmployerNotFoundError:

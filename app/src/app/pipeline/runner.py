@@ -20,7 +20,6 @@ from app.db import session_scope
 from app.db.models import Run, SearchProfile
 from app.pipeline.collect_stage import run_collect
 from app.pipeline.normalise_stage import run_normalise
-from app.pipeline.suppress_stage import run_suppress
 from app.services import profiles
 
 log = logging.getLogger(__name__)
@@ -54,7 +53,10 @@ def track_run(session) -> Iterator[Run]:
         session.commit()
         log.info(
             "run %d finished: collected=%d deduplicated=%d by_site=%s",
-            run.id, run.collected_count, run.deduplicated_count, run.counts_by_site,
+            run.id,
+            run.collected_count,
+            run.deduplicated_count,
+            run.counts_by_site,
         )
 
 
@@ -69,13 +71,11 @@ def _run(session, run, specs) -> dict:
     config = RunConfig.resolve(session)
     collected = run_collect(session, run, specs, config)
     raw_count, distinct = run_normalise(session, run)
-    suppressed = run_suppress(session)
     return {
         "run_id": run.id,
         "collected": collected,
         "raw": raw_count,
         "distinct": distinct,
-        "suppressed": suppressed,
     }
 
 

@@ -13,21 +13,41 @@ import unicodedata
 # Legal-entity suffixes only. Note S.A.E. — the Egyptian joint-stock form —
 # which appears in local listings.
 LEGAL_SUFFIXES = {
-    "inc", "incorporated",
-    "llc", "lc",
-    "ltd", "limited",
-    "llp", "lp",
+    "inc",
+    "incorporated",
+    "llc",
+    "lc",
+    "ltd",
+    "limited",
+    "llp",
+    "lp",
     "plc",
-    "corp", "corporation",
-    "co", "company",
-    "gmbh", "mbh", "ag",
-    "sa", "sae", "sas", "sarl", "spa", "srl",
-    "bv", "nv",
-    "ab", "as", "oy", "aps",
-    "pty", "pte",
+    "corp",
+    "corporation",
+    "co",
+    "company",
+    "gmbh",
+    "mbh",
+    "ag",
+    "sa",
+    "sae",
+    "sas",
+    "sarl",
+    "spa",
+    "srl",
+    "bv",
+    "nv",
+    "ab",
+    "as",
+    "oy",
+    "aps",
+    "pty",
+    "pte",
     "kk",
-    "wll",   # Gulf: with limited liability
-    "fzco", "fze", "fzllc",  # UAE free-zone forms
+    "wll",  # Gulf: with limited liability
+    "fzco",
+    "fze",
+    "fzllc",  # UAE free-zone forms
 }
 
 _ARABIC = re.compile(r"[؀-ۿݐ-ݿ]")

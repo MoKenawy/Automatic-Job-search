@@ -59,41 +59,55 @@ def session():
         s.add_all([acme, blacklisted])
         s.flush()
 
-        s.add_all([
-            # Both boards, same run — a tie, not a winner
-            Posting(
-                fingerprint="a" * 64, employer_id=acme.id,
-                title="Data Engineer", normalised_title="data engineer",
-                first_seen_at=datetime(2026, 7, 1), status=STATUS_NEW,
-                sources={
-                    "indeed": {"url": "https://i/1", "first_seen": SAME_RUN},
-                    "linkedin": {"url": "https://l/1", "first_seen": SAME_RUN},
-                },
-            ),
-            # Same normalised title as above: volume 2, breadth 1 so far
-            Posting(
-                fingerprint="b" * 64, employer_id=acme.id,
-                title="Data Engineer II", normalised_title="data engineer",
-                first_seen_at=datetime(2026, 7, 10), status=STATUS_SHORTLIST,
-                sources={"indeed": {"url": "https://i/2", "first_seen": SAME_RUN}},
-            ),
-            # Both boards, LinkedIn a run earlier — a strict winner
-            Posting(
-                fingerprint="c" * 64, employer_id=acme.id,
-                title="Analytics Engineer", normalised_title="analytics engineer",
-                first_seen_at=datetime(2026, 7, 20), status=STATUS_NEW,
-                sources={
-                    "indeed": {"url": "https://i/3", "first_seen": NEXT_RUN},
-                    "linkedin": {"url": "https://l/3", "first_seen": SAME_RUN},
-                },
-            ),
-            Posting(
-                fingerprint="d" * 64, employer_id=blacklisted.id,
-                title="Junior Dev", normalised_title="junior dev",
-                first_seen_at=datetime(2026, 7, 5), status=STATUS_NEW,
-                sources={"linkedin": {"url": "https://l/4", "first_seen": SAME_RUN}},
-            ),
-        ])
+        s.add_all(
+            [
+                # Both boards, same run — a tie, not a winner
+                Posting(
+                    fingerprint="a" * 64,
+                    employer_id=acme.id,
+                    title="Data Engineer",
+                    normalised_title="data engineer",
+                    first_seen_at=datetime(2026, 7, 1),
+                    status=STATUS_NEW,
+                    sources={
+                        "indeed": {"url": "https://i/1", "first_seen": SAME_RUN},
+                        "linkedin": {"url": "https://l/1", "first_seen": SAME_RUN},
+                    },
+                ),
+                # Same normalised title as above: volume 2, breadth 1 so far
+                Posting(
+                    fingerprint="b" * 64,
+                    employer_id=acme.id,
+                    title="Data Engineer II",
+                    normalised_title="data engineer",
+                    first_seen_at=datetime(2026, 7, 10),
+                    status=STATUS_SHORTLIST,
+                    sources={"indeed": {"url": "https://i/2", "first_seen": SAME_RUN}},
+                ),
+                # Both boards, LinkedIn a run earlier — a strict winner
+                Posting(
+                    fingerprint="c" * 64,
+                    employer_id=acme.id,
+                    title="Analytics Engineer",
+                    normalised_title="analytics engineer",
+                    first_seen_at=datetime(2026, 7, 20),
+                    status=STATUS_NEW,
+                    sources={
+                        "indeed": {"url": "https://i/3", "first_seen": NEXT_RUN},
+                        "linkedin": {"url": "https://l/3", "first_seen": SAME_RUN},
+                    },
+                ),
+                Posting(
+                    fingerprint="d" * 64,
+                    employer_id=blacklisted.id,
+                    title="Junior Dev",
+                    normalised_title="junior dev",
+                    first_seen_at=datetime(2026, 7, 5),
+                    status=STATUS_NEW,
+                    sources={"linkedin": {"url": "https://l/4", "first_seen": SAME_RUN}},
+                ),
+            ]
+        )
         s.commit()
         yield s
 
@@ -183,8 +197,10 @@ def test_a_posting_with_no_provenance_timestamps_is_not_contested(session):
     with no winner — it is an absence of evidence, not a tie."""
     session.add(
         Posting(
-            fingerprint="e" * 64, employer_id=1,
-            title="Legacy", normalised_title="legacy",
+            fingerprint="e" * 64,
+            employer_id=1,
+            title="Legacy",
+            normalised_title="legacy",
             first_seen_at=datetime(2026, 7, 2),
             sources={"indeed": {"url": "https://i/5"}, "linkedin": {"url": "https://l/5"}},
         )
@@ -241,18 +257,24 @@ def profile_session():
         s.flush()
 
         shared = Posting(
-            fingerprint="a" * 64, employer_id=employer.id,
-            title="Backend Engineer", normalised_title="backend engineer",
+            fingerprint="a" * 64,
+            employer_id=employer.id,
+            title="Backend Engineer",
+            normalised_title="backend engineer",
             status=STATUS_NEW,
         )
         backend_only = Posting(
-            fingerprint="b" * 64, employer_id=employer.id,
-            title="Senior Backend Engineer", normalised_title="senior backend engineer",
+            fingerprint="b" * 64,
+            employer_id=employer.id,
+            title="Senior Backend Engineer",
+            normalised_title="senior backend engineer",
             status=STATUS_SHORTLIST,
         )
         data_only = Posting(
-            fingerprint="c" * 64, employer_id=employer.id,
-            title="Data Engineer", normalised_title="data engineer",
+            fingerprint="c" * 64,
+            employer_id=employer.id,
+            title="Data Engineer",
+            normalised_title="data engineer",
             status=STATUS_APPLIED,
         )
         s.add_all([shared, backend_only, data_only])
@@ -270,12 +292,20 @@ def profile_session():
         s.add_all([raw_shared_via_backend, raw_backend_only, raw_shared_via_data, raw_data_only])
         s.flush()
 
-        s.add_all([
-            RawPostingNormalization(raw_posting_id=raw_shared_via_backend.id, posting_id=shared.id),
-            RawPostingNormalization(raw_posting_id=raw_backend_only.id, posting_id=backend_only.id),
-            RawPostingNormalization(raw_posting_id=raw_shared_via_data.id, posting_id=shared.id),
-            RawPostingNormalization(raw_posting_id=raw_data_only.id, posting_id=data_only.id),
-        ])
+        s.add_all(
+            [
+                RawPostingNormalization(
+                    raw_posting_id=raw_shared_via_backend.id, posting_id=shared.id
+                ),
+                RawPostingNormalization(
+                    raw_posting_id=raw_backend_only.id, posting_id=backend_only.id
+                ),
+                RawPostingNormalization(
+                    raw_posting_id=raw_shared_via_data.id, posting_id=shared.id
+                ),
+                RawPostingNormalization(raw_posting_id=raw_data_only.id, posting_id=data_only.id),
+            ]
+        )
         s.commit()
         yield s
 

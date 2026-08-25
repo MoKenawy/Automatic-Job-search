@@ -13,6 +13,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.config import WORKING_SITES
 from app.db.models import STATUS_REJECTED, Employer, Posting, Run, SearchProfile
+from app.db.visibility import not_suppressed
 
 # Selects postings whose country could not be resolved. `parse_country` returns
 # None rather than guessing (normalise/country.py), so this is a real bucket the
@@ -35,21 +36,32 @@ class Totals:
 
 
 def totals(session: Session) -> Totals:
+    # not_suppressed() applies to every figure over `postings` (ADR-0015). The
+    # employer count below deliberately does not — the predicate is over
+    # postings, not employers — and uses Employer.suppressed directly instead.
     by_status = dict(
         session.execute(
-            select(Posting.status, func.count()).group_by(Posting.status)
+            select(Posting.status, func.count()).where(not_suppressed()).group_by(Posting.status)
         ).all()
     )
     return Totals(
-        postings=session.scalar(select(func.count()).select_from(Posting)) or 0,
+        postings=session.scalar(select(func.count()).select_from(Posting).where(not_suppressed()))
+        or 0,
         published=session.scalar(
-            select(func.count()).select_from(Posting).where(Posting.published)
-        ) or 0,
+            select(func.count()).select_from(Posting).where(Posting.published, not_suppressed())
+        )
+        or 0,
         scored=session.scalar(
-            select(func.count()).select_from(Posting).where(Posting.score.isnot(None))
-        ) or 0,
+            select(func.count())
+            .select_from(Posting)
+            .where(Posting.score.isnot(None), not_suppressed())
+        )
+        or 0,
         by_status=by_status,
-        employers=session.scalar(select(func.count()).select_from(Employer)) or 0,
+        employers=session.scalar(
+            select(func.count()).select_from(Employer).where(Employer.suppressed.is_(False))
+        )
+        or 0,
         last_run=session.scalar(select(Run).order_by(Run.started_at.desc())),
     )
 
@@ -112,9 +124,10 @@ def _ordering(status: str | None) -> tuple:
     is what was rejected most recently — so `status_changed_at` leads instead.
     For a posting whose status *is* Rejected that timestamp is its rejection
     time, which is why no separate `rejected_at` column is needed. It is NULL
-    only for postings born Rejected because their employer was already
-    suppressed (`Posting.create`), which have no rejection event of their own;
-    those sort last.
+    only for rows that predate ADR-0015 (postings born Rejected because their
+    employer was already suppressed under the old materialised model, which
+    have no rejection event of their own); no posting reaches this state any
+    more, but existing rows still sort last.
 
     Every ordering ends on `id`, which is unique and stable. Without it, rows
     tying on the leading keys could be returned in a different order for each
@@ -166,9 +179,7 @@ def list_postings(
         where.append(Posting.published.is_(True))
     if search:
         like = f"%{search.lower()}%"
-        where.append(
-            func.lower(Posting.title).like(like) | func.lower(Employer.name).like(like)
-        )
+        where.append(func.lower(Posting.title).like(like) | func.lower(Employer.name).like(like))
     if country == COUNTRY_UNKNOWN:
         where.append(Posting.country_code.is_(None))
     elif country:
@@ -177,16 +188,20 @@ def list_postings(
         where.append(Posting.is_remote.is_(remote))
     if source:
         where.append(_has_source(session, source))
+    where.append(not_suppressed())  # ADR-0015 — applied to both statements below
 
     # The join is repeated for the count because `search` reaches into
     # `employers`. It is an inner join on a non-nullable FK, so it cannot change
     # the count on its own.
-    total = session.scalar(
-        select(func.count())
-        .select_from(Posting)
-        .join(Employer, Employer.id == Posting.employer_id)
-        .where(*where)
-    ) or 0
+    total = (
+        session.scalar(
+            select(func.count())
+            .select_from(Posting)
+            .join(Employer, Employer.id == Posting.employer_id)
+            .where(*where)
+        )
+        or 0
+    )
 
     per_page = max(1, per_page if per_page is not None else PAGE_SIZE)
     number = min(max(page, 1), max(1, -(-total // per_page)))
@@ -225,13 +240,15 @@ def facets(session: Session) -> Facets:
     countries = list(
         session.scalars(
             select(Posting.country_code)
-            .where(Posting.country_code.isnot(None))
+            .where(Posting.country_code.isnot(None), not_suppressed())
             .distinct()
             .order_by(Posting.country_code)
         ).all()
     )
     unknown = session.scalar(
-        select(func.count()).select_from(Posting).where(Posting.country_code.is_(None))
+        select(func.count())
+        .select_from(Posting)
+        .where(Posting.country_code.is_(None), not_suppressed())
     )
     return Facets(
         countries=countries,
@@ -251,14 +268,17 @@ def known_sites(session: Session) -> list[str]:
     still be used to filter the postings it left behind.
     """
     recorded = {
-        site
-        for counts in session.scalars(select(Run.counts_by_site))
-        for site in (counts or {})
+        site for counts in session.scalars(select(Run.counts_by_site)) for site in (counts or {})
     }
     return sorted(recorded | set(WORKING_SITES))
 
 
 def get_posting(session: Session, posting_id: int) -> tuple[Posting, Employer] | None:
+    # Deliberate opt-out from not_suppressed() (ADR-0015, FR-015): this page is
+    # the operator's route back out of a suppression, and detail.html already
+    # renders the blacklist banner and the "Remove from blacklist" control.
+    # Filtering it would make lifting unreachable from the posting that
+    # prompted it.
     return session.execute(
         select(Posting, Employer)
         .join(Employer, Employer.id == Posting.employer_id)

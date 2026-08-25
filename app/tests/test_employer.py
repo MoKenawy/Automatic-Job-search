@@ -13,11 +13,11 @@ from app.normalise.employer import normalise_employer
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
-        ("Alstom", "alstom"),              # OBSERVED — Indeed
-        ("ALSTOM", "alstom"),              # OBSERVED — casing differs by board
+        ("Alstom", "alstom"),  # OBSERVED — Indeed
+        ("ALSTOM", "alstom"),  # OBSERVED — casing differs by board
         ("Coca-Cola HBC", "coca cola hbc"),  # OBSERVED — LinkedIn
         ("AtkinsRéalis", "atkinsrealis"),  # OBSERVED — accent stripped
-        ("Valleysoft", "valleysoft"),      # OBSERVED
+        ("Valleysoft", "valleysoft"),  # OBSERVED
     ],
 )
 def test_observed_employers(raw, expected):
@@ -33,9 +33,9 @@ def test_observed_employers(raw, expected):
         ("Acme Ltd.", "acme"),
         ("Acme Limited", "acme"),
         ("Acme GmbH", "acme"),
-        ("Acme S.A.E.", "acme"),        # Egyptian joint-stock form
-        ("Acme W.L.L.", "acme"),        # Gulf form
-        ("Acme FZE", "acme"),           # UAE free zone
+        ("Acme S.A.E.", "acme"),  # Egyptian joint-stock form
+        ("Acme W.L.L.", "acme"),  # Gulf form
+        ("Acme FZE", "acme"),  # UAE free zone
         ("Acme Co.", "acme"),
     ],
 )
@@ -71,7 +71,7 @@ def test_suffix_word_midname_is_retained():
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
-        ("Halan - حالا", "halan"),        # OBSERVED — LinkedIn, bilingual branding
+        ("Halan - حالا", "halan"),  # OBSERVED — LinkedIn, bilingual branding
         ("sonnen Egypt", "sonnen egypt"),  # OBSERVED
     ],
 )

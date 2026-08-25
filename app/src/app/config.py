@@ -33,9 +33,7 @@ class SearchSpec(BaseModel):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Storage
     database_url: str = "postgresql+psycopg://jobs:jobs@localhost:5432/jobs"
@@ -112,21 +110,15 @@ class RunConfig(BaseModel):
 
     results_per_search: int = Field(default_factory=lambda: settings.results_per_search)
     hours_old: int = Field(default_factory=lambda: settings.hours_old)
-    request_delay_seconds: float = Field(
-        default_factory=lambda: settings.request_delay_seconds
-    )
+    request_delay_seconds: float = Field(default_factory=lambda: settings.request_delay_seconds)
     linkedin_fetch_description: bool = Field(
         default_factory=lambda: settings.linkedin_fetch_description
     )
     proxies: list[str] = Field(default_factory=lambda: list(settings.proxies))
     publish_threshold: int = Field(default_factory=lambda: settings.publish_threshold)
     scoring_model: str = Field(default_factory=lambda: settings.scoring_model)
-    title_include_pattern: str = Field(
-        default_factory=lambda: settings.title_include_pattern
-    )
-    title_exclude_pattern: str = Field(
-        default_factory=lambda: settings.title_exclude_pattern
-    )
+    title_include_pattern: str = Field(default_factory=lambda: settings.title_include_pattern)
+    title_exclude_pattern: str = Field(default_factory=lambda: settings.title_exclude_pattern)
 
     @classmethod
     def resolve(cls, session: "Session") -> "RunConfig":

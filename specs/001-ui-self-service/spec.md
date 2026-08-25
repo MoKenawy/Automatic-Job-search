@@ -179,14 +179,26 @@ configured time.
 **Company blacklist**
 
 - **FR-006**: The operator MUST be able to blacklist and un-blacklist an employer.
-- **FR-007**: While an employer is blacklisted, the system MUST set every posting
-  from that employer to Rejected, for both existing and newly collected postings.
+- **FR-007**: **Superseded by [ADR-0015](../../Docs/ADRs/0015-employer-level-suppression.md)
+  / [002-employer-suppression-derived](../002-employer-suppression-derived/spec.md)
+  FR-002/FR-003/FR-006.** Blacklisting no longer sets a posting's status —
+  suppression is derived from `employers.suppressed` at read time and never
+  written to a posting.
 - **FR-008**: Auto-rejected postings MUST be retained, never deleted (design D9).
-- **FR-009**: A blacklisted employer's postings MUST never be published.
+- **FR-009**: **Superseded by [002-employer-suppression-derived](../002-employer-suppression-derived/spec.md)
+  FR-009.** A blacklisted employer's postings MUST never be published — the
+  requirement stands, but enforcement moved from write time (the sweep
+  clearing `published`) to read time (the visibility seam), and now applies
+  regardless of whether the posting was published before its employer was
+  blacklisted.
 - **FR-010**: The system MUST provide a view listing all blacklisted employers with
   the ability to remove each.
-- **FR-011**: Removing a blacklist MUST stop future auto-rejection but MUST NOT
-  automatically reinstate previously rejected postings.
+- **FR-011**: **Superseded and inverted by [002-employer-suppression-derived](../002-employer-suppression-derived/spec.md)
+  FR-012/FR-013.** Removing a blacklist now restores the employer's postings
+  to visibility with their prior triage status intact — this is now a display
+  decision, not an irreversible mutation. Postings suppressed *before* this
+  change stay Rejected on lift (FR-013's standing note); only postings
+  suppressed after it round-trip.
 - **FR-012**: The operator MUST be able to blacklist an employer directly from a
   posting (list row or detail).
 

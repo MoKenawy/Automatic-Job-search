@@ -50,8 +50,13 @@ def test_settings_page_renders(client):
 def test_settings_save_persists_and_redirects(client, factory):
     r = client.post(
         "/settings",
-        data={"publish_threshold": "72", "results_per_search": "20", "hours_old": "48",
-              "request_delay_seconds": "10", "scoring_model": "qwen2.5:7b-instruct"},
+        data={
+            "publish_threshold": "72",
+            "results_per_search": "20",
+            "hours_old": "48",
+            "request_delay_seconds": "10",
+            "scoring_model": "qwen2.5:7b-instruct",
+        },
         follow_redirects=False,
     )
     assert r.status_code == 303
@@ -62,13 +67,19 @@ def test_settings_save_persists_and_redirects(client, factory):
 def test_settings_invalid_shows_error_and_keeps_prior(client, factory):
     r = client.post(
         "/settings",
-        data={"publish_threshold": "150", "results_per_search": "20", "hours_old": "48",
-              "request_delay_seconds": "10", "scoring_model": "x"},
+        data={
+            "publish_threshold": "150",
+            "results_per_search": "20",
+            "hours_old": "48",
+            "request_delay_seconds": "10",
+            "scoring_model": "x",
+        },
     )
     assert r.status_code == 400
     with factory() as s:
         # nothing persisted
         from app.db.models import AppSetting
+
         assert s.get(AppSetting, "publish_threshold") is None
 
 
@@ -82,8 +93,14 @@ def test_profiles_page_renders(client):
 def test_create_profile_via_form(client, factory):
     r = client.post(
         "/profiles",
-        data={"name": "Remote DE", "term": "data engineer", "sites": ["indeed", "linkedin"],
-              "is_remote": "on", "schedule_hour": "7", "schedule_minute": "30"},
+        data={
+            "name": "Remote DE",
+            "term": "data engineer",
+            "sites": ["indeed", "linkedin"],
+            "is_remote": "on",
+            "schedule_hour": "7",
+            "schedule_minute": "30",
+        },
         follow_redirects=False,
     )
     assert r.status_code == 303
@@ -109,8 +126,12 @@ def test_create_profile_no_sites_reports_error(client, factory):
 def test_disable_profile_excludes_from_scheduling(client, factory):
     with factory() as s:
         p = profiles.create(
-            s, name="P", term="data engineer", sites=["indeed"],
-            schedule_hour="6", schedule_minute="0",
+            s,
+            name="P",
+            term="data engineer",
+            sites=["indeed"],
+            schedule_hour="6",
+            schedule_minute="0",
         )
         pid = p.id
     client.post(f"/profiles/{pid}/enabled", data={"enabled": "false"}, follow_redirects=False)
@@ -121,8 +142,12 @@ def test_disable_profile_excludes_from_scheduling(client, factory):
 def test_delete_profile(client, factory):
     with factory() as s:
         p = profiles.create(
-            s, name="P", term="data engineer", sites=["indeed"],
-            schedule_hour="6", schedule_minute="0",
+            s,
+            name="P",
+            term="data engineer",
+            sites=["indeed"],
+            schedule_hour="6",
+            schedule_minute="0",
         )
         pid = p.id
     client.post(f"/profiles/{pid}/delete", follow_redirects=False)

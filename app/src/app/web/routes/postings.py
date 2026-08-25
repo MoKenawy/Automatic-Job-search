@@ -51,9 +51,11 @@ def _render_list(
     # Pager links must carry the active filters, or paging would quietly widen
     # the result set. Built here as a callable so the template asks for a page
     # number and gets a whole URL, rather than concatenating one three times.
-    active = {k: v for k, v in
-              (("status", status), ("q", q), ("country", country), ("source", source))
-              if v}
+    active = {
+        k: v
+        for k, v in (("status", status), ("q", q), ("country", country), ("source", source))
+        if v
+    }
     if published:
         active["published"] = "true"
 
