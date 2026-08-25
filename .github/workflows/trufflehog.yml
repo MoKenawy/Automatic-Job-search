@@ -86,12 +86,23 @@ jobs:
 
       # On main, scan everything. A secret committed and then "removed" in a
       # later commit is still in the history and still compromised; only a full
-      # scan finds it. Verified clean against this repository's history at the
-      # time of writing.
-      - name: Scan the full history
+      # scan finds it.
+      #
+      # `--branch main` is required, not optional. Without it TruffleHog walks
+      # every ref present in the clone, and `fetch-depth: 0` above fetches all
+      # branches — so a placeholder in a doc on an unmerged feature branch
+      # turned a push to main red, reporting a finding that is not on main at
+      # all. That is bad signal design: main would stay red until every branch
+      # in the repository, including abandoned ones, was clean.
+      #
+      # The trade-off is stated plainly: a branch that is never opened as a
+      # pull request is never scanned. Coverage comes from the PR job above,
+      # which every branch passes through on its way to main.
+      - name: Scan the full history of main
         if: github.event_name == 'push'
         run: |
           trufflehog git "file://$PWD" \
+            --branch main \
             --config .trufflehog/config.yaml \
             --include-paths .trufflehog/includes.txt \
             --exclude-paths .trufflehog/excludes.txt \
