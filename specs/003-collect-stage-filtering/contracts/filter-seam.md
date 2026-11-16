@@ -177,8 +177,18 @@ uv run python -m app filter [--run-id N] [--all] [--dry-run]
 | `filter --all` | every posting in the database | **none** — see below |
 | `… --dry-run` | as above | none; nothing is written at all |
 
-Also runs as part of `run-all`, wired into `pipeline/runner._run()` after normalise,
-which covers the CLI, the scheduler and the web "run now" in one place.
+`--all` and `--run-id` are mutually exclusive, and saying so beats silently
+preferring one. Behind the command sit two entry points sharing one evaluator:
+
+```python
+# app/src/app/pipeline/filter_stage.py
+def run_filter(session, run, config, *, dry_run=False) -> tuple[int, int]
+def filter_all(session, config, *, dry_run=False) -> tuple[int, int]
+```
+
+`run_filter` also runs as part of `run-all`, wired into `pipeline/runner._run()`
+after normalise, which covers the CLI, the scheduler and the web "run now" in one
+place.
 
 ### Guarantees
 
@@ -186,10 +196,10 @@ which covers the CLI, the scheduler and the web "run now" in one place.
 |---|---|---|
 | C1 | **`filter_passed_count + filter_rejected_count == deduplicated_count`** for any run the stage processed | SC-003 made testable, and it pins the stage's scope to exactly the set `run_normalise` counted — distinct postings reached through `raw_posting_normalizations` |
 | C2 | **`--all` writes no run counters** | FR-015's counts belong to a run that evaluated postings during an execution. Writing a re-apply's totals onto a past run would decouple them from its `collected_count` and break C1 |
-| C3 | **A converged re-apply issues zero UPDATE statements** | SC-007 literally: `updated_at` carries `onupdate`, so blind writes would move a thousand timestamps for no change (research R5). Writes are difference-guarded |
+| C3 | **A converged re-apply issues zero UPDATE statements**, and **says so** — the number of verdicts changed is reported | SC-007 literally: `updated_at` carries `onupdate`, so blind writes would move a thousand timestamps for no change (research R5). Writes are difference-guarded, and the changed count is what makes the property observable rather than merely true |
 | C4 | **`--dry-run` writes nothing** — no verdict, no counter, no `updated_at` | The only safe way to measure the criteria against the real corpus before anything can be hidden, which is what the Phase 2/3 boundary exists for |
 | C5 | **Never writes `status`, `status_changed_at`, `last_retrieved_at`, or any raw row** | FR-012 and FR-014. Rejection and operator judgement are separate facts; a verdict is not an observation (ADR-0012) |
-| C6 | **Reports what it could not interpret** — the count of unrecognised experience values, and any pattern error | FR-002a and FR-008 require the fault to reach the operator. Precedent: `run_normalise`'s `unresolved_country` in its completion log |
+| C6 | **Reports what it could not interpret** — the count of unrecognised experience values and any pattern error, in the log, in the command's output, **and on `run.error`** | FR-002a and FR-008 require the fault to reach *the operator*, whose surface is the triage interface: `run.error` is rendered at `/runs`. Precedents: `run_normalise`'s `unresolved_country` in its completion log, and `run_collect` recording a non-fatal board failure on `run.error` |
 | C7 | **Warns when it rejects a whole haul** — `rejected == deduplicated_count > 0` | The spec's edge case: in the aggregate this is indistinguishable from a board that stopped responding, and the two must stay distinguishable |
 
 ---
