@@ -7,6 +7,7 @@ never written here.
 """
 
 import logging
+import re
 from typing import Any
 
 from pydantic import BaseModel, ValidationError, field_validator
@@ -52,6 +53,30 @@ class _EditableModel(BaseModel):
             raise ValueError("must be between 0 and 100")
         return v
 
+    @field_validator("title_include_pattern", "title_exclude_pattern")
+    @classmethod
+    def _valid_expression(cls, v: str) -> str:
+        """Refuse a pattern the filter could not use (FR-008, ADR-0016).
+
+        An empty pattern is not an error — it is how the criterion is switched
+        off, and it is the shipped default (D6).
+
+        Validating here rather than only at filter time is a deliberate
+        narrowing of FR-008. The filter still disables an unusable pattern and
+        reports it, because a pattern can reach the database another way (the
+        environment, or a hand-written row), and a run must never end on one.
+        But an operator typing a bad expression into the form should be told
+        immediately, while they still have it in front of them, instead of
+        discovering hours later that a criterion silently did nothing.
+        """
+        if not v or not v.strip():
+            return v
+        try:
+            re.compile(v)
+        except re.error as exc:
+            raise ValueError(f"is not a valid regular expression: {exc}") from exc
+        return v
+
 
 # The keys the UI may edit, in a stable display order.
 EDITABLE_KEYS: tuple[str, ...] = tuple(_EditableModel.model_fields.keys())
@@ -69,8 +94,13 @@ CONSUMED_KEYS: frozenset[str] = frozenset(
         "results_per_search",  # collect_one -> results_wanted
         "hours_old",  # collect_one -> hours_old
         "request_delay_seconds",  # collect_one -> time.sleep between sites
-        "linkedin_fetch_description",  # collect_one -> linkedin kwarg
+        "linkedin_fetch_description",  # collect_one -> linkedin kwarg; also the
+        # switch on postings.job_level, and so on the experience criterion:
+        # LinkedIn declares a seniority level only when descriptions are
+        # fetched (ADR-0016)
         "proxies",  # collect_one -> proxies kwarg
+        "title_include_pattern",  # filter_stage -> filters.titles (D6)
+        "title_exclude_pattern",  # filter_stage -> filters.titles (D6)
     }
 )
 
@@ -80,8 +110,6 @@ PENDING_KEYS: frozenset[str] = frozenset(
     {
         "publish_threshold",  # stage 4 - publication
         "scoring_model",  # stage 3 - scoring
-        "title_include_pattern",  # stage 3 - title filter
-        "title_exclude_pattern",  # stage 3 - title filter
     }
 )
 

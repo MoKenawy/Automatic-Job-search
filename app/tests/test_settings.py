@@ -113,3 +113,38 @@ def test_every_editable_key_is_consumed_or_pending():
     accounted = settings_service.CONSUMED_KEYS | settings_service.PENDING_KEYS
     assert set(settings_service.EDITABLE_KEYS) == accounted
     assert not (settings_service.CONSUMED_KEYS & settings_service.PENDING_KEYS)
+
+
+def test_the_title_patterns_are_now_consumed_rather_than_pending():
+    """ADR-0016 gives D6's patterns a consumer (`pipeline.filter_stage`), so they
+    leave PENDING_KEYS. The partition test above would not catch the move on its
+    own: a key is accounted for either way."""
+    for key in ("title_include_pattern", "title_exclude_pattern"):
+        assert key in settings_service.CONSUMED_KEYS
+        assert key not in settings_service.PENDING_KEYS
+
+
+def test_a_malformed_title_pattern_is_refused_and_the_prior_value_stands(session):
+    """FR-008 at the form, rather than hours later in a run.
+
+    The filter stage still disables and reports an unusable pattern — a value can
+    reach the database another way, and a run must never end on one — but an
+    operator typing a bad expression should be told while they still have it in
+    front of them.
+    """
+    settings_service.set_many(
+        session, settings_service.coerce_form({"title_exclude_pattern": "qa analyst"})
+    )
+
+    with pytest.raises(settings_service.ValidationError):
+        settings_service.set_many(
+            session, settings_service.coerce_form({"title_exclude_pattern": "developer("})
+        )
+
+    assert settings_service.get(session, "title_exclude_pattern") == "qa analyst"
+
+
+def test_an_empty_title_pattern_is_accepted_because_that_is_how_it_is_disabled(session):
+    """Empty is not invalid: it is the shipped default and the off switch (D6)."""
+    settings_service.set_many(session, settings_service.coerce_form({"title_exclude_pattern": ""}))
+    assert settings_service.get(session, "title_exclude_pattern") == ""
