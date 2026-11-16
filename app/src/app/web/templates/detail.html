@@ -26,6 +26,42 @@
   {% endif %}
 </p>
 
+{# ADR-0016 FR-013/FR-016 — this page deliberately opts out of the filter seam,
+   so it is the one place a withheld posting can be read at all. The banner is
+   what makes that opt-out worth having: without it the operator finds a posting
+   missing from the queue and no page that says why. Shaped on the blacklist
+   banner above, which exists for exactly the same reason (ADR-0015). #}
+{% if verdict.rejected or current.rejected %}
+<p style="margin-top:10px">
+  <span class="pill rejected">filtered out</span>
+  {% if verdict.rejected %}
+    Turned away on
+    {% if verdict.grounds == 'both' %}title and experience
+    {% elif verdict.grounds == 'title' %}title
+    {% else %}experience{% endif %}
+    grounds{% if verdict.grounds != 'title' and p.job_level %}, at
+    <strong>{{ p.job_level }}</strong>{% endif %}.
+    {% if p.status == 'new' %}
+      It is withheld from the queue while untriaged.
+    {% else %}
+      It still appears in the queue, because you have already triaged it — a
+      criteria change never withdraws your own judgement.
+    {% endif %}
+  {% else %}
+    The criteria in force now would turn this posting away on
+    {% if current.grounds == 'both' %}title and experience{% else %}{{ current.grounds }}{% endif %}
+    grounds, but the stored verdict predates them.
+  {% endif %}
+  {% if verdict.title_passed is not none or verdict.experience_passed is not none %}
+    {% if (verdict.title_passed, verdict.experience_passed) != (current.title_passed, current.experience_passed) %}
+      <br><span class="muted">Criteria changed since the filter was last
+      applied — re-apply with <code>filter --all</code> to update this
+      verdict.</span>
+    {% endif %}
+  {% endif %}
+</p>
+{% endif %}
+
 <div class="split" style="margin-top:22px">
   <div>
     <h2>Description</h2>
@@ -80,7 +116,14 @@
         <dt>Posted</dt><dd>{{ p.date_posted.strftime('%d %b %Y') if p.date_posted else '—' }}</dd>
         <dt>First seen</dt><dd>{{ p.first_seen_at.strftime('%d %b %Y, %H:%M') }}</dd>
         <dt>Last seen</dt><dd>{{ p.last_retrieved_at.strftime('%d %b %Y, %H:%M') }}</dd>
-        <dt>Filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
+        {# One row per criterion (ADR-0016). Each is tri-state, and the three
+           states are different facts: not applied, applied and admitted,
+           applied and rejected. A dash means the criterion did not apply —
+           no pattern set, or no profile recorded an experience level — not
+           that the posting passed. #}
+        <dt>Seniority</dt><dd>{{ p.job_level or '—' }}</dd>
+        <dt>Title filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
+        <dt>Experience filter</dt><dd>{{ 'passed' if p.experience_filter_passed else ('rejected' if p.experience_filter_passed is not none else '—') }}</dd>
         <dt>Fingerprint</dt><dd class="muted" style="font-size:11px">{{ p.fingerprint[:24] }}…</dd>
       </dl>
     </div>

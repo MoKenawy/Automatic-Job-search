@@ -11,9 +11,18 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
-from app.config import WORKING_SITES
+from app.config import WORKING_SITES, RunConfig
+from app.db.attribution import requested_experience_by_posting
 from app.db.models import STATUS_REJECTED, Employer, Posting, Run, SearchProfile
-from app.db.visibility import not_suppressed
+from app.db.visibility import filter_rejected, hidden_by_filter, not_suppressed
+from app.filters import (
+    Criteria,
+    TitleRules,
+    Verdict,
+    evaluate,
+    parse_level,
+    parse_requested,
+)
 
 # Selects postings whose country could not be resolved. `parse_country` returns
 # None rather than guessing (normalise/country.py), so this is a real bucket the
@@ -23,6 +32,12 @@ COUNTRY_UNKNOWN = "unknown"
 
 # Rows per page in the triage list.
 PAGE_SIZE = 50
+
+# `verdict` value selecting the filter's review bucket (FR-017). A sentinel on an
+# existing parameter rather than a new axis, following COUNTRY_UNKNOWN above: the
+# list already threads its filter state through three places, and each new axis is
+# another place to forget.
+VERDICT_REJECTED = "rejected"
 
 
 @dataclass
@@ -35,26 +50,35 @@ class Totals:
     last_run: Run | None
 
 
+def _visible() -> tuple:
+    """The two conditions every figure and listing over `postings` applies.
+
+    Suppression (ADR-0015) and the filter verdict (ADR-0016) are independent
+    reasons to withhold a posting, and both are derived at read time rather than
+    stamped. Returned together so a read path adopts the pair as one idiom: two
+    obligations spelled out separately at eight call sites is one of them waiting
+    to be forgotten.
+    """
+    return (not_suppressed(), ~hidden_by_filter())
+
+
 def totals(session: Session) -> Totals:
-    # not_suppressed() applies to every figure over `postings` (ADR-0015). The
-    # employer count below deliberately does not — the predicate is over
+    # _visible() applies to every figure over `postings` (ADR-0015, ADR-0016).
+    # The employer count below deliberately does not — those predicates are over
     # postings, not employers — and uses Employer.suppressed directly instead.
     by_status = dict(
         session.execute(
-            select(Posting.status, func.count()).where(not_suppressed()).group_by(Posting.status)
+            select(Posting.status, func.count()).where(*_visible()).group_by(Posting.status)
         ).all()
     )
     return Totals(
-        postings=session.scalar(select(func.count()).select_from(Posting).where(not_suppressed()))
-        or 0,
+        postings=session.scalar(select(func.count()).select_from(Posting).where(*_visible())) or 0,
         published=session.scalar(
-            select(func.count()).select_from(Posting).where(Posting.published, not_suppressed())
+            select(func.count()).select_from(Posting).where(Posting.published, *_visible())
         )
         or 0,
         scored=session.scalar(
-            select(func.count())
-            .select_from(Posting)
-            .where(Posting.score.isnot(None), not_suppressed())
+            select(func.count()).select_from(Posting).where(Posting.score.isnot(None), *_visible())
         )
         or 0,
         by_status=by_status,
@@ -155,6 +179,7 @@ def list_postings(
     country: str | None = None,
     remote: bool | None = None,
     source: str | None = None,
+    verdict: str | None = None,
     page: int = 1,
     per_page: int | None = None,
 ) -> Page:
@@ -171,6 +196,15 @@ def list_postings(
 
     `page` is clamped into range rather than validated, so a link held over from
     a wider result set lands on the last page instead of an empty table.
+
+    `verdict=VERDICT_REJECTED` inverts the filter seam, listing what the filter
+    turned away (FR-017). It selects `filter_rejected()` — the verdict — and not
+    the complement of the hide rule, so a posting rejected *after* the operator
+    shortlisted it appears here as well as in the normal list. That overlap is
+    deliberate: the strongest available evidence of a false rejection is a
+    posting the operator thought worth keeping which the current criteria reject,
+    and a bucket defined as "everything hidden" would conceal exactly that
+    (SC-002, contracts/filter-seam.md).
     """
     where = []
     if status:
@@ -188,7 +222,11 @@ def list_postings(
         where.append(Posting.is_remote.is_(remote))
     if source:
         where.append(_has_source(session, source))
-    where.append(not_suppressed())  # ADR-0015 — applied to both statements below
+    # ADR-0015 and ADR-0016 — applied to both statements below. The count and the
+    # page must carry the same conditions, or the pager claims rows the operator
+    # cannot reach.
+    where.append(not_suppressed())
+    where.append(filter_rejected() if verdict == VERDICT_REJECTED else ~hidden_by_filter())
 
     # The join is repeated for the count because `search` reaches into
     # `employers`. It is an inner join on a non-nullable FK, so it cannot change
@@ -240,15 +278,13 @@ def facets(session: Session) -> Facets:
     countries = list(
         session.scalars(
             select(Posting.country_code)
-            .where(Posting.country_code.isnot(None), not_suppressed())
+            .where(Posting.country_code.isnot(None), *_visible())
             .distinct()
             .order_by(Posting.country_code)
         ).all()
     )
     unknown = session.scalar(
-        select(func.count())
-        .select_from(Posting)
-        .where(Posting.country_code.is_(None), not_suppressed())
+        select(func.count()).select_from(Posting).where(Posting.country_code.is_(None), *_visible())
     )
     return Facets(
         countries=countries,
@@ -279,11 +315,56 @@ def get_posting(session: Session, posting_id: int) -> tuple[Posting, Employer] |
     # renders the blacklist banner and the "Remove from blacklist" control.
     # Filtering it would make lifting unreachable from the posting that
     # prompted it.
+    #
+    # Deliberate opt-out from hidden_by_filter() too (ADR-0016, FR-013/FR-016),
+    # for the same reason and on the same terms: this is where a withheld posting
+    # is reachable at all, and where detail.html names the criterion that
+    # withheld it. A filtered detail page would leave the operator with a posting
+    # missing from the queue and no page to read about why.
     return session.execute(
         select(Posting, Employer)
         .join(Employer, Employer.id == Posting.employer_id)
         .where(Posting.id == posting_id)
     ).first()
+
+
+def stored_verdict(posting: Posting) -> Verdict:
+    """The filter verdict as recorded on the posting (FR-016).
+
+    A `Verdict` rather than two raw columns, so the detail page and the list
+    derive the grounds the same way the stage does — there is one definition of
+    what "rejected on title grounds" means, and it is in `app.filters`.
+    """
+    return Verdict(
+        title_passed=posting.title_filter_passed,
+        experience_passed=posting.experience_filter_passed,
+        level=parse_level(posting.job_level),
+    )
+
+
+def current_verdict(session: Session, posting: Posting) -> Verdict:
+    """What the filter would decide about this posting right now (FR-011).
+
+    Recomputed from the criteria in force, which lets the detail page say that a
+    stored verdict is out of date rather than presenting it as current. That is
+    the one thing a stored reason column could never do: the operator reads the
+    grounds *because* they are about to change the rule that produced them, so a
+    recorded explanation is stale exactly when it is consulted (ADR-0016).
+
+    Read-only, and cheap: one compile and one evaluation for a single posting.
+    """
+    config = RunConfig.resolve(session)
+    requested = requested_experience_by_posting(session, [posting.id]).get(posting.id, [])
+    criteria = Criteria(
+        titles=TitleRules.compile(config.title_include_pattern, config.title_exclude_pattern),
+        requested_levels=tuple(parse_requested(text) for text in requested),
+    )
+    return evaluate(
+        title=posting.title,
+        normalised_title=posting.normalised_title,
+        job_level=posting.job_level,
+        criteria=criteria,
+    )
 
 
 def blacklisted_employers(session: Session) -> list[tuple[Employer, int]]:
