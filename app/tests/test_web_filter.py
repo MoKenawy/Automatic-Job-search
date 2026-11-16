@@ -21,6 +21,7 @@ from app.db.models import (
     Base,
     Employer,
     Posting,
+    Run,
 )
 from app.web.app import app, get_db
 
@@ -220,3 +221,69 @@ def test_the_detail_page_shows_both_criteria_separately(client):
     body = client.get(f"/postings/{posting_id}").text
     assert "Title filter" in body
     assert "Experience filter" in body
+
+
+# --- the run funnel (FR-015) ------------------------------------------------
+
+
+@pytest.fixture
+def runs_client():
+    """A client over two runs: one the filter has touched, one it has not."""
+    engine = create_engine(
+        "sqlite://",
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+
+    with factory() as seed:
+        seed.add(
+            Run(
+                status="success",
+                collected_count=34,
+                deduplicated_count=32,
+                counts_by_site={"linkedin": 34},
+            )
+        )
+        seed.add(
+            Run(
+                status="success",
+                collected_count=26,
+                deduplicated_count=25,
+                filter_passed_count=11,
+                filter_rejected_count=14,
+                counts_by_site={"linkedin": 26},
+            )
+        )
+        seed.commit()
+
+    def override():
+        session = factory()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_the_runs_view_shows_the_filter_columns(runs_client):
+    body = runs_client.get("/runs").text
+    assert "Passed" in body
+    assert "Rejected" in body
+    assert ">11<" in body.replace(" ", "").replace("\n", "")
+    assert ">14<" in body.replace(" ", "").replace("\n", "")
+
+
+def test_a_run_the_filter_never_touched_reads_as_unknown_not_zero(runs_client):
+    """Zero is a claim that the filter admitted nothing. A run that predates the
+    stage has made no such claim, and rendering it as 0 manufactures exactly the
+    false alarm the per-stage counts exist to raise honestly
+    (reports-implementation-plan.md R5, amended by ADR-0016)."""
+    body = runs_client.get("/runs").text
+    row = [line for line in body.splitlines() if "34" in line or "—" in line]
+    assert any("—" in line for line in row)
