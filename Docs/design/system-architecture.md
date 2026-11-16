@@ -102,16 +102,23 @@ The application is one Python package, `app`, organised by responsibility.
 | `app.config` | Typed settings from environment/`.env` | — |
 | `app.collect` | Stage 1: query boards via JobSpy | JobSpy |
 | `app.normalise` | Fingerprinting: country, employer, title | JobSpy (country enum) |
-| `app.db` | SQLAlchemy models and session management | SQLAlchemy |
-| `app.pipeline` | Stage orchestration and persistence | `collect`, `normalise`, `db` |
+| `app.filters` | Relevance and experience criteria (D6, ADR-0016) | — |
+| `app.db` | SQLAlchemy models, session management, and the read-time seams | SQLAlchemy |
+| `app.pipeline` | Stage orchestration and persistence | `collect`, `normalise`, `filters`, `db` |
 | `app.web` | FastAPI interface | `db`, FastAPI |
 | `app.scheduler` | APScheduler daily trigger | APScheduler |
 | `app.__main__` | Typer CLI wiring the above together | all |
 
-The dependency direction is strict: `normalise` and `collect` know nothing of
-the database; `pipeline` composes them and persists; `web` reads the database
-only. Fingerprint logic is pure functions over strings, testable without any
-infrastructure.
+The dependency direction is strict: `normalise`, `collect` and `filters` know
+nothing of the database; `pipeline` composes them and persists; `web` reads the
+database only. Fingerprint and criteria logic are pure functions over strings,
+testable without any infrastructure.
+
+`app.db` holds the read-time seams — `visibility.py` (what is withheld, and
+why) and `attribution.py` (which run and profile surfaced a posting) — rather
+than `app.services`, because `pipeline` may not import `services` and the
+pipeline stages are seam consumers. A seam sited where a consumer cannot reach
+it is a seam that consumer will reimplement (ADR-0015, ADR-0016).
 
 ---
 
@@ -152,18 +159,38 @@ therefore conservative (suffixes only), title normalisation retains
 seniority/discipline, and an unresolvable country becomes `UNKNOWN` rather than a
 guess.
 
+### 5.2a Filter — relevance and experience
+
+Evaluates every posting a run surfaced against two criteria and records a
+verdict for each: the operator's include/exclude patterns applied to the title
+(design D6), and the experience level recorded on the search profiles that
+surfaced it, compared against the board's declared seniority. Writes
+`runs.filter_passed_count` and `runs.filter_rejected_count`, and nothing else —
+never a triage status, never a landed row.
+
+This is D6's filter **extracted from stage 3**, not a renumbering of the
+pipeline: stage 3 does not exist yet, the counters would otherwise stay unwritten
+until it did, and re-applying changed criteria without re-collecting needs a
+standalone entry point regardless (`filter --all`). Stage 3 consumes its verdict
+rather than containing it.
+
+Re-runnable, and more strongly: a re-application under unchanged criteria writes
+nothing at all. Unknown never rejects, so a partial run under-filters rather
+than over-filters. See [ADR-0016](../ADRs/0016-collect-stage-filter-verdicts.md).
+
 ### 5.3 Stage 3 — Score **(planned)**
 
-Applies a coarse regular-expression title filter to reduce model invocations
-(design D6), then scores each surviving posting against the CV through a locally
-hosted instruction-tuned model via Ollama. Output — score, matched skills, gaps,
+Scores each posting the filter admitted against the CV through a locally hosted
+instruction-tuned model via Ollama. Output — score, matched skills, gaps,
 rationale — is validated against a Pydantic schema before storage; malformed
 output is rejected. The producing model is recorded with the score.
 
-**Seam obligation (ADR-0015):** the candidate query must apply
-`db.visibility.not_suppressed()` when selecting postings to score, and the
-scored-count written to `runs` must be scoped the same way. Scoring a
-blacklisted employer's postings is wasted model time.
+**Seam obligation (ADR-0015, ADR-0016):** the candidate query must apply
+`db.visibility.not_suppressed()` **and** `~db.visibility.hidden_by_filter()`
+when selecting postings to score, and the scored-count written to `runs` must be
+scoped the same way. Scoring a blacklisted employer's postings, or postings the
+operator's own criteria turned away, is wasted model time — the reduction in
+model invocations D6 exists for.
 
 ### 5.4 Stage 4 — Publish **(planned)**
 
@@ -189,13 +216,14 @@ shares the application image and the same Python runtime as the pipeline
 | Route | Purpose |
 |---|---|
 | `GET /` | Overview: totals, triage breakdown, source-health sparklines |
-| `GET /postings` | Ranked, filterable, searchable list |
+| `GET /postings` | Ranked, filterable, searchable list. Withholds what the filter turned away while it is still untriaged (ADR-0016) |
+| `GET /postings?verdict=rejected` | What the filter turned away, with the criterion that did it (FR-017) |
 | `GET /postings/{id}` | Detail: description beside assessment; source links |
 | `POST /postings/{id}/status` | Triage transition (HTMX fragment, or redirect without) |
 | `GET /runs` | Per-source trend and run history (the §7.4 review surface) |
 | `GET /healthz` | Liveness plus database reachability |
 
-Read models live in `app.web.queries`, separate from the route handlers, so the
+Read models live in `app.services.queries`, separate from the route handlers, so the
 querying is testable without a web client and templates receive plain data rather
 than ORM rows.
 
