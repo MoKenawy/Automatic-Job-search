@@ -109,6 +109,12 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
                 description=payload.get("description"),
                 date_posted=_parse_date(payload.get("date_posted")),
                 job_type=(payload.get("job_type") or None),
+                # The board's declared seniority, promoted out of the payload by
+                # ADR-0016 so the filter's primary input is typed. The collector
+                # lowercases it and yields "" rather than null for a LinkedIn row
+                # whose description was not fetched, so "informative or nothing"
+                # is decided in the model, not here.
+                job_level=payload.get("job_level"),
                 site=raw.site,
                 provenance=provenance,
             )
@@ -123,6 +129,11 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
                 description=payload.get("description"),
                 now=now,
             )
+            # A second board may declare a lower seniority than the first. The
+            # stored label is the minimum across contributing rows, so the
+            # merged value depends on the set of boards rather than on which
+            # row was processed first (FR-009, ADR-0016).
+            posting.merge_job_level(payload.get("job_level"))
 
         # `posting` here relies on SQLAlchemy's relationship-based FK resolution:
         # a newly created posting has no `id` yet until flush, so the link is
