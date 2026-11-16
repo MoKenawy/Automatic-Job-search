@@ -318,7 +318,7 @@ the build is deferred. The pipeline justifies itself only in use. *(§11)*
 | Collection (FR-1…6) | D2, D11, D14 | `tests/test_collect.py`; live run |
 | Landing (FR-7…8) | §8 | live run; row counts |
 | Deduplication (FR-9…15) | D12, §7.3 | `tests/test_fingerprint.py`, `test_employer.py`, `test_country.py` |
-| Scoring (FR-16…20) | D5, D6, D8 | *(pending implementation)* |
+| Scoring (FR-16…20) | D5, D6, D8, ADR-0007 | *(pending implementation)* |
 | Publication (FR-21…23) | D7, D9, ADR-0004 | *(pending implementation)* |
 | Triage (FR-24…29) | ADR-0004, §7.4, §8.1 | `tests/test_web.py` |
 | Orchestration (FR-30…32) | §7.1, §7.4 | `pipeline/runner.py`; live run |
