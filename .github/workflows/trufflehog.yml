@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the full history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # Required: TruffleHog scans commits, so it needs them present.
           fetch-depth: 0
