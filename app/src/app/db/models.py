@@ -564,6 +564,14 @@ class SearchProfile(Base):
     # Advisory until wired into the scorer (research Q1); a post-collection filter,
     # not a board parameter
     experience: Mapped[str | None] = mapped_column(String(64))
+    # This profile's own title rules, applied IN ADDITION to the global ones at
+    # /settings, never instead of them (ADR-0018). NULL means "this profile adds
+    # nothing" — not "this profile admits everything" — so a profile created
+    # before these columns existed behaves exactly as it did. Text, not
+    # String(n): the global patterns are unbounded, and a cap here would refuse a
+    # pattern the global setting accepts, a difference no operator could predict.
+    title_include_pattern: Mapped[str | None] = mapped_column(Text)
+    title_exclude_pattern: Mapped[str | None] = mapped_column(Text)
 
     schedule_hour: Mapped[int] = mapped_column(Integer, default=6, nullable=False)
     schedule_minute: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
