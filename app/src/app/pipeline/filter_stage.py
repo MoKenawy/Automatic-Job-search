@@ -29,9 +29,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import RunConfig
-from app.db.attribution import posting_ids_for_run, requested_experience_by_posting
+from app.db.attribution import contributors_by_posting, posting_ids_for_run
 from app.db.models import Posting, Run
-from app.filters import Criteria, Level, TitleRules, evaluate, parse_requested
+from app.filters import (
+    Contributor,
+    ProfileInput,
+    TitleRules,
+    build_criteria,
+    evaluate,
+)
 
 log = logging.getLogger(__name__)
 
@@ -54,7 +60,11 @@ class FilterOutcome:
     rejected: int = 0
     changed: int = 0
     unreadable_experience: set[str] = field(default_factory=set)
-    errors: tuple[str, ...] = ()
+    # A set, not a tuple assigned once: pattern faults now come from the global
+    # rule *and* from every contributing profile, and the last assignment winning
+    # would lose all but one of them. Reported sorted, so a fault reads the same
+    # on every application of the same data.
+    errors: set[str] = field(default_factory=set)
 
     @property
     def evaluated(self) -> int:
@@ -63,7 +73,7 @@ class FilterOutcome:
     @property
     def faults(self) -> list[str]:
         """Everything the operator should be told, in one list (FR-002a, FR-008)."""
-        faults = list(self.errors)
+        faults = sorted(self.errors)
         if self.unreadable_experience:
             values = ", ".join(sorted(repr(v) for v in self.unreadable_experience))
             faults.append(
@@ -71,25 +81,6 @@ class FilterOutcome:
                 f"criterion did not apply to the profiles holding it"
             )
         return faults
-
-
-def _criteria_for(
-    titles: TitleRules, requested: list[str | None], outcome: FilterOutcome
-) -> Criteria:
-    """Build one posting's criteria, recording any requested value it could not read.
-
-    An unreadable value becomes `None`, which disables the criterion for that
-    profile rather than rejecting anything (FR-002a) — but it is collected here so
-    the run can report it. Silently treating it as "no requirement" is how a typo
-    in a profile would go unnoticed for months.
-    """
-    levels: list[Level | None] = []
-    for text in requested:
-        level = parse_requested(text)
-        if level is None and text and text.strip():
-            outcome.unreadable_experience.add(text.strip())
-        levels.append(level)
-    return Criteria(titles=titles, requested_levels=tuple(levels))
 
 
 def _apply(
@@ -101,16 +92,30 @@ def _apply(
 ) -> FilterOutcome:
     """Evaluate the postings in scope and record the verdicts.
 
-    `posting_ids` of `None` means every posting. Criteria are compiled once per
-    application: the title patterns are global, and a per-posting compile would
-    both waste work and give an operator's malformed pattern several chances to
-    be reported differently.
+    `posting_ids` of `None` means every posting.
+
+    Compilation is hoisted out of the posting loop: the global patterns once per
+    application, and each contributing profile's once per *distinct profile*, via
+    the cache passed to `build_criteria`. A per-posting compile would waste work
+    and, worse, give an operator's malformed pattern one chance per posting to be
+    reported differently. The set of profiles is tiny and bounded, so the hoisting
+    still holds with profiles in the picture; it is now keyed by profile rather
+    than global.
+
+    The verdicts are a function of the posting, the criteria **and the set of
+    profiles that currently contribute to it** (ADR-0018). A posting surfaced for
+    the first time by a second profile can therefore change verdict with no
+    criteria change at all, and this stage will then write it. The converged
+    re-application property (SC-007) holds for a fixed set of contributors.
     """
     outcome = FilterOutcome()
     titles = TitleRules.compile(config.title_include_pattern, config.title_exclude_pattern)
-    outcome.errors = titles.errors
+    # Recorded before the early return below, so a malformed global pattern is
+    # reported even when nothing is in scope.
+    outcome.errors.update(titles.errors)
 
-    requested_by_posting = requested_experience_by_posting(session, posting_ids)
+    contributors_by_id = contributors_by_posting(session, posting_ids)
+    resolved: dict[ProfileInput, Contributor] = {}
 
     stmt = select(Posting).order_by(Posting.id)
     if posting_ids is not None:
@@ -119,11 +124,16 @@ def _apply(
         stmt = stmt.where(Posting.id.in_(posting_ids))
 
     for posting in session.scalars(stmt.execution_options(yield_per=BATCH_SIZE)):
+        criteria = build_criteria(titles, contributors_by_id.get(posting.id, []), resolved=resolved)
+        outcome.errors.update(criteria.errors)
+        outcome.unreadable_experience.update(
+            c.unreadable_experience for c in criteria.contributors if c.unreadable_experience
+        )
         verdict = evaluate(
             title=posting.title,
             normalised_title=posting.normalised_title,
             job_level=posting.job_level,
-            criteria=_criteria_for(titles, requested_by_posting.get(posting.id, []), outcome),
+            criteria=criteria,
         )
 
         if verdict.rejected:

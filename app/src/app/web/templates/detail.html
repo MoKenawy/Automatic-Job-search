@@ -54,9 +54,9 @@
   {% endif %}
   {% if verdict.title_passed is not none or verdict.experience_passed is not none %}
     {% if (verdict.title_passed, verdict.experience_passed) != (current.title_passed, current.experience_passed) %}
-      <br><span class="muted">Criteria changed since the filter was last
-      applied — re-apply with <code>filter --all</code> to update this
-      verdict.</span>
+      <br><span class="muted">The criteria, or the profiles that found this
+      posting, have changed since the filter was last applied — re-apply with
+      <code>filter --all</code> to update this verdict.</span>
     {% endif %}
   {% endif %}
 </p>

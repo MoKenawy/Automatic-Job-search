@@ -226,5 +226,10 @@ any stage that follows:
   moves the timestamp. The filter compares before it writes, so a converged
   re-application emits nothing at all, and reports the number of values it
   changed so that the property is observable rather than merely claimed.
+- **If the stage reads a profile's settings, resolve them per posting.** A posting
+  can be surfaced by several profiles, so criteria come from
+  `db.attribution.contributors_by_posting` through `filters.build_criteria` — the
+  one builder the stage and the detail page share (ADR-0018). Reading
+  `run.profile_id` instead makes a verdict depend on which run was filtered last.
 
 *End of document.*

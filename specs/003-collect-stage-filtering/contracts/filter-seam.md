@@ -1,5 +1,12 @@
 # Contract: the filter seam
 
+> **Amended by [ADR-0018](../../../Docs/ADRs/0018-per-profile-title-rules.md), 17 November 2026.** The contracts below describe `Criteria` with one global
+> `TitleRules` and a `requested_levels` tuple. `Criteria` now carries `contributors` —
+> one record per contributing profile holding its requested level **and** its own
+> title rules — and the title verdict is `all_of(global, any_of(profiles))`.
+> `requested_levels` survives as a derived property. The experience-criterion
+> contract, including the disjunction paragraph below, is unchanged.
+
 **Modules**: `app/src/app/filters/` *(new, pure)* · `app/src/app/db/visibility.py`
 *(extended)* · `app/src/app/pipeline/filter_stage.py` *(new)*
 **Feature**: [003-collect-stage-filtering](../spec.md) | **Implements**: FR-004…FR-011,

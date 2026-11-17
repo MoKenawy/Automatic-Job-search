@@ -345,12 +345,16 @@ the posting returns with its prior triage status unchanged.
   The title include/exclude configuration already exists as operator-editable
   settings shared across the pipeline, whereas experience is recorded on each
   search profile. This feature does not move either.
+  *(Amended 17 November 2026, ADR-0018: a profile may now also carry its own
+  title include/exclude patterns, applied **in addition to** the global ones.
+  The global rule still binds every posting.)*
 - **Coarse, not clever.** The filter's job is to remove the obviously
   irrelevant cheaply, so that the expensive scoring step runs on fewer postings.
   Judging genuine fit remains the scorer's job and is out of scope here.
 - **Postings from a profile-less run are admitted on experience grounds**, since
   no requested level exists to compare against. Title criteria, being global,
-  still apply to them.
+  still apply to them. *(Still true under ADR-0018: the global rule binds a
+  posting whatever profiles contributed to it, including none.)*
 - **Existing postings are not retroactively filtered on installation.** The
   filter applies from its first application onward; whether to apply it to the
   1,092 rows already collected is an operator action, not an install step.

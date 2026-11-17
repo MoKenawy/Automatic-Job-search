@@ -26,6 +26,8 @@ import re
 from collections.abc import Iterable
 from enum import IntEnum
 
+from app.filters.combine import any_of
+
 __all__ = [
     "BOARD_LABELS",
     "Level",
@@ -304,10 +306,4 @@ def admits_any(requested: Iterable[Level | None], actual: Level | None) -> bool 
     admits unconditionally. When *every* contributor is like that, the criterion
     was never applied, and the answer is `None`.
     """
-    verdicts = [admits(request, actual) for request in requested]
-    if not verdicts or all(verdict is None for verdict in verdicts):
-        return None
-    # `is not False` is True-or-None: a contributor that admits, or one that
-    # imposes no requirement and so cannot withhold. At least one verdict is
-    # decided here, since the all-None case returned above.
-    return any(verdict is not False for verdict in verdicts)
+    return any_of(admits(request, actual) for request in requested)

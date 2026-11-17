@@ -92,6 +92,8 @@ Automatic-Job-search/
     │   ├── filters/               # Relevance and experience criteria (D6, ADR-0016)
     │   │   ├── levels.py          # The seniority scale and both vocabularies
     │   │   ├── titles.py          # Include/exclude patterns
+    │   │   ├── combine.py         # The two tri-state combinators (ADR-0018)
+    │   │   ├── resolve.py         # Stored profile fields -> one posting's criteria
     │   │   └── verdict.py         # One posting, two criteria, one verdict
     │   ├── pipeline/              # Stage orchestration and persistence
     │   │   ├── runner.py          # Run tracking and stage sequencing
