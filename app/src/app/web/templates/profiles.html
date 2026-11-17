@@ -7,6 +7,14 @@
   Each profile is a saved job survey with its own role, sites, and run time. Enabled
   profiles run automatically at their scheduled time; any can be run now (ADR-0005).
 </p>
+<p class="sub">
+  Each profile can also carry its own filter rules. They apply <strong>in addition to</strong>
+  the title patterns on the <a href="/settings">settings</a> page, never instead of them, and
+  exclude always beats include. A posting found by more than one profile is kept if any one
+  of them would keep it, and a profile with an empty experience box never hides anything on
+  seniority grounds. Rule changes reach postings already collected once you run
+  <code>filter --all</code>; nothing is re-collected.
+</p>
 
 {% if error %}<div class="flash err">{{ error }}</div>{% endif %}
 
@@ -44,6 +52,34 @@
           </form>
         </td>
       </tr>
+      <tr>
+        <td colspan="9" style="padding-top:0;border-top:0">
+          <details>
+            <summary class="muted" style="font-size:12px;cursor:pointer">
+              Filter rules —
+              {% if p.experience or p.title_include_pattern or p.title_exclude_pattern %}
+                {% if p.experience %}experience <code>{{ p.experience }}</code>{% endif %}
+                {% if p.title_include_pattern %} include <code>{{ p.title_include_pattern }}</code>{% endif %}
+                {% if p.title_exclude_pattern %} exclude <code>{{ p.title_exclude_pattern }}</code>{% endif %}
+              {% else %}none set (hides nothing)
+              {% endif %}
+            </summary>
+            <form method="post" action="/profiles/{{ p.id }}/filters" class="formgrid" style="margin:10px 0">
+              <label for="exp-{{ p.id }}">Experience</label>
+              <input id="exp-{{ p.id }}" name="experience" value="{{ p.experience or '' }}"
+                     placeholder="e.g. entry level, junior, senior — blank means no seniority filtering">
+              <label for="inc-{{ p.id }}">Title must match</label>
+              <input id="inc-{{ p.id }}" name="title_include_pattern" value="{{ p.title_include_pattern or '' }}"
+                     placeholder="regular expression, optional — blank means any title">
+              <label for="exc-{{ p.id }}">Title must not match</label>
+              <input id="exc-{{ p.id }}" name="title_exclude_pattern" value="{{ p.title_exclude_pattern or '' }}"
+                     placeholder="regular expression, optional — wins over the include pattern">
+              <span></span>
+              <span><button class="btn btn-xs" type="submit">Save filter rules</button></span>
+            </form>
+          </details>
+        </td>
+      </tr>
       {% else %}
       <tr><td colspan="9" class="empty">No profiles. Add one below.</td></tr>
       {% endfor %}
@@ -77,6 +113,14 @@
 
     <label for="experience">Experience</label>
     <input id="experience" name="experience" placeholder="e.g. senior (optional)">
+
+    <label for="title_include_pattern">Title must match</label>
+    <input id="title_include_pattern" name="title_include_pattern"
+           placeholder="regular expression (optional)">
+
+    <label for="title_exclude_pattern">Title must not match</label>
+    <input id="title_exclude_pattern" name="title_exclude_pattern"
+           placeholder="regular expression (optional)">
 
     <label for="is_remote">Remote only</label>
     <input id="is_remote" name="is_remote" type="checkbox">
