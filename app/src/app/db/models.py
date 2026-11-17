@@ -51,6 +51,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB as _PG_JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
+from app.filters import merge_labels
+
 # JSONB in production; degrades to JSON on other dialects (e.g. SQLite under
 # test) so the model stays loadable without a PostgreSQL connection.
 JSONB = _PG_JSONB().with_variant(JSON(), "sqlite")
@@ -58,6 +60,15 @@ JSONB = _PG_JSONB().with_variant(JSON(), "sqlite")
 
 class Base(DeclarativeBase):
     pass
+
+
+def _informative_level(label: str | None) -> str | None:
+    """The label if it carries a level, else None (ADR-0016).
+
+    `merge_labels` is the single rule for what counts as informative, so the
+    birth of a posting and a later re-observation cannot disagree about it.
+    """
+    return merge_labels([label])
 
 
 # Triage states (design §8.1). Operator judgement only — suppression is
@@ -282,8 +293,38 @@ class Posting(Base):
     # {"indeed": {"url": "...", "job_id": "...", "first_seen": "..."}, ...}
     sources: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
-    # Stage 3 — coarse title filter, then model evaluation
+    # The board's own declared seniority, verbatim and lowercased as the
+    # collector delivers it ('mid-senior level', 'entry level', ...). Promoted
+    # out of the raw payload by ADR-0016 because one board supplies it on every
+    # row; it is the experience filter's primary input. Where several collected
+    # rows fold into one posting this holds the *lowest* label among them
+    # (merge_job_level below). It never holds an inference: the title-derived
+    # fallback is computed at evaluation time and not stored, for the reason
+    # ADR-0012 split last_retrieved_at from updated_at — a column named after a
+    # payload field must answer "what did the board say?".
+    job_level: Mapped[str | None] = mapped_column(String(64))
+
+    # Filter verdicts, one per criterion, written only by
+    # pipeline/filter_stage.py (ADR-0016). Tri-state, and the three states are
+    # different facts:
+    #
+    #   NULL   the criterion was not applied — never filtered, or the criterion
+    #          is disabled (empty pattern, absent or unreadable requested
+    #          experience, malformed pattern)
+    #   True   applied, and admitted — including admitted *because* the input
+    #          was unknown (FR-005)
+    #   False  applied, and rejected
+    #
+    # NULL is load-bearing rather than incidental: it is what makes installing
+    # the filter observably a no-op (SC-006), and a NOT NULL column with a
+    # default would destroy the distinction. Whether a rejected posting is
+    # withheld is answered at read time by db.visibility.hidden_by_filter(),
+    # never stamped on `status` — a verdict is about criteria, a status is about
+    # the operator's judgement, and neither is written into the other.
     title_filter_passed: Mapped[bool | None] = mapped_column(Boolean)
+    experience_filter_passed: Mapped[bool | None] = mapped_column(Boolean)
+
+    # Stage 3 — model evaluation
     score: Mapped[int | None] = mapped_column(Integer, index=True)
     matched_skills: Mapped[list | None] = mapped_column(JSONB)
     gaps: Mapped[list | None] = mapped_column(JSONB)
@@ -355,6 +396,7 @@ class Posting(Base):
         job_type: str | None,
         site: str,
         provenance: dict,
+        job_level: str | None = None,
     ) -> "Posting":
         """Always born `new` — operator judgement only (ADR-0015).
 
@@ -373,6 +415,7 @@ class Posting(Base):
             description=description,
             date_posted=date_posted,
             job_type=job_type,
+            job_level=_informative_level(job_level),
             sources={site: provenance},
             status=STATUS_NEW,
         )
@@ -394,6 +437,27 @@ class Posting(Base):
         self.sources = sources
         self.last_retrieved_at = now
         self.merge_description(description)
+
+    def merge_job_level(self, label: str | None) -> None:
+        """Lower this posting's seniority label if another board declared less.
+
+        Unlike `merge_description` and `Employer.enrich_from`, which fill a gap
+        and never overwrite, this **lowers**: the stored label must be the
+        minimum across every contributing row, so that it is a function of the
+        set of boards that surfaced the role rather than of whichever row was
+        processed first (FR-009). Do not "fix" it to match its neighbours.
+
+        Minimum is also the admitting direction. Rejection happens only above
+        the requested level (FR-007), so when two boards disagree the lower
+        label is the one that shows the operator the posting.
+
+        A label carrying no level — absent, empty, 'not applicable' — is not a
+        candidate: it would promote "the board said nothing useful" into a
+        column whose NULL already says exactly that.
+        """
+        merged = merge_labels([self.job_level, label])
+        if merged is not None and merged != self.job_level:
+            self.job_level = merged
 
     def merge_description(self, description: str | None) -> None:
         """Backfill a description only if this posting does not already have
