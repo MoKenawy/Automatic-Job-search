@@ -1,15 +1,32 @@
 """Data model — four entities, per design §8.
 
-Column choices are grounded in the measured JobSpy output of 20 July 2026
-(design §4.3), not in the library's declared schema. JobSpy emits 34 columns, but
-most are null for the two sources that work. Fields measured at 0% populated are
-left in the raw payload rather than promoted to columns:
+Column choices are grounded in measured JobSpy output (design §4.3), not in the
+library's declared schema. JobSpy emits 34 columns, most of them null for the two
+sources that work, and a field measured at 0% populated is left in the raw
+payload rather than promoted to a column.
 
+Re-measured 16 November 2026 over 60 raw rows (40 LinkedIn, 20 Indeed), because
+the original 20 July 2026 measurement had gone stale on two counts (FR-020,
+ADR-0016):
+
+    job_level           100% LinkedIn / 0% Indeed — 67% overall. PROMOTED to
+                        postings.job_level by ADR-0016; it is the experience
+                        filter's primary input. Note the coupling: LinkedIn
+                        supplies it only when descriptions are fetched, so
+                        `linkedin_fetch_description` is a switch on this field
+    company_industry    100% LinkedIn / 0% Indeed — 67% overall. Populated, but
+                        deliberately left in the payload: it is not a filter
+                        criterion and nothing reads it (spec 003, FR-019/FR-020)
+    job_function        0% — confirmed, stays in the payload
+    listing_type        0% — confirmed, stays in the payload
+    skills, experience_range                    0%, Naukri/LinkedIn-specific
     salary block (salary_source, interval, min_amount, max_amount, currency)  D13
-    job_level, job_function, listing_type       LinkedIn-declared, never populated
-    company_industry, skills, experience_range  Naukri/LinkedIn-specific
     company_rating, company_reviews_count       Naukri-specific
     vacancy_count, work_from_home_type          Naukri-specific
+
+The earlier record described job_level and company_industry as "LinkedIn-declared,
+never populated", which is how a field the boards do supply came to be filtered on
+by nothing for four months. One board declares it on every row; the other on none.
 
 Company enrichment (num_employees, revenue, description) *is* populated by Indeed
 at roughly 60-70%, and is an attribute of the employer rather than the posting,
