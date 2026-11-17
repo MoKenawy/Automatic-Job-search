@@ -12,13 +12,27 @@
   {% endif %}
 </p>
 
+{% if verdict == 'rejected' %}
+<p class="sub">
+  Postings the filter turned away, under the criteria in force now. They are
+  withheld from the queue only while untriaged — anything you have already
+  shortlisted or applied to still appears there as well. Loosen the criteria at
+  <a href="/settings">Settings</a> or on the profile, then re-apply with
+  <code>filter --all</code>, and they return with their status intact.
+</p>
+{% endif %}
+
 {% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
 
 <form class="filters" method="get" action="/postings">
-  <a href="/postings" class="{{ 'on' if not status }}">All</a>
+  <a href="/postings" class="{{ 'on' if not status and not verdict }}">All</a>
   {% for s in statuses %}
-  <a href="/postings?status={{ s }}" class="{{ 'on' if status == s }}">{{ s }}</a>
+  <a href="/postings?status={{ s }}" class="{{ 'on' if status == s and not verdict }}">{{ s }}</a>
   {% endfor %}
+  {# FR-017 — what the filter turned away. Deliberately not the complement of the
+     normal list: a posting rejected after the operator shortlisted it shows in
+     both, because that is the clearest evidence a criterion is too aggressive. #}
+  <a href="/postings?verdict=rejected" class="{{ 'on' if verdict == 'rejected' }}">filtered out</a>
   <input type="search" name="q" value="{{ q }}" placeholder="title or company">
   <select name="country" aria-label="Location">
     <option value="">Any location</option>
@@ -37,6 +51,7 @@
     {% endfor %}
   </select>
   {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+  {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
   <button class="btn" type="submit">Search</button>
 </form>
 
@@ -53,6 +68,7 @@
   {% if country %}<input type="hidden" name="country" value="{{ country }}">{% endif %}
   {% if source %}<input type="hidden" name="source" value="{{ source }}">{% endif %}
   {% if published %}<input type="hidden" name="published" value="true">{% endif %}
+  {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
   <input type="hidden" name="page" value="{{ pager.number }}">
   <div class="bulkbar" id="bulkbar">
     <span class="muted" id="selcount">0 selected</span>
@@ -76,6 +92,7 @@
         <th>Posted</th>
         {# The rejected bucket is ordered by this column, so show it there. #}
         {% if status == 'rejected' %}<th>Rejected</th>{% endif %}
+        {% if verdict == 'rejected' %}<th>Turned away on</th>{% endif %}
         <th>Status</th>
       </tr>
     </thead>
@@ -97,10 +114,19 @@
         {% if status == 'rejected' %}
         <td class="muted">{{ p.status_changed_at.strftime('%d %b %Y') if p.status_changed_at else '—' }}</td>
         {% endif %}
+        {% if verdict == 'rejected' %}
+        <td class="muted">
+          {% if p.title_filter_passed is false and p.experience_filter_passed is false %}title and experience
+          {% elif p.title_filter_passed is false %}title
+          {% else %}experience{% if p.job_level %} ({{ p.job_level }}){% endif %}
+          {% endif %}
+        </td>
+        {% endif %}
         <td>{% include "_row_status.html" %}</td>
       </tr>
       {% else %}
-      <tr><td colspan="{{ 9 if status == 'rejected' else 8 }}" class="empty">No postings match.</td></tr>
+      {# Two conditional columns, so the span counts them both. #}
+      <tr><td colspan="{{ 8 + (1 if status == 'rejected' else 0) + (1 if verdict == 'rejected' else 0) }}" class="empty">No postings match.</td></tr>
       {% endfor %}
     </tbody>
   </table>

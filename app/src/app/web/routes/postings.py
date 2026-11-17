@@ -23,6 +23,7 @@ def _render_list(
     published: bool,
     country: str | None,
     source: str | None,
+    verdict: str | None,
     page: int,
     flash: str | None = None,
 ):
@@ -45,6 +46,7 @@ def _render_list(
         country=country_filter,
         remote=remote_filter,
         source=source,
+        verdict=verdict,
         page=page,
     )
 
@@ -53,7 +55,16 @@ def _render_list(
     # number and gets a whole URL, rather than concatenating one three times.
     active = {
         k: v
-        for k, v in (("status", status), ("q", q), ("country", country), ("source", source))
+        for k, v in (
+            ("status", status),
+            ("q", q),
+            ("country", country),
+            ("source", source),
+            # The filter's review bucket is part of the active filter state, so
+            # paging within it stays within it (ADR-0016, FR-017). Omit it and
+            # page 2 of "filtered out" would quietly be page 2 of everything.
+            ("verdict", verdict),
+        )
         if v
     }
     if published:
@@ -73,6 +84,7 @@ def _render_list(
             "published": published,
             "country": country or "",
             "source": source or "",
+            "verdict": verdict or "",
             "statuses": STATUSES,
             "totals": queries.totals(db),
             "facets": queries.facets(db),
@@ -89,6 +101,7 @@ def postings(
     published: bool = False,
     country: str | None = None,
     source: str | None = None,
+    verdict: str | None = None,
     page: int = 1,
     db: Session = Depends(get_db),
 ):
@@ -100,6 +113,7 @@ def postings(
         published=published,
         country=country,
         source=source,
+        verdict=verdict,
         page=page,
     )
 
@@ -113,7 +127,19 @@ def posting_detail(request: Request, posting_id: int, db: Session = Depends(get_
     return TEMPLATES.TemplateResponse(
         request=request,
         name="detail.html",
-        context={"p": posting, "employer": employer, "statuses": STATUSES},
+        context={
+            "p": posting,
+            "employer": employer,
+            "statuses": STATUSES,
+            # The grounds for a rejection are derived, never stored (ADR-0016),
+            # and `current` re-derives them under the criteria in force *now* —
+            # which is how the page can say that the stored verdict is stale
+            # rather than leaving the operator to guess. A reason column could
+            # not do this: it would describe the rule the operator is about to
+            # change, with no way to know it had changed.
+            "verdict": queries.stored_verdict(posting),
+            "current": queries.current_verdict(db, posting),
+        },
     )
 
 
@@ -166,6 +192,7 @@ def set_status_bulk(
     published: bool = Form(default=False),
     country: str | None = Form(default=None),
     source: str | None = Form(default=None),
+    verdict: str | None = Form(default=None),
     page: int = Form(default=1),
     db: Session = Depends(get_db),
 ):
@@ -191,6 +218,7 @@ def set_status_bulk(
         published=published,
         country=country,
         source=source,
+        verdict=verdict,
         page=page,
         flash=f"{updated} posting(s) set to {status}",
     )
