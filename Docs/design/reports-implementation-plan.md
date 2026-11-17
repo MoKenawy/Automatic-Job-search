@@ -244,10 +244,20 @@ median of recent runs. §7.4's stated failure mode is a run that succeeds while
 returning progressively less, which no single run's status reveals.
 
 **Mark the stage-3 counters as not-yet-applicable, do not display them as
-zero.** `filter_passed_count`, `filter_rejected_count`, `scored_count` and
-`published_count` are structurally zero because the stages that write them do
-not exist. Rendering them as zeros in a health view manufactures a false alarm
-on a working pipeline.
+zero.** `scored_count` and `published_count` are structurally zero because the
+stages that write them do not exist. Rendering them as zeros in a health view
+manufactures a false alarm on a working pipeline.
+
+> **Amended 16 November 2026 (ADR-0016).** `filter_passed_count` and
+> `filter_rejected_count` now have a writer — the filter stage — so they are no
+> longer structurally zero and are excluded from the list above. The instruction
+> narrows rather than lapses: a run that predates the stage still carries no
+> figures, and both `runs.html` and `status` render that pair as `—` rather than
+> `0`, for exactly the reason stated here. The two are written together, so a
+> zero pair on a run the stage *has* touched is a real signal — a criterion that
+> turned away the whole haul — and the stage logs a warning when that happens,
+> because in the aggregate it is indistinguishable from a board that stopped
+> responding.
 
 ### R6 — Work arrangement mix
 

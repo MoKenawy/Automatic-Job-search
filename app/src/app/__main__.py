@@ -166,13 +166,23 @@ def status(limit: int = typer.Option(10, help="How many recent runs to show.")) 
             typer.echo("no runs recorded")
             return
 
-        typer.echo(f"{'id':>4}  {'started':<20} {'status':<9} {'coll':>5} {'dedup':>6}  by_site")
+        typer.echo(
+            f"{'id':>4}  {'started':<20} {'status':<9} {'coll':>5} {'dedup':>6} "
+            f"{'pass':>5} {'rej':>5}  by_site"
+        )
         for r in runs:
             started = r.started_at.strftime("%Y-%m-%d %H:%M:%S")
             by_site = ", ".join(f"{k}={v}" for k, v in sorted((r.counts_by_site or {}).items()))
+            # A run the filter never touched prints —, not 0: zero would claim
+            # the filter admitted nothing, which is a different fact and the
+            # kind of false alarm this very table exists to raise honestly.
+            filtered = r.filter_passed_count or r.filter_rejected_count
+            passed = f"{r.filter_passed_count}" if filtered else "—"
+            rejected = f"{r.filter_rejected_count}" if filtered else "—"
             typer.echo(
                 f"{r.id:>4}  {started:<20} {r.status:<9} "
-                f"{r.collected_count:>5} {r.deduplicated_count:>6}  {by_site}"
+                f"{r.collected_count:>5} {r.deduplicated_count:>6} "
+                f"{passed:>5} {rejected:>5}  {by_site}"
             )
             if r.error:
                 typer.echo(f"      error: {r.error}")

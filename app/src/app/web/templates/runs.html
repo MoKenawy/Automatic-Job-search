@@ -47,6 +47,8 @@
         <th>Status</th>
         <th class="num">Collected</th>
         <th class="num">Distinct</th>
+        <th class="num">Passed</th>
+        <th class="num">Rejected</th>
         <th class="num">Scored</th>
         <th class="num">Published</th>
         <th>By source</th>
@@ -67,6 +69,14 @@
         </td>
         <td class="num">{{ r.collected_count }}</td>
         <td class="num">{{ r.deduplicated_count }}</td>
+        {# A run the filter never touched shows —, not 0. Zero is a claim that
+           the filter admitted nothing, and rendering a structurally absent
+           figure as zero manufactures a false alarm on a working pipeline
+           (reports-implementation-plan.md §R5). The two columns are either both
+           written or neither, so one test covers the pair. #}
+        {% set filtered = r.filter_passed_count or r.filter_rejected_count %}
+        <td class="num">{{ r.filter_passed_count if filtered else '—' }}</td>
+        <td class="num">{{ r.filter_rejected_count if filtered else '—' }}</td>
         <td class="num">{{ r.scored_count }}</td>
         <td class="num">{{ r.published_count }}</td>
         <td class="muted">
@@ -76,10 +86,10 @@
         </td>
       </tr>
       {% if r.error %}
-      <tr><td></td><td colspan="8" class="muted" style="font-size:12px">{{ r.error }}</td></tr>
+      <tr><td></td><td colspan="10" class="muted" style="font-size:12px">{{ r.error }}</td></tr>
       {% endif %}
       {% else %}
-      <tr><td colspan="9" class="empty">No runs recorded yet.</td></tr>
+      <tr><td colspan="11" class="empty">No runs recorded yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>
