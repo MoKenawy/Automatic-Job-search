@@ -45,6 +45,7 @@ earlier record is retained.
 | [0015](ADRs/0015-employer-level-suppression.md) | Employer-level suppression, derived at read time | Accepted |
 | [0016](ADRs/0016-collect-stage-filter-verdicts.md) | Filter verdicts — derived criteria, derived visibility | Accepted |
 | [0017](ADRs/0017-board-seniority-label-reliability.md) | Board seniority label — how far to trust it when it hides a posting | **Proposed** |
+| [0018](ADRs/0018-per-profile-title-rules.md) | Per-profile title rules — two levels, one combination rule | Accepted |
 
 A **Proposed** record states evidence and options and decides nothing; it binds no
 behaviour until it is accepted. ADR-0017 is the first.
