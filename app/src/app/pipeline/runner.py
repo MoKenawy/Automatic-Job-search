@@ -19,6 +19,7 @@ from app.config import RunConfig
 from app.db import session_scope
 from app.db.models import Run, SearchProfile
 from app.pipeline.collect_stage import run_collect
+from app.pipeline.filter_stage import run_filter
 from app.pipeline.normalise_stage import run_normalise
 from app.services import profiles
 
@@ -52,10 +53,12 @@ def track_run(session) -> Iterator[Run]:
         run.finished_at = datetime.now(UTC)
         session.commit()
         log.info(
-            "run %d finished: collected=%d deduplicated=%d by_site=%s",
+            "run %d finished: collected=%d deduplicated=%d passed=%d rejected=%d by_site=%s",
             run.id,
             run.collected_count,
             run.deduplicated_count,
+            run.filter_passed_count,
+            run.filter_rejected_count,
             run.counts_by_site,
         )
 
@@ -71,11 +74,18 @@ def _run(session, run, specs) -> dict:
     config = RunConfig.resolve(session)
     collected = run_collect(session, run, specs, config)
     raw_count, distinct = run_normalise(session, run)
+    # The filter runs here rather than inside stage 2 so that it can also be
+    # re-applied on its own under changed criteria, without re-collecting
+    # (FR-011). Wiring it at this one point covers the CLI's `run-all`, the
+    # scheduler's per-profile tick and the web "run now" together.
+    filtered = run_filter(session, run, config)
     return {
         "run_id": run.id,
         "collected": collected,
         "raw": raw_count,
         "distinct": distinct,
+        "passed": filtered.passed,
+        "rejected": filtered.rejected,
     }
 
 

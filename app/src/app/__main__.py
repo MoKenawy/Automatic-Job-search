@@ -58,9 +58,71 @@ def normalise(
         typer.echo(f"run {run.id}: {raw_count} raw rows -> {distinct} distinct postings")
 
 
+@app.command("filter")
+def filter_(
+    run_id: int = typer.Option(None, help="Run to filter. Defaults to the latest."),
+    all_postings: bool = typer.Option(
+        False, "--all", help="Re-apply the criteria to every posting, not just one run's."
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Report what would change, and write nothing."
+    ),
+) -> None:
+    """Relevance and experience filter — record a verdict per posting (ADR-0016).
+
+    Named `filter` for the operator; the function is `filter_` because the
+    command name would otherwise shadow the builtin, the same reason `run-all`
+    is declared separately from `run_all`.
+
+    `--all` is how a criteria change reaches already-collected postings, with no
+    board contacted (FR-011). It writes no run counters: those belong to a run
+    that evaluated postings during an execution.
+    """
+    from sqlalchemy import select
+
+    from app.config import RunConfig
+    from app.db import session_scope
+    from app.db.models import Run
+    from app.pipeline import filter_all, run_filter
+
+    if all_postings and run_id is not None:
+        typer.echo("--all filters every posting; it cannot be combined with --run-id", err=True)
+        raise typer.Exit(code=2)
+
+    with session_scope() as session:
+        config = RunConfig.resolve(session)
+
+        if all_postings:
+            outcome = filter_all(session, config, dry_run=dry_run)
+            scope = "all postings"
+        else:
+            if run_id is None:
+                run = session.scalar(select(Run).order_by(Run.started_at.desc()))
+            else:
+                run = session.get(Run, run_id)
+            if run is None:
+                typer.echo("no run found", err=True)
+                raise typer.Exit(code=1)
+            outcome = run_filter(session, run, config, dry_run=dry_run)
+            scope = f"run {run.id}"
+
+        prefix = "would change" if dry_run else "changed"
+        typer.echo(
+            f"{scope}: {outcome.passed} passed, {outcome.rejected} rejected, "
+            f"{prefix} {outcome.changed} verdict(s)"
+        )
+        # Zero changes on a re-application is the point, not an absence of news:
+        # it is how SC-007's "re-applying produces identical verdicts" is read
+        # off the command rather than inferred.
+        if not outcome.changed and outcome.evaluated:
+            typer.echo("  verdicts already current — nothing was written")
+        for fault in outcome.faults:
+            typer.echo(f"  fault: {fault}", err=True)
+
+
 @app.command()
 def score() -> None:
-    """Stage 3 — title filter, then local model evaluation."""
+    """Stage 3 — local model evaluation of the postings the filter admitted."""
     raise typer.Exit(code=_unimplemented("score"))
 
 
@@ -78,9 +140,10 @@ def run_all() -> None:
     result = run_all_profiles()
     typer.echo(
         f"run {result['run_id']}: collected={result['collected']} raw={result['raw']} "
-        f"distinct={result['distinct']}"
+        f"distinct={result['distinct']} passed={result['passed']} "
+        f"rejected={result['rejected']}"
     )
-    # Stages 3 and 4 join here once the CV is supplied
+    # Scoring and publication join here once the CV is supplied
     typer.echo("stages 3-4 outstanding (scoring, publication)")
 
 
