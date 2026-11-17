@@ -13,7 +13,13 @@ ADR-0016):
                         postings.job_level by ADR-0016; it is the experience
                         filter's primary input. Note the coupling: LinkedIn
                         supplies it only when descriptions are fetched, so
-                        `linkedin_fetch_description` is a switch on this field
+                        `linkedin_fetch_description` is a switch on this field.
+                        Under JobSpy 1.1.82 the LinkedIn scraper is the only
+                        one that sets it: the text beside the English
+                        "Seniority level" heading, lowercased (ADR-0019,
+                        ADR-0020). A label `filters.levels` cannot read is not
+                        promoted — the column stays NULL — but it is not lost:
+                        the payload keeps it verbatim and stage 2 logs it
     company_industry    100% LinkedIn / 0% Indeed — 67% overall. Populated, but
                         deliberately left in the payload: it is not a filter
                         criterion and nothing reads it (spec 003, FR-019/FR-020)

@@ -17,6 +17,7 @@ from app.filters.levels import (
     Level,
     admits,
     admits_any,
+    is_unrecognised_label,
     level_from_title,
     merge_labels,
     parse_level,
@@ -98,6 +99,53 @@ def test_an_unlisted_but_readable_label_is_still_evidence():
     """A board saying `senior` has told us something; refusing to read it would
     treat evidence as absence, which is the one direction this file guards."""
     assert parse_level("senior") == Level.MID_SENIOR
+
+
+# --- unrecognised board labels (vocabulary drift) ---------------------------
+#
+# `is_unrecognised_label` is what stage 2 warns on. A false positive is noise in
+# the log; a false negative is drift nobody notices. The "not unrecognised" set is
+# kept the larger of the two, as everywhere in this file.
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "mid-senior level",  # OBSERVED
+        "entry level",  # OBSERVED
+        "associate",  # OBSERVED
+        "director",  # OBSERVED
+        "executive",  # OBSERVED — ADR-0017, 1 row
+        "internship",  # OBSERVED — ADR-0017, 1 row
+        "Mid-Senior level",  # as LinkedIn renders it, before the collector lowercases
+        "senior",  # outside the board table but readable through the synonyms
+        None,
+        "",
+        "   ",
+        "not applicable",  # OBSERVED — the board saying nothing, not drift
+        "Not Applicable",
+        "n/a",
+        "unknown",
+    ],
+)
+def test_a_readable_or_uninformative_label_is_not_flagged(label):
+    assert is_unrecognised_label(label) is False
+
+
+@pytest.mark.parametrize(
+    "label",
+    [
+        "senior level",
+        "executive level",
+        "premier emploi",  # a translated LinkedIn page
+        "مستوى المبتدئين",
+    ],
+)
+def test_a_label_no_vocabulary_reads_is_flagged(label):
+    """The board said something; `parse_level` returning None here is a gap in
+    this module, not an absence of evidence."""
+    assert parse_level(label) is None
+    assert is_unrecognised_label(label) is True
 
 
 # --- requested experience (FR-002) ------------------------------------------

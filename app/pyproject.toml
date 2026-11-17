@@ -87,3 +87,6 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+    "live: makes real requests to the job boards; skipped unless --live is given",
+]

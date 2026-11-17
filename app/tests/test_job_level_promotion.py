@@ -109,6 +109,70 @@ def test_a_payload_with_no_job_level_key_at_all_is_tolerated(session):
     assert session.query(Posting).one().job_level is None
 
 
+# --- a label the filter cannot read -----------------------------------------
+
+
+def test_an_unrecognised_label_is_logged_and_kept_in_the_payload(session, caplog):
+    """Vocabulary drift must be visible. The label is not promoted — the column
+    stays NULL and the filter falls back to the title — but it is not lost
+    either: the raw payload keeps it verbatim, so a later BOARD_LABELS entry and
+    a backfill recover it without a re-scrape."""
+    run = _run(session)
+    _land(session, run, "linkedin", job_level="senior level")
+    session.commit()
+
+    with caplog.at_level("WARNING", logger="app.pipeline.normalise_stage"):
+        run_normalise(session, run)
+
+    assert session.query(Posting).one().job_level is None
+    assert session.query(RawPosting).one().payload["job_level"] == "senior level"
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1
+    assert "senior level" in warnings[0].getMessage()
+    assert "BOARD_LABELS" in warnings[0].getMessage()
+
+
+def test_unrecognised_labels_are_counted_in_one_warning(session, caplog):
+    run = _run(session)
+    _land(session, run, "linkedin", job_level="senior level", title="Data Engineer")
+    _land(session, run, "linkedin", job_level="senior level", title="Data Analyst")
+    _land(session, run, "linkedin", job_level="premier emploi", title="Data Scientist")
+    session.commit()
+
+    with caplog.at_level("WARNING", logger="app.pipeline.normalise_stage"):
+        run_normalise(session, run)
+
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1
+    message = warnings[0].getMessage()
+    assert "3 row(s)" in message
+    assert "'senior level': 2" in message
+    assert "'premier emploi': 1" in message
+
+
+@pytest.mark.parametrize(
+    "job_level",
+    [
+        "mid-senior level",  # OBSERVED
+        "entry level",  # OBSERVED
+        "associate",  # OBSERVED
+        "director",  # OBSERVED
+        "",  # OBSERVED — description not fetched
+        None,  # OBSERVED — every Indeed row
+        "not applicable",  # OBSERVED
+    ],
+)
+def test_a_known_or_uninformative_label_raises_no_warning(session, caplog, job_level):
+    run = _run(session)
+    _land(session, run, "linkedin", job_level=job_level)
+    session.commit()
+
+    with caplog.at_level("WARNING", logger="app.pipeline.normalise_stage"):
+        run_normalise(session, run)
+
+    assert not [r for r in caplog.records if r.levelname == "WARNING"]
+
+
 # --- a second sighting ------------------------------------------------------
 
 
