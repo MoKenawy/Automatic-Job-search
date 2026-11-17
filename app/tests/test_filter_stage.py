@@ -22,6 +22,7 @@ from app.config import RunConfig
 from app.db.models import (
     STATUS_NEW,
     STATUS_SHORTLIST,
+    AppSetting,
     Base,
     Employer,
     Posting,
@@ -31,6 +32,7 @@ from app.db.models import (
     SearchProfile,
 )
 from app.pipeline.filter_stage import filter_all, run_filter
+from app.services.queries import current_verdict
 
 NO_CRITERIA = RunConfig(title_include_pattern="", title_exclude_pattern="")
 
@@ -52,8 +54,24 @@ def _config(*, include: str = "", exclude: str = "") -> RunConfig:
     return RunConfig(title_include_pattern=include, title_exclude_pattern=exclude)
 
 
-def _profile(session, name: str, experience: str | None) -> SearchProfile:
-    profile = SearchProfile(name=name, term="data engineer", experience=experience, sites=[])
+def _profile(
+    session,
+    name: str,
+    experience: str | None = None,
+    *,
+    include: str | None = None,
+    exclude: str | None = None,
+) -> SearchProfile:
+    # The pattern keywords are additive: every existing caller passes only the
+    # first two arguments and gets a profile with no rules of its own.
+    profile = SearchProfile(
+        name=name,
+        term="data engineer",
+        experience=experience,
+        title_include_pattern=include,
+        title_exclude_pattern=exclude,
+        sites=[],
+    )
     session.add(profile)
     session.flush()
     return profile
@@ -609,3 +627,301 @@ def test_filter_all_judges_a_posting_no_run_accounts_for(session):
     session.refresh(posting)
     assert posting.title_filter_passed is False
     assert posting.experience_filter_passed is None
+
+
+# --- ADR-0018: per-profile title rules ---------------------------------------
+#
+# SC-002 governs the balance: the cases proving nothing is wrongly withheld are
+# the majority here, as they are everywhere else in the filter's tests.
+
+
+def test_sc006_a_profile_with_no_patterns_writes_no_title_verdict(session):
+    """Installing the columns is a no-op: a profile that sets nothing adds nothing,
+    so with no global rule either the verdict column stays NULL."""
+    run = _run(session, _profile(session, "plain"))
+    posting = _posting(session, run)
+
+    run_filter(session, run, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is None
+
+
+def test_a_profile_with_no_patterns_leaves_the_global_rule_exactly_as_it_was(session):
+    """Pins today's behaviour: global set, profile blank. The profile must not
+    switch the global rule off, which is the failure a per-contributor
+    conjunction would have (and the reason the shape is AND(global, OR(profiles)))."""
+    run = _run(session, _profile(session, "plain"))
+    excluded = _posting(session, run, title="QA Analyst")
+    kept = _posting(session, run, title="Data Engineer")
+
+    run_filter(session, run, _config(exclude="qa analyst"))
+
+    session.refresh(excluded)
+    session.refresh(kept)
+    assert excluded.title_filter_passed is False
+    assert kept.title_filter_passed is True
+
+
+def test_a_profile_exclude_applies_when_there_is_no_global_rule(session):
+    run = _run(session, _profile(session, "no-interns", exclude="intern"))
+    excluded = _posting(session, run, title="Data Intern")
+    kept = _posting(session, run, title="Data Engineer")
+
+    run_filter(session, run, NO_CRITERIA)
+
+    session.refresh(excluded)
+    session.refresh(kept)
+    assert excluded.title_filter_passed is False
+    assert kept.title_filter_passed is True
+
+
+def test_a_profile_include_admits_what_matches_and_only_that(session):
+    run = _run(session, _profile(session, "engineers-only", include="engineer"))
+    matching = _posting(session, run, title="Data Engineer")
+    other = _posting(session, run, title="Account Manager")
+
+    run_filter(session, run, NO_CRITERIA)
+
+    session.refresh(matching)
+    session.refresh(other)
+    assert matching.title_filter_passed is True
+    assert other.title_filter_passed is False
+
+
+def test_a_profile_rule_does_not_reach_a_posting_it_did_not_surface(session):
+    """The two-sided check: profile A excludes 'analyst', but only B found this
+    posting, so A's rule must not touch it."""
+    _profile(session, "A", exclude="analyst")
+    run_b = _run(session, _profile(session, "B"))
+    posting = _posting(session, run_b, title="Data Analyst")
+
+    run_filter(session, run_b, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is None
+
+
+def test_a_global_exclude_cannot_be_lifted_by_a_profile_include(session):
+    """Both rules bind. A profile that asks for 'senior' does not get it past a
+    house rule that says never to show 'senior'."""
+    run = _run(session, _profile(session, "wants-senior", include="senior"))
+    posting = _posting(session, run, title="Senior Data Engineer")
+
+    run_filter(session, run, _config(exclude="senior"))
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is False
+
+
+def test_exclude_beats_include_when_the_two_come_from_different_levels(session):
+    """The precedence question, answered across levels: profile include 'engineer',
+    global exclude 'data' — the exclude wins."""
+    run = _run(session, _profile(session, "engineers", include="engineer"))
+    posting = _posting(session, run, title="Data Engineer")
+
+    run_filter(session, run, _config(exclude="data"))
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is False
+
+
+def test_exclude_beats_include_within_a_single_profile(session):
+    run = _run(session, _profile(session, "both", include="engineer", exclude="data"))
+    posting = _posting(session, run, title="Data Engineer")
+
+    run_filter(session, run, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is False
+
+
+def test_a_global_rule_still_binds_a_posting_whose_only_contributor_is_profile_less(session):
+    run = _run(session)  # a manual run-all: no profile
+    posting = _posting(session, run, title="QA Analyst")
+
+    run_filter(session, run, _config(exclude="qa analyst"))
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is False
+
+
+def test_two_profiles_one_excluding_and_one_silent_admit_the_posting_deliberately(session):
+    """DELIBERATE, not an oversight (ADR-0018). A contributor with nothing to say
+    cannot withhold anything, so it defeats another contributor's exclude. The
+    alternative lets a profile the operator is not thinking about conceal a
+    posting another profile asked for, and a concealed posting is unrecoverable."""
+    run_a = _run(session, _profile(session, "excluding", exclude="analyst"))
+    run_b = _run(session, _profile(session, "silent"))
+    posting = _posting(session, run_a, title="Data Analyst")
+    _attribute(session, run_b, posting)
+
+    run_filter(session, run_a, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is True
+
+
+def test_two_profiles_that_both_exclude_reject_the_posting(session):
+    run_a = _run(session, _profile(session, "A", exclude="analyst"))
+    run_b = _run(session, _profile(session, "B", exclude="data"))
+    posting = _posting(session, run_a, title="Data Analyst")
+    _attribute(session, run_b, posting)
+
+    run_filter(session, run_a, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is False
+
+
+@pytest.mark.parametrize("reversed_order", [False, True])
+def test_the_title_verdict_does_not_depend_on_which_run_is_filtered(session, reversed_order):
+    """FR-010 for the title column: order-independent, because disjunction is."""
+    run_a = _run(session, _profile(session, "A", exclude="analyst"))
+    run_b = _run(session, _profile(session, "B"))
+    posting = _posting(session, run_a, title="Data Analyst")
+    _attribute(session, run_b, posting)
+
+    for run in (run_b, run_a) if reversed_order else (run_a, run_b):
+        run_filter(session, run, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is True
+
+
+def test_a_second_profile_surfacing_a_rejected_posting_changes_its_verdict(session):
+    """DOCUMENTED, not a bug (ADR-0018). The verdict is a function of the criteria
+    *and the set of contributing profiles*, so a posting one profile's exclude
+    rejected is admitted once a silent profile also surfaces it, with no criteria
+    change at all. The converged re-application property holds for a fixed set of
+    contributors."""
+    run_a = _run(session, _profile(session, "A", exclude="analyst"))
+    posting = _posting(session, run_a, title="Data Analyst")
+    run_filter(session, run_a, NO_CRITERIA)
+    session.refresh(posting)
+    assert posting.title_filter_passed is False
+
+    run_b = _run(session, _profile(session, "B"))
+    _attribute(session, run_b, posting)
+    outcome = run_filter(session, run_b, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is True
+    assert outcome.changed == 1
+
+
+def test_a_malformed_profile_pattern_rejects_nothing_and_names_the_profile(session):
+    """FR-008, per profile. The fault must say *which* profile, or an operator
+    with several cannot tell which to fix, and it must be reported once even
+    though that profile surfaced several postings."""
+    run = _run(session, _profile(session, "Backend developer", exclude="developer("))
+    postings = [_posting(session, run, title=f"Role {n}") for n in range(3)]
+
+    outcome = run_filter(session, run, NO_CRITERIA)
+
+    assert run.filter_rejected_count == 0
+    for posting in postings:
+        session.refresh(posting)
+        assert posting.title_filter_passed is None
+    mine = [fault for fault in outcome.faults if "Backend developer" in fault]
+    assert len(mine) == 1
+    assert "not a valid expression" in mine[0]
+    assert "Backend developer" in (run.error or "")
+
+
+def test_a_malformed_profile_pattern_does_not_disable_the_global_rule(session):
+    run = _run(session, _profile(session, "broken", exclude="developer("))
+    excluded = _posting(session, run, title="QA Analyst")
+
+    run_filter(session, run, _config(exclude="qa analyst"))
+
+    session.refresh(excluded)
+    assert excluded.title_filter_passed is False
+
+
+def test_two_profiles_with_malformed_patterns_are_both_reported(session):
+    """An assignment instead of an accumulation would keep only the last."""
+    run_a = _run(session, _profile(session, "first", exclude="a("))
+    run_b = _run(session, _profile(session, "second", include="b["))
+    posting = _posting(session, run_a)
+    _attribute(session, run_b, posting)
+
+    outcome = run_filter(session, run_a, NO_CRITERIA)
+
+    text = " | ".join(outcome.faults)
+    assert "first" in text
+    assert "second" in text
+
+
+def test_a_converged_re_application_with_profile_rules_writes_nothing(session):
+    """SC-007 survives per-profile rules: the guard compares before it writes."""
+    run = _run(session, _profile(session, "P", exclude="analyst"))
+    posting = _posting(session, run, title="Data Analyst")
+    run_filter(session, run, NO_CRITERIA)
+    session.refresh(posting)
+    stamped = posting.updated_at
+
+    second = run_filter(session, run, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert second.changed == 0
+    assert posting.updated_at == stamped
+
+
+def test_loosening_a_profile_rule_restores_the_posting_without_re_collecting(session):
+    profile = _profile(session, "P", exclude="analyst")
+    run = _run(session, profile)
+    posting = _posting(session, run, title="Data Analyst")
+    run_filter(session, run, NO_CRITERIA)
+    session.refresh(posting)
+    assert posting.title_filter_passed is False
+
+    profile.title_exclude_pattern = None
+    session.commit()
+    filter_all(session, NO_CRITERIA)
+
+    session.refresh(posting)
+    assert posting.title_filter_passed is None  # not applied, rather than "passed"
+
+
+# --- the stage and the detail page must reach the same verdict ----------------
+
+
+def _pin_global_rules(session, *, include: str = "", exclude: str = "") -> None:
+    """`current_verdict` resolves criteria through `RunConfig.resolve`, which reads
+    `app_settings`; pin both keys so this installation's .env cannot decide the test."""
+    session.add(AppSetting(key="title_include_pattern", value=include))
+    session.add(AppSetting(key="title_exclude_pattern", value=exclude))
+    session.commit()
+
+
+@pytest.mark.parametrize(
+    ("global_exclude", "a_exclude", "b_exclude", "title"),
+    [
+        ("", "", "", "Data Analyst"),  # nothing set anywhere -> NULL
+        ("analyst", "", "", "Data Analyst"),  # global only
+        ("", "analyst", "", "Data Analyst"),  # one profile excludes, one silent
+        ("", "analyst", "data", "Data Analyst"),  # both profiles exclude
+        ("data", "analyst", "", "Data Analyst"),  # global + a silent profile
+        ("", "", "", "Data Engineer"),
+    ],
+)
+def test_the_detail_page_and_the_stage_reach_the_same_verdict(
+    session, global_exclude, a_exclude, b_exclude, title
+):
+    """Both go through `filters.build_criteria`, and this is the test that says so.
+    Without it the stored verdict and the displayed one could drift apart with
+    every other test still green, and the page would then tell the operator that
+    their criteria had changed when only the code had."""
+    _pin_global_rules(session, exclude=global_exclude)
+    run_a = _run(session, _profile(session, "A", exclude=a_exclude or None))
+    run_b = _run(session, _profile(session, "B", exclude=b_exclude or None))
+    posting = _posting(session, run_a, title=title)
+    _attribute(session, run_b, posting)
+
+    filter_all(session, _config(exclude=global_exclude))
+    session.refresh(posting)
+    live = current_verdict(session, posting)
+
+    assert live.title_passed is posting.title_filter_passed
+    assert live.experience_passed is posting.experience_filter_passed

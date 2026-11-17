@@ -28,8 +28,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import RawPosting, RawPostingNormalization, Run, SearchProfile
+from app.filters import ProfileInput
 
-__all__ = ["posting_ids_for_run", "requested_experience_by_posting"]
+__all__ = ["contributors_by_posting", "posting_ids_for_run"]
 
 
 def posting_ids_for_run(session: Session, run_id: int) -> list[int]:
@@ -51,23 +52,33 @@ def posting_ids_for_run(session: Session, run_id: int) -> list[int]:
     )
 
 
-def requested_experience_by_posting(
+def contributors_by_posting(
     session: Session, posting_ids: list[int] | None = None
-) -> dict[int, list[str | None]]:
-    """For each posting, the experience text of every profile that surfaced it.
+) -> dict[int, list[ProfileInput]]:
+    """For each posting, the stored filter fields of every profile that surfaced it.
 
-    A `None` entry is a contributor that imposes no requirement: a profile-less
-    run (a manual `run-all`), or a profile whose `experience` field is empty.
-    Both admit unconditionally, so both are the same thing to the criterion — see
-    `filters.levels.admits_any`.
+    One query serves both criteria: a profile's requested experience and its own
+    title patterns are read in the same traversal, so they cannot come from
+    different sets of contributors (ADR-0018).
+
+    A profile-less run (a manual `run-all`) yields the all-`None` `ProfileInput`.
+    So does a profile with nothing set, apart from its name: both impose no
+    requirement, and both are the same thing to the criteria — see
+    `filters.verdict.Contributor`.
 
     A posting absent from the result has no contributing run at all, which the
-    caller must read as "no experience criterion applies" rather than as a
+    caller must read as "no per-profile criterion applies" rather than as a
     rejection. Returning nothing for it, rather than an empty list, keeps that
-    distinction with the caller instead of encoding it here.
+    distinction with the caller instead of encoding it here. (The **global** title
+    rule still applies to such a posting; that is `Criteria.titles`, not a
+    contributor.)
 
     `posting_ids` of `None` means every posting — the whole-corpus re-apply.
     Passing an empty list means no postings, and returns nothing.
+
+    This module imports `ProfileInput` from `app.filters`, which is a pure leaf:
+    it imports nothing from `db/`, so no cycle, and `db/` already depends on
+    `config` in the same way.
     """
     if posting_ids is not None and not posting_ids:
         return {}
@@ -76,24 +87,39 @@ def requested_experience_by_posting(
         select(
             RawPostingNormalization.posting_id,
             Run.profile_id,
+            SearchProfile.name,
             SearchProfile.experience,
+            SearchProfile.title_include_pattern,
+            SearchProfile.title_exclude_pattern,
         )
         .select_from(RawPostingNormalization)
         .join(RawPosting, RawPosting.id == RawPostingNormalization.raw_posting_id)
         .join(Run, Run.id == RawPosting.run_id)
         .outerjoin(SearchProfile, SearchProfile.id == Run.profile_id)
         # DISTINCT so a profile that surfaced the same posting across many runs
-        # contributes one requirement rather than one per run. The verdict is a
-        # disjunction, so repetition could not change it — but it would make the
-        # log, and any later per-profile diagnosis, misleading.
+        # contributes once rather than once per run. Every combinator here is
+        # idempotent, so repetition could not change a verdict — but it would make
+        # the log, and any per-profile diagnosis, misleading.
         .distinct()
+        # A stable order, so that a fault is reported the same way on every
+        # application of the same data.
+        .order_by(RawPostingNormalization.posting_id, Run.profile_id)
     )
     if posting_ids is not None:
         stmt = stmt.where(RawPostingNormalization.posting_id.in_(posting_ids))
 
-    requested: dict[int, list[str | None]] = defaultdict(list)
-    for posting_id, profile_id, experience in session.execute(stmt).all():
-        # A profile-less run and a profile with no experience recorded are the
-        # same fact here: a contributor that cannot withhold anything.
-        requested[posting_id].append(experience if profile_id is not None else None)
-    return dict(requested)
+    contributors: dict[int, list[ProfileInput]] = defaultdict(list)
+    for posting_id, profile_id, name, experience, include, exclude in session.execute(stmt).all():
+        # A profile-less run contributes nothing, whatever the outer join left in
+        # the profile columns (which is NULL anyway; this keeps the intent explicit).
+        contributors[posting_id].append(
+            ProfileInput()
+            if profile_id is None
+            else ProfileInput(
+                name=name,
+                experience=experience,
+                title_include_pattern=include,
+                title_exclude_pattern=exclude,
+            )
+        )
+    return dict(contributors)

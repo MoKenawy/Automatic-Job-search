@@ -12,16 +12,15 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.elements import ColumnElement
 
 from app.config import WORKING_SITES, RunConfig
-from app.db.attribution import requested_experience_by_posting
+from app.db.attribution import contributors_by_posting
 from app.db.models import STATUS_REJECTED, Employer, Posting, Run, SearchProfile
 from app.db.visibility import filter_rejected, hidden_by_filter, not_suppressed
 from app.filters import (
-    Criteria,
     TitleRules,
     Verdict,
+    build_criteria,
     evaluate,
     parse_level,
-    parse_requested,
 )
 
 # Selects postings whose country could not be resolved. `parse_country` returns
@@ -352,12 +351,18 @@ def current_verdict(session: Session, posting: Posting) -> Verdict:
     recorded explanation is stale exactly when it is consulted (ADR-0016).
 
     Read-only, and cheap: one compile and one evaluation for a single posting.
+
+    Builds its criteria through `filters.build_criteria`, the same function the
+    stage uses, so that the verdict shown here and the verdict stored cannot
+    disagree about *how* the global rule and the contributing profiles' rules are
+    combined (ADR-0018). A disagreement it does report is therefore real: the
+    criteria, or the set of profiles that surfaced the posting, changed since the
+    stage last ran.
     """
     config = RunConfig.resolve(session)
-    requested = requested_experience_by_posting(session, [posting.id]).get(posting.id, [])
-    criteria = Criteria(
-        titles=TitleRules.compile(config.title_include_pattern, config.title_exclude_pattern),
-        requested_levels=tuple(parse_requested(text) for text in requested),
+    criteria = build_criteria(
+        TitleRules.compile(config.title_include_pattern, config.title_exclude_pattern),
+        contributors_by_posting(session, [posting.id]).get(posting.id, []),
     )
     return evaluate(
         title=posting.title,

@@ -40,13 +40,22 @@ class TitleRules:
     errors: tuple[str, ...] = ()
 
     @classmethod
-    def compile(cls, include: str = "", exclude: str = "") -> "TitleRules":
+    def compile(
+        cls, include: str | None = "", exclude: str | None = "", *, source: str | None = None
+    ) -> "TitleRules":
         """Compile both patterns, treating empty or whitespace-only as disabled.
 
         Case-insensitive, so the operator need not think about it. Emptiness is
         decided on the string rather than on a match result — see the module
-        docstring; this is the ordering the whole corpus depends on.
+        docstring; this is the ordering the whole corpus depends on. `None` is
+        the same as empty: a search profile that sets no pattern stores NULL.
+
+        `source` names where the patterns came from, and is prefixed to any fault.
+        The global patterns are read at `/settings`; a profile's are read on
+        `/profiles`, and an operator with several profiles cannot act on "a
+        pattern is invalid" without being told which one (ADR-0018).
         """
+        where = f"profile {source!r}: " if source else ""
         compiled: dict[str, re.Pattern[str] | None] = {"include": None, "exclude": None}
         errors: list[str] = []
 
@@ -58,7 +67,7 @@ class TitleRules:
             except re.error as exc:
                 # Reported, never raised: the run completes and this criterion
                 # simply does not apply (FR-008).
-                errors.append(f"title_{name}_pattern is not a valid expression: {exc}")
+                errors.append(f"{where}title_{name}_pattern is not a valid expression: {exc}")
 
         return cls(include=compiled["include"], exclude=compiled["exclude"], errors=tuple(errors))
 

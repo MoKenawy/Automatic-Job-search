@@ -14,10 +14,11 @@ that produced them.
 
 from dataclasses import dataclass, field
 
+from app.filters.combine import all_of, any_of
 from app.filters.levels import Level, admits_any, level_from_title, parse_level
 from app.filters.titles import TitleRules
 
-__all__ = ["Criteria", "Verdict", "evaluate"]
+__all__ = ["Contributor", "Criteria", "Verdict", "evaluate"]
 
 # Where the seniority used for the verdict came from. Diagnosis, not storage:
 # `postings.job_level` holds the board's own label and never an inference
@@ -27,24 +28,63 @@ SOURCE_TITLE = "title"
 
 
 @dataclass(frozen=True)
-class Criteria:
-    """What one posting is judged against.
+class Contributor:
+    """What one search profile that surfaced a posting asks for.
 
-    `titles` is global — operator-editable settings shared across the pipeline.
-    `requested_levels` is per posting: the requested level of every search profile
-    that has surfaced it, with `None` for a contributor that imposes no
-    requirement (a profile-less run, or a profile whose experience is absent or
-    unreadable). An empty tuple means nothing has surfaced it at all, and the
-    experience criterion does not apply.
+    A profile-less run (a manual `run-all`) is a contributor with nothing set, as
+    is a profile whose fields are blank: both impose no requirement, so both are
+    the same thing to the criteria.
+
+    Requested level and title rules travel **together**, in one record per
+    profile, so that the two criteria cannot be assembled from different
+    profile sets and quietly disagree about who contributed.
+
+    `unreadable_experience` carries the profile's experience text when it could
+    not be read, so the stage can report it (FR-002a). It plays no part in the
+    verdict, where an unreadable value is simply no requirement.
+    """
+
+    requested: Level | None = None
+    titles: TitleRules = field(default_factory=TitleRules)
+    unreadable_experience: str | None = None
+
+
+@dataclass(frozen=True)
+class Criteria:
+    """What one posting is judged against (ADR-0016, ADR-0018).
+
+    `titles` is the **global** rule, from `/settings`: it binds every posting, and
+    nothing about attribution can lift it. `contributors` is per posting — one
+    record for each search profile that has surfaced it. An empty tuple means no
+    run accounts for the posting at all.
+
+    The two are not interchangeable and are not nested: the title verdict is
+    `all_of(global, any_of(profiles))`. Nesting the global rule *inside* the
+    per-profile loop would make it vanish for a posting with no contributor, so
+    the same title, under the same exclude pattern, would be rejected or kept
+    according to whether a `Run` row happened to exist — a cliff, not a rule.
     """
 
     titles: TitleRules = field(default_factory=TitleRules)
-    requested_levels: tuple[Level | None, ...] = ()
+    contributors: tuple[Contributor, ...] = ()
+
+    @property
+    def requested_levels(self) -> tuple[Level | None, ...]:
+        """The requested level of every contributing profile, in contributor order."""
+        return tuple(contributor.requested for contributor in self.contributors)
 
     @property
     def errors(self) -> tuple[str, ...]:
-        """Faults the operator must be told about (FR-002a, FR-008)."""
-        return self.titles.errors
+        """Pattern faults the operator must be told about (FR-008).
+
+        Global first, then each profile's — which already names the profile.
+        Deduplicated in order: the same malformed pattern on a profile that
+        contributed twice is one fault.
+        """
+        seen: dict[str, None] = dict.fromkeys(self.titles.errors)
+        for contributor in self.contributors:
+            seen.update(dict.fromkeys(contributor.titles.errors))
+        return tuple(seen)
 
 
 @dataclass(frozen=True)
@@ -108,8 +148,18 @@ def evaluate(
         level = level_from_title(normalised_title)
         source = SOURCE_TITLE if level is not None else None
 
+    # The global rule binds unconditionally; the profiles' rules are a
+    # disjunction, exactly as the experience criterion's are, so that a profile
+    # the operator is not thinking about cannot conceal what another asked for.
+    title_passed = all_of(
+        [
+            criteria.titles.verdict(title),
+            any_of(contributor.titles.verdict(title) for contributor in criteria.contributors),
+        ]
+    )
+
     return Verdict(
-        title_passed=criteria.titles.verdict(title),
+        title_passed=title_passed,
         experience_passed=admits_any(criteria.requested_levels, level),
         level=level,
         level_source=source,
