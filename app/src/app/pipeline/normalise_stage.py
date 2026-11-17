@@ -9,6 +9,7 @@ Re-runnable: processing the same raw rows again converges on the same state.
 """
 
 import logging
+from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
 
@@ -16,6 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Employer, Posting, RawPosting, RawPostingNormalization, Run
+from app.filters import is_unrecognised_label
 from app.normalise import build_fingerprint, normalise_employer
 
 log = logging.getLogger(__name__)
@@ -39,6 +41,11 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
 
     now = datetime.now(UTC)
     unresolved_country = 0
+    # Seniority labels a board supplied that `filters.levels` cannot read. They
+    # stay verbatim in the raw payload and are not promoted, so the filter falls
+    # back to the title for them; counting them is what makes vocabulary drift
+    # visible in the run log instead of only in a payload query.
+    unrecognised_labels: Counter[str] = Counter()
 
     # Fingerprint every row up front so the batch lookups below can be built
     # from the complete set of digests and employer names this run touches,
@@ -55,6 +62,8 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
         )
         if not parts.country_resolved and not payload.get("is_remote"):
             unresolved_country += 1
+        if is_unrecognised_label(payload.get("job_level")):
+            unrecognised_labels[str(payload.get("job_level"))] += 1
         parsed.append((raw, parts, payload))
 
     digests = {parts.digest for _, parts, _ in parsed}
@@ -143,6 +152,15 @@ def run_normalise(session: Session, run: Run) -> tuple[int, int]:
 
     run.deduplicated_count = len(touched)
     session.commit()
+
+    if unrecognised_labels:
+        log.warning(
+            "stage 2: %d row(s) carried a seniority label the filter cannot read "
+            "(kept verbatim in raw_postings.payload, not promoted to "
+            "postings.job_level): %s - add to BOARD_LABELS (filters/levels.py)",
+            sum(unrecognised_labels.values()),
+            dict(sorted(unrecognised_labels.items())),
+        )
 
     log.info(
         "stage 2 complete: %d raw rows -> %d distinct postings (%d unresolved country)",
