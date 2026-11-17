@@ -56,6 +56,13 @@ class Level(IntEnum):
 # Measured on the live corpus 16 November 2026: mid-senior level, entry level,
 # associate, director and the empty string all occur; internship and executive are
 # documented members of the vocabulary not yet seen.
+#
+# In practice "the boards" is one board. Under JobSpy 1.1.82 only the LinkedIn
+# scraper sets `job_level`, and only when `linkedin_fetch_description` is on: it
+# reads the text beside the English "Seniority level" heading on the job page and
+# lowercases it. No other scraper sets the field (ADR-0020). The library's output
+# is pinned against this table by tests/test_jobspy_contract.py, and a label that
+# escapes it is logged by stage 2 rather than silently left unpromoted.
 BOARD_LABELS: dict[str, Level] = {
     "internship": Level.INTERNSHIP,
     "entry level": Level.ENTRY,
