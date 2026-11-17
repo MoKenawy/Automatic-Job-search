@@ -44,6 +44,10 @@ earlier record is retained.
 | [0014](ADRs/0014-status-transition-row-locking.md) | `SELECT ... FOR UPDATE` for concurrent status transitions | Accepted; case 2 superseded by 0015 |
 | [0015](ADRs/0015-employer-level-suppression.md) | Employer-level suppression, derived at read time | Accepted |
 | [0016](ADRs/0016-collect-stage-filter-verdicts.md) | Filter verdicts — derived criteria, derived visibility | Accepted |
+| [0017](ADRs/0017-board-seniority-label-reliability.md) | Board seniority label — how far to trust it when it hides a posting | **Proposed** |
+
+A **Proposed** record states evidence and options and decides nothing; it binds no
+behaviour until it is accepted. ADR-0017 is the first.
 
 ## Project structure
 
