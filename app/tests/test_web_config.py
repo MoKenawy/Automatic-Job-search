@@ -153,3 +153,123 @@ def test_delete_profile(client, factory):
     client.post(f"/profiles/{pid}/delete", follow_redirects=False)
     with factory() as s:
         assert profiles.list_all(s) == []
+
+
+# --- ADR-0018: per-profile filter rules ----------------------------------------
+
+
+def _make_profile(factory, **over) -> int:
+    fields = {
+        "name": "P",
+        "term": "data engineer",
+        "sites": ["indeed"],
+        "schedule_hour": "6",
+        "schedule_minute": "0",
+    }
+    fields.update(over)
+    with factory() as s:
+        return profiles.create(s, **fields).id
+
+
+def test_the_filter_rules_form_saves_the_three_fields(client, factory):
+    pid = _make_profile(factory)
+    r = client.post(
+        f"/profiles/{pid}/filters",
+        data={
+            "experience": "entry level",
+            "title_include_pattern": "engineer",
+            "title_exclude_pattern": "senior",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "error" not in r.headers["location"]
+    with factory() as s:
+        p = profiles.list_all(s)[0]
+        assert (p.experience, p.title_include_pattern, p.title_exclude_pattern) == (
+            "entry level",
+            "engineer",
+            "senior",
+        )
+
+
+def test_the_filter_rules_form_does_not_re_enable_a_disabled_profile(client, factory):
+    """The hazard that ruled out posting a form to the generic update route."""
+    pid = _make_profile(factory)
+    client.post(f"/profiles/{pid}/enabled", data={"enabled": "false"}, follow_redirects=False)
+
+    client.post(
+        f"/profiles/{pid}/filters",
+        data={"experience": "junior", "title_include_pattern": "", "title_exclude_pattern": ""},
+        follow_redirects=False,
+    )
+
+    with factory() as s:
+        assert profiles.list_all(s)[0].enabled is False
+        assert profiles.enabled_specs(s) == []
+
+
+def test_the_filter_rules_form_reports_a_malformed_pattern_and_saves_nothing(client, factory):
+    pid = _make_profile(factory, experience="senior")
+    r = client.post(
+        f"/profiles/{pid}/filters",
+        data={
+            "experience": "entry level",
+            "title_include_pattern": "",
+            "title_exclude_pattern": "developer(",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "error" in r.headers["location"]
+    with factory() as s:
+        assert profiles.list_all(s)[0].experience == "senior"
+
+
+def test_the_filter_rules_form_on_a_missing_profile_reports_an_error(client):
+    r = client.post(
+        "/profiles/999/filters",
+        data={"experience": "", "title_include_pattern": "", "title_exclude_pattern": ""},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "error" in r.headers["location"]
+
+
+def test_the_profiles_page_shows_each_profiles_rules_and_the_form(client, factory):
+    _make_profile(
+        factory, name="Has rules", experience="junior", title_exclude_pattern="intern|sales"
+    )
+    _make_profile(factory, name="No rules")
+    html = client.get("/profiles").text
+    assert "intern|sales" in html
+    assert "none set" in html  # the profile with nothing says so
+    assert "Save filter rules" in html
+    assert "/filters" in html
+
+
+def test_the_profiles_page_states_how_the_levels_combine(client):
+    """The operator-facing statement of the rules (ADR-0018), kept on the page the
+    rules are edited on rather than only in the docs."""
+    html = client.get("/profiles").text
+    assert "in addition to" in html
+    assert "exclude always beats include" in html
+    assert "filter --all" in html
+
+
+def test_the_add_form_accepts_title_patterns(client, factory):
+    r = client.post(
+        "/profiles",
+        data={
+            "name": "With rules",
+            "term": "x",
+            "sites": ["indeed"],
+            "schedule_hour": "6",
+            "schedule_minute": "0",
+            "title_exclude_pattern": "intern",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    with factory() as s:
+        assert profiles.list_all(s)[0].title_exclude_pattern == "intern"

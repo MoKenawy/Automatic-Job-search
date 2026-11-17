@@ -162,8 +162,8 @@ away, under the criteria in force now, with the criterion that turned each one
 away. Two criteria apply (ADR-0016):
 
 - **Title** — the include/exclude patterns at `/settings`, applied to the job
-  title only. Both are empty by default, and an empty pattern means the
-  criterion is off.
+  title only, and optionally each profile's own on `/profiles`. Both levels are
+  empty by default, and an empty pattern means the criterion is off.
 - **Experience** — the level recorded on a search profile, compared against the
   board's declared seniority (or, where no board declared one, a cautious
   reading of the title). A request admits everything at or below it. A posting
@@ -183,6 +183,39 @@ docker compose exec scheduler python -m app filter --all --dry-run
 ```
 
 That reports what would change and writes nothing.
+
+**Filter rules per profile** (`/profiles`, *Filter rules* under each profile).
+Each profile can carry its own title patterns and experience level. Four
+things are worth knowing before relying on them (ADR-0018):
+
+- **They add to the global rules, never replace them.** A pattern at
+  `/settings` binds every posting whatever profile found it, and a profile
+  cannot loosen it.
+- **Exclude always beats include**, within a profile and across the two levels.
+  A profile that asks for `senior` does not get it past a global exclude of
+  `senior`.
+- **A blank *Experience* box means that profile never hides anything on
+  seniority grounds.** It is not "no preference, defer to the others": for
+  every posting that profile found, it votes to admit. When a posting was
+  found by several profiles, it is kept if *any* of them would keep it, so one
+  profile with the box empty switches seniority filtering off for everything
+  it shares with profiles that did fill it in. This is deliberate — the
+  alternative lets a profile you are not thinking about conceal a posting
+  another one wanted — but it surprises people. **Fill the box in on every
+  profile where you want seniority filtering.**
+- **A profile's exclude can be defeated by another profile** that found the
+  same posting and excludes nothing, for the same reason. A rule that must be
+  absolute belongs in the global settings. On a typical corpus most postings
+  (about nine in ten) are found by one profile only and are governed fully.
+
+A change to any of these reaches postings already collected once you run
+`filter --all`; nothing is re-collected, and a posting a rule withheld comes
+back, triage status intact, when the rule is loosened and the filter re-applied.
+
+If most of your LinkedIn postings land under *filtered out*, that is the
+seniority criterion working as specified, not LinkedIn being blocked:
+LinkedIn labels many ordinary roles `mid-senior level`. The evidence and the
+options are recorded in ADR-0017, which is proposed and decides nothing yet.
 
 **Settings** (`/settings`). Operational values — results per search, request
 delay, publish threshold, scoring model, LinkedIn description fetch, title

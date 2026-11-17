@@ -53,6 +53,33 @@ def profiles_set_enabled(
     return RedirectResponse(url="/profiles", status_code=303)
 
 
+@router.post("/profiles/{profile_id}/filters")
+def profiles_set_filters(
+    profile_id: int,
+    experience: str = Form(""),
+    title_include_pattern: str = Form(""),
+    title_exclude_pattern: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    """Edit one profile's filter rules without touching anything else (ADR-0018).
+
+    A route of its own rather than the generic update: see
+    `profile_store.set_filter_rules` for why a form that sends only some fields
+    must not go through `update()`.
+    """
+    try:
+        profile_store.set_filter_rules(
+            db,
+            profile_id,
+            experience=experience,
+            title_include_pattern=title_include_pattern,
+            title_exclude_pattern=title_exclude_pattern,
+        )
+    except profile_store.ProfileError as exc:
+        return RedirectResponse(url=f"/profiles?error={exc}", status_code=303)
+    return RedirectResponse(url="/profiles", status_code=303)
+
+
 @router.post("/profiles/{profile_id}/delete")
 def profiles_delete(profile_id: int, db: Session = Depends(get_db)):
     try:
