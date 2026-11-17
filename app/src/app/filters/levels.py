@@ -33,6 +33,7 @@ __all__ = [
     "Level",
     "admits",
     "admits_any",
+    "is_unrecognised_label",
     "level_from_title",
     "merge_labels",
     "parse_level",
@@ -188,6 +189,27 @@ def parse_level(label: str | None) -> Level | None:
     if canonical in _UNKNOWN_LABELS:
         return None
     return BOARD_LABELS.get(canonical) or _REQUESTED_SYNONYMS.get(canonical)
+
+
+def is_unrecognised_label(label: str | None) -> bool:
+    """Whether a board said something about seniority that `parse_level` cannot read.
+
+    Distinguishes two reasons `parse_level` returns `None`. A label that carries
+    no information — absent, empty, `not applicable` — is the board saying
+    nothing. A label that carries words outside every vocabulary here is the
+    board saying something *we* did not understand: vocabulary drift, a layout
+    change, a translated page.
+
+    Both leave `postings.job_level` NULL, but only the second is a gap in this
+    module. The label itself is not lost — `raw_postings.payload` keeps it
+    verbatim (FR-012), so adding it to `BOARD_LABELS` and backfilling costs no
+    re-scrape. What would be lost without this is *noticing*: stage 2 counts and
+    logs these so drift shows up in the run log rather than in a payload query.
+    """
+    canonical = _canonical(label)
+    if not canonical or canonical in _UNKNOWN_LABELS:
+        return False
+    return parse_level(label) is None
 
 
 def parse_requested(text: str | None) -> Level | None:
