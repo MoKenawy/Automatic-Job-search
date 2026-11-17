@@ -30,6 +30,15 @@
 
     {{ field('title_include_pattern', 'Title include regex') }}
     {{ field('title_exclude_pattern', 'Title exclude regex') }}
+    {# D6 and ADR-0016. The coupling in the second sentence is invisible from
+       this screen, and the filter fails open when it bites, so nothing else
+       would tell the operator it had happened. #}
+    <p class="sub" style="grid-column:1/-1;margin:-6px 0 10px">
+      Applied to the job title only; empty switches the criterion off. Seniority
+      filtering depends on <strong>LinkedIn description fetch</strong> staying
+      on — the board declares a posting's level only when descriptions are
+      fetched.
+    </p>
 
     <label for="proxies">Proxies<span class="muted"> — one per line</span></label>
     <textarea id="proxies" name="proxies" rows="2">{{ values['proxies'] | join('\n') }}</textarea>

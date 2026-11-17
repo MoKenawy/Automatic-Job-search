@@ -51,8 +51,8 @@ erDiagram
         string   status "running | success | failed"
         int      collected_count
         int      deduplicated_count
-        int      filter_passed_count
-        int      filter_rejected_count
+        int      filter_passed_count "verdict as of last application"
+        int      filter_rejected_count "verdict as of last application"
         int      scored_count
         int      published_count
         jsonb    counts_by_site "per-source counts, e.g. {indeed:30}"
@@ -81,7 +81,9 @@ erDiagram
         date     date_posted "nullable, indexed"
         string   job_type "nullable"
         jsonb    sources "board -> {url, job_id, first_seen}"
-        bool     title_filter_passed "nullable, stage 3"
+        string   job_level "nullable, board-declared seniority"
+        bool     title_filter_passed "nullable, tri-state, filter"
+        bool     experience_filter_passed "nullable, tri-state, filter"
         int      score "nullable, indexed, stage 3"
         jsonb    matched_skills "nullable, stage 3"
         jsonb    gaps "nullable, stage 3"
@@ -141,13 +143,33 @@ One row per real-world role, keyed on `fingerprint`. Columns fall into groups:
   that `location_raw` is verbatim and **not comparable across boards** (one may
   render a city in Arabic, another in English); `country_code` is the comparable,
   parsed value and the one used in the fingerprint.
-- **Scoring (stage 3):** `title_filter_passed`, `score`, `matched_skills`,
-  `gaps`, `rationale`, `scored_at`, `scored_by_model`. All nullable until scored.
+- **Filtering (ADR-0016):** `job_level`, `title_filter_passed`,
+  `experience_filter_passed`. `job_level` is the board's own declared seniority,
+  verbatim; where several collected rows fold into one posting it holds the
+  lowest label among them, and it never holds an inference. The two verdict
+  columns are **tri-state**, and the three states are different facts:
+
+  | Value | Meaning |
+  |---|---|
+  | NULL | the criterion was not applied — never filtered, or disabled (empty pattern, absent or unreadable requested experience) |
+  | TRUE | applied, and admitted — including admitted *because* the input was unknown |
+  | FALSE | applied, and rejected |
+
+  Whether a posting is rejected, and on which grounds, is derived from the pair
+  rather than stored: criteria change routinely, so a recorded reason would be
+  stale precisely when it is read. Written only by `pipeline/filter_stage.py`.
+- **Scoring (stage 3):** `score`, `matched_skills`, `gaps`, `rationale`,
+  `scored_at`, `scored_by_model`. All nullable until scored.
 - **Publication and triage (stage 4):** `published`, `published_at`, `status`.
 
-`status` doubles as the suppression mechanism: `rejected` is retained
-indefinitely and never resurfaces (SRS FR-23, FR-27), so no separate
-posting-level suppression flag is needed.
+`status` is operator judgement only. It does **not** double as a suppression or
+filtering mechanism: a blacklisted employer's postings (ADR-0015) and postings a
+criterion turned away (ADR-0016) are withheld at read time through
+`db/visibility.py`, never stamped. That separation is what makes both
+reversible — lifting a blacklist or loosening a criterion restores the posting
+with the triage status it already held. (The previous claim here, that `status`
+doubled as the suppression mechanism, was falsified by ADR-0015 and is corrected
+rather than left standing.)
 
 ---
 

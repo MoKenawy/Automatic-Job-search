@@ -43,6 +43,7 @@ earlier record is retained.
 | [0013](ADRs/0013-posting-status-history.md) | Transactional audit table for triage status transitions | Accepted |
 | [0014](ADRs/0014-status-transition-row-locking.md) | `SELECT ... FOR UPDATE` for concurrent status transitions | Accepted; case 2 superseded by 0015 |
 | [0015](ADRs/0015-employer-level-suppression.md) | Employer-level suppression, derived at read time | Accepted |
+| [0016](ADRs/0016-collect-stage-filter-verdicts.md) | Filter verdicts — derived criteria, derived visibility | Accepted |
 
 ## Project structure
 
@@ -84,11 +85,18 @@ Automatic-Job-search/
     │   │   ├── employer.py
     │   │   ├── title.py
     │   │   └── fingerprint.py
+    │   ├── filters/               # Relevance and experience criteria (D6, ADR-0016)
+    │   │   ├── levels.py          # The seniority scale and both vocabularies
+    │   │   ├── titles.py          # Include/exclude patterns
+    │   │   └── verdict.py         # One posting, two criteria, one verdict
     │   ├── pipeline/              # Stage orchestration and persistence
-    │   │   ├── run.py             # Run tracking
+    │   │   ├── runner.py          # Run tracking and stage sequencing
     │   │   ├── collect_stage.py   # Stage 1 persistence
-    │   │   └── normalise_stage.py # Stage 2 dedup upsert
+    │   │   ├── normalise_stage.py # Stage 2 dedup upsert
+    │   │   └── filter_stage.py    # Filter verdicts and the run funnel
     │   ├── db/                    # SQLAlchemy models and session
+    │   │   ├── visibility.py      # Read-time withholding (ADR-0015, ADR-0016)
+    │   │   └── attribution.py     # Posting → run → profile traversal
     │   └── web/                   # FastAPI triage interface
     │       └── templates/         # Jinja2 templates
     │

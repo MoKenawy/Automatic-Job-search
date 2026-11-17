@@ -132,7 +132,8 @@ uv run python -m app --help
 |---|---|
 | `collect` | Stage 1: collect and land raw postings |
 | `normalise [--run-id N]` | Stage 2: fingerprint and deduplicate (latest run by default) |
-| `score` | Stage 3: title filter + model scoring *(planned)* |
+| `filter [--run-id N] [--all] [--dry-run]` | Relevance and experience verdicts (D6, ADR-0016). `--all` re-applies the criteria to every posting without contacting a board; `--dry-run` reports and writes nothing |
+| `score` | Stage 3: model scoring of the postings the filter admitted *(planned)* |
 | `publish` | Stage 4: mark above-threshold published *(planned)* |
 | `run-all` | Every stage in order, recording per-stage counts |
 | `serve` | Run the scheduler in the foreground |
@@ -200,12 +201,30 @@ To implement a new stage (e.g. stage 3, scoring):
    concerns, with its own tests.
 2. Add a persistence function in `app.pipeline` that reads from the database,
    calls the pure logic, and writes results — following `normalise_stage.py`.
-3. Wire it into `__main__.py` as a subcommand and into `run-all`.
+3. Wire it into `__main__.py` as a subcommand and into `runner._run()`, which
+   covers the CLI, the scheduler and the web "run now" together.
 4. Update `runs` counts so the stage is observable (design §7.4).
 5. Validate against real stored postings before trusting output — for scoring,
    design §12 item 9 requires checking a sample by hand first.
 
 Keep stages idempotent: re-running against the same input must converge on the
 same state.
+
+The filter (ADR-0016) is the most recent stage to follow this recipe, and worth
+reading as the worked example — `app/src/app/filters/` for step 1,
+`pipeline/filter_stage.py` for step 2. Two things it added are obligations for
+any stage that follows:
+
+- **If the stage selects postings, it applies the read-time seams.** Both
+  `db.visibility.not_suppressed()` and `~db.visibility.hidden_by_filter()`, or
+  it scores and publishes things the operator has been shown to not want. The
+  inventory in
+  `specs/002-employer-suppression-derived/contracts/read-path-inventory.md`
+  holds a row per read path; add yours.
+- **If re-running is meant to be free, guard the writes.** `postings.updated_at`
+  carries `onupdate`, so assigning an unchanged value still emits an UPDATE and
+  moves the timestamp. The filter compares before it writes, so a converged
+  re-application emits nothing at all, and reports the number of values it
+  changed so that the property is observable rather than merely claimed.
 
 *End of document.*

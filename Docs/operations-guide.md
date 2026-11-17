@@ -149,18 +149,52 @@ will be trusted (design §12 item 9).
 
 The interface now manages what used to require editing `.env` and restarting.
 
-**Blacklist** (`/blacklist`). Blacklisting an employer sets every posting from
-them — existing and future — to Rejected, retained but never published. Do this
-from the employer's row on a posting detail page, or manage the list on the
-Blacklist page. Removing a blacklist stops future auto-rejection; it does not
-reinstate already-rejected postings.
+**Blacklist** (`/blacklist`). Blacklisting an employer withholds every posting
+from them — existing and future — from your views; the postings are retained and
+never published. Do this from the employer's row on a posting detail page, or
+manage the list on the Blacklist page. Removing a blacklist brings their
+postings back **with whatever triage status they already had**: nothing was
+overwritten, so nothing needs reinstating (ADR-0015). Expect the back catalogue
+to reappear in the queue on a lift.
+
+**Filtered out** (`/postings?verdict=rejected`). The postings the filter turned
+away, under the criteria in force now, with the criterion that turned each one
+away. Two criteria apply (ADR-0016):
+
+- **Title** — the include/exclude patterns at `/settings`, applied to the job
+  title only. Both are empty by default, and an empty pattern means the
+  criterion is off.
+- **Experience** — the level recorded on a search profile, compared against the
+  board's declared seniority (or, where no board declared one, a cautious
+  reading of the title). A request admits everything at or below it. A posting
+  whose level is unknown is always admitted.
+
+A rejected posting is **withheld, not deleted**, and only while it is still
+untriaged — anything you have shortlisted or applied to stays in the queue, so a
+criteria change never withdraws your own judgement. To bring a withheld posting
+back: loosen the criterion, then re-apply with `filter --all`. Its triage status
+is untouched.
+
+Expect filtering to begin on the first run after installation if a profile
+already records an experience level. Measure it first:
+
+```powershell
+docker compose exec scheduler python -m app filter --all --dry-run
+```
+
+That reports what would change and writes nothing.
 
 **Settings** (`/settings`). Operational values — results per search, request
 delay, publish threshold, scoring model, LinkedIn description fetch, title
 filters, proxies — are edited here and take effect on the next run with no
-restart. Invalid values are rejected and the prior value stands. Restart-only
-settings (timezone, bind host/port) are shown read-only; the database URL is not
-shown.
+restart. Invalid values are rejected and the prior value stands, which now
+includes a title pattern that is not a valid expression. Restart-only settings
+(timezone, bind host/port) are shown read-only; the database URL is not shown.
+
+One coupling is worth knowing: **LinkedIn declares a posting's seniority only
+when description fetching is on**, so turning `linkedin_fetch_description` off
+also turns off most of the experience filter's input. It fails open — nothing is
+wrongly withheld — but it fails quietly, so nothing will tell you it happened.
 
 **Schedules** (`/profiles`). Each search profile is a saved survey — role,
 location, sites, remote, experience — with its own run time and an enabled flag.
@@ -247,6 +281,8 @@ easier, not to become the activity.
 | Open interface | `http://localhost:8000` |
 | Run full pipeline now | `docker compose exec scheduler python -m app run-all` |
 | Recent run counts | `docker compose exec scheduler python -m app status` |
+| Re-apply the filter after a criteria change | `docker compose exec scheduler python -m app filter --all` |
+| See what the filter would change, writing nothing | `docker compose exec scheduler python -m app filter --all --dry-run` |
 | Effective config | `docker compose exec scheduler python -m app config` |
 | Service status | `docker compose ps -a` |
 | Follow scheduler logs | `docker compose logs -f scheduler` |
