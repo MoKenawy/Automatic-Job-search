@@ -131,8 +131,10 @@ def test_jobspy_is_the_version_these_contracts_were_written_against():
     assert installed == PINNED_JOBSPY, (
         f"python-jobspy is {installed}, these contracts pin {PINNED_JOBSPY}. "
         "Run `uv run pytest --live tests/test_jobspy_contract.py`, re-read "
-        "jobspy/linkedin (criteria() and _fetch_details), check ADR-0019 and "
-        "ADR-0020 still describe it, then move PINNED_JOBSPY."
+        "jobspy/linkedin (criteria() and _fetch_details), fix whatever "
+        "tests/test_jobspy_country.py reports in collect/jobspy_country.py "
+        "(and its JOBSPY_VERSION), check ADR-0019 and ADR-0020 still describe "
+        "it, then move PINNED_JOBSPY."
     )
 
 

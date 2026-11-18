@@ -99,15 +99,18 @@ def collect_one(spec: SearchSpec, config: RunConfig) -> CollectionResult:
             "hours_old": config.hours_old,
             "verbose": 1,
         }
-        kwargs.update(extra_kwargs(site, spec, config))
         if config.proxies:
             kwargs["proxies"] = config.proxies
 
         try:
+            # Inside the try: a site's kwargs can be refused before any request
+            # (an unsupported country), and that is this site's failure only.
+            kwargs.update(extra_kwargs(site, spec, config))
             df = scrape_jobs(**kwargs)
         except Exception as exc:  # noqa: BLE001 - a failing source must not end the run
             # Since JobSpy 1.4.0 this is mostly a bad argument (ValueError /
-            # TypeError); a board failing is reported in the frame instead.
+            # TypeError, or our UnsupportedCountry); a board failing is
+            # reported in the frame instead.
             log.warning("collection failed: site=%s term=%r: %s", site, spec.term, exc)
             result.errors[site] = f"{type(exc).__name__}: {exc}"
             result.counts_by_site[site] = result.counts_by_site.get(site, 0)

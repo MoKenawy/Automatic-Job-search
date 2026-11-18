@@ -8,6 +8,7 @@ polymorphism. New boards add an entry here, not a subclass.
 
 from typing import Any
 
+from app.collect.jobspy_country import to_jobspy
 from app.config import RunConfig, SearchSpec
 
 SiteKwargBuilder = Any  # Callable[[SearchSpec, RunConfig], dict[str, Any]]
@@ -15,8 +16,13 @@ SiteKwargBuilder = Any  # Callable[[SearchSpec, RunConfig], dict[str, Any]]
 
 def _country_governed(spec: SearchSpec, config: RunConfig) -> dict[str, Any]:
     """country_indeed governs Indeed and Glassdoor only; harmless elsewhere
-    but passed narrowly to keep the call surface honest."""
-    return {"country_indeed": spec.country}
+    but passed narrowly to keep the call surface honest.
+
+    The profile's country is in our vocabulary ("egypt", "united kingdom");
+    JobSpy 1.4 wants its own `Country` value ("egypt", "uk") and raises on
+    anything else. `to_jobspy` translates, and raises `UnsupportedCountry` for a
+    country JobSpy cannot search, which the collector records for this site."""
+    return {"country_indeed": to_jobspy(spec.country)}
 
 
 def _google(spec: SearchSpec, config: RunConfig) -> dict[str, Any]:
