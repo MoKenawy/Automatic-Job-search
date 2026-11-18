@@ -214,8 +214,55 @@ back, triage status intact, when the rule is loosened and the filter re-applied.
 
 If most of your LinkedIn postings land under *filtered out*, that is the
 seniority criterion working as specified, not LinkedIn being blocked:
-LinkedIn labels many ordinary roles `mid-senior level`. The evidence and the
-options are recorded in ADR-0017, which is proposed and decides nothing yet.
+LinkedIn labels many ordinary roles `mid-senior level`. ADR-0017 accepted this
+behaviour as built: the board's label decides, and the title is read only where
+the board is silent. The withheld postings stay reachable at *filtered out*,
+each with its grounds. If you think the label is hiding too much, say so: the
+record names the measurement that would reopen the question.
+
+**Setting up a new profile: search term and experience** (ADR-0020). The two
+boxes do different jobs, and mixing them up costs postings you never see.
+
+- **The search term is what the boards receive.** It goes to each board as a
+  plain keyword search, exactly as typed. JobSpy, the library behind collection,
+  has no experience or seniority parameter for any board, so the term is the
+  only control you have over *what is collected*. Each board returns at most
+  *results per search* rows (`/settings`) for each search, so the term also
+  decides which rows fill that cap.
+- **Name the role only** — `data engineer`, not `junior data engineer`. Boards
+  match keywords, not seniority, so adding *junior* drops every plainly titled
+  entry role ("Data Engineer") before it is collected. It also pulls in senior
+  postings whose description merely mentions juniors. A posting that was never
+  collected cannot be brought back by loosening a rule.
+- **Put the seniority in *Experience*.** It is applied *after* collection, to
+  everything the profile found, and can be changed and re-applied to history at
+  any time. Words it understands, lowest to highest:
+
+  | Write | Level | Hides |
+  |---|---|---|
+  | `intern`, `internship`, `trainee` | internship | everything above internship |
+  | `entry level`, `junior`, `graduate`, `fresher` | entry | mid-senior and above (an entry request also admits *associate*) |
+  | `associate` | associate | mid-senior and above |
+  | `mid`, `senior`, `lead`, `staff`, `principal` | mid-senior | director and executive |
+  | `director`, `head` | director | executive |
+  | `executive`, `chief`, `vp` | executive | nothing |
+
+  A blank box means no seniority filtering for that profile. Text it cannot
+  read (or a range such as `junior to senior`) is ignored, and the filter run
+  logs it as unreadable.
+- **The boards are judged differently.** LinkedIn states a seniority on each
+  posting ("Seniority level"), and that label decides. Indeed states none, so an
+  Indeed posting is hidden only when its *title* carries a seniority word
+  ("Senior", "Lead", "Principal" …); a plainly titled Indeed posting is always
+  kept. (Naukri publishes an experience range, but it is not one of the boards
+  collected.)
+- **Want more entry-level results?** Add a **second** profile with a
+  seniority-qualified term (`junior data engineer`, `graduate data engineer`)
+  *alongside* the plain one, with the same Experience. It surfaces roles the plain
+  search's cap may have crowded out. Never *replace* the plain term with it. Each
+  extra profile is another set of requests to the boards, so add them sparingly.
+- After changing a profile's Experience, measure with
+  `filter --all --dry-run`, then apply with `filter --all`.
 
 **Settings** (`/settings`). Operational values — results per search, request
 delay, publish threshold, scoring model, LinkedIn description fetch, title

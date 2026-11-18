@@ -67,7 +67,15 @@
             <form method="post" action="/profiles/{{ p.id }}/filters" class="formgrid" style="margin:10px 0">
               <label for="exp-{{ p.id }}">Experience</label>
               <input id="exp-{{ p.id }}" name="experience" value="{{ p.experience or '' }}"
+                     aria-describedby="exp-{{ p.id }}-hint"
                      placeholder="e.g. entry level, junior, senior — blank means no seniority filtering">
+              <p class="hint" id="exp-{{ p.id }}-hint">
+                Hides postings above this level <em>after</em> they are collected; it never narrows the search.
+                Understood: <code>intern</code> · <code>entry level</code> / <code>junior</code> / <code>graduate</code>
+                · <code>associate</code> · <code>mid</code> / <code>senior</code> · <code>director</code> · <code>executive</code>.
+                Blank means no seniority filtering. LinkedIn postings are judged on the board's own seniority
+                label, Indeed postings on title words only.
+              </p>
               <label for="inc-{{ p.id }}">Title must match</label>
               <input id="inc-{{ p.id }}" name="title_include_pattern" value="{{ p.title_include_pattern or '' }}"
                      placeholder="regular expression, optional — blank means any title">
@@ -94,7 +102,14 @@
     <input id="name" name="name" required placeholder="e.g. Senior data engineer, remote">
 
     <label for="term">Role / search term</label>
-    <input id="term" name="term" required placeholder="data engineer">
+    <input id="term" name="term" required placeholder="data engineer" aria-describedby="term-hint">
+    <p class="hint" id="term-hint">
+      Sent to each board as a plain keyword search. Name the role only (<em>data engineer</em>) and put
+      seniority in <strong>Experience</strong>, not here: a word like <em>junior</em> in the term makes
+      the board drop plainly titled roles before they are collected, and they can't be recovered later.
+      Want more entry-level results? Add a <strong>second</strong> profile with e.g.
+      <em>junior data engineer</em> alongside the plain one; don't replace it.
+    </p>
 
     <label for="location">Location</label>
     <input id="location" name="location" placeholder="Cairo, Egypt (blank for remote)">
@@ -112,7 +127,15 @@
     </span>
 
     <label for="experience">Experience</label>
-    <input id="experience" name="experience" placeholder="e.g. senior (optional)">
+    <input id="experience" name="experience" placeholder="e.g. entry level (optional)"
+           aria-describedby="experience-hint">
+    <p class="hint" id="experience-hint">
+      Hides postings above this level <em>after</em> they are collected; it never narrows the search.
+      Understood: <code>intern</code> · <code>entry level</code> / <code>junior</code> / <code>graduate</code>
+      · <code>associate</code> · <code>mid</code> / <code>senior</code> · <code>director</code> · <code>executive</code>.
+      Blank means no seniority filtering. LinkedIn postings are judged on the board's own seniority
+      label, Indeed postings on title words only.
+    </p>
 
     <label for="title_include_pattern">Title must match</label>
     <input id="title_include_pattern" name="title_include_pattern"

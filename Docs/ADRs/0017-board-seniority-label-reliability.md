@@ -1,16 +1,16 @@
 # ADR-0017: Board seniority label — how far to trust it when it hides a posting
 
-* Status: proposed
+* Status: accepted — as built (18 November 2026)
 * Deciders: Mohammed
-* Date: 17 November 2026
+* Date: 17 November 2026; decided 18 November 2026
 
 Technical Story: after the collect-stage filter shipped (ADR-0016), most LinkedIn
 postings stopped reaching the triage queue and the operator read it as "LinkedIn
 is blocked". It is not: collection is healthy, and the postings are being hidden
 by the experience criterion, on the strength of a field LinkedIn fills in
-unreliably. This record **states the evidence and the options and decides
-nothing**. It is proposed, not accepted, on purpose — see
-[Decision](#decision).
+unreliably. The record was opened as proposed, to state the evidence and the
+options before choosing. It is now accepted: the rule stays **as built**, with a
+named measurement that would reopen it — see [Decision](#decision).
 
 ## Context and Problem Statement
 
@@ -112,19 +112,65 @@ all. A choice between them should rest on that case, not on the headline count.
 
 ## Decision
 
-**Deferred.** The operator has asked for the evidence to be recorded and the
-choice kept open. No behaviour changes with this record; the filter keeps
-behaving as ADR-0016 describes. This ADR stays *proposed* until the question is
-settled, and becomes either accepted (with the chosen option added above) or
-superseded.
+**As built.** The board's label decides, and the title is read only where the
+board declared nothing — the first row of the options table, 82 of 135 postings
+hidden on this corpus. No behaviour changes; the filter keeps behaving as
+ADR-0016 describes.
 
-Two things are explicitly **not** decided here and should not be inferred from
-it: that the label is untrustworthy in general (25 of 135 postings is a sample,
-not a verdict), and that any of the options above is preferred.
+The 25 postings hidden on the board's word alone are accepted as the cost, for
+now, because:
+
+* they are **withheld, not lost** — each stays at `/postings?verdict=rejected`
+  with its grounds, and a later change of rule restores it with its triage
+  status intact (FR-011, FR-013);
+* A and B hide the same 57 on this corpus, so the corpus cannot yet tell them
+  apart, and changing the rule on a headline count would be choosing blind;
+* the criterion exists to save triage work, and the as-built rule is the only
+  option that does so on LinkedIn at full strength.
+
+What this record does **not** settle is whether those 25 are mostly right. That
+is a question of fact about the postings, and it gets an instrument rather than
+a guess — next section. The two non-decisions stated when this was proposed
+still hold: the label is not judged untrustworthy in general, and no
+alternative option is preferred.
+
+### Follow-up: a DeepEval indicator on the as-built rejections
+
+*Recorded, not built.* An opt-in evaluation suite, using
+[DeepEval](https://github.com/confident-ai/deepeval), whose result is the
+signal for reopening this record.
+
+* **What it judges.** Exactly the contested set: postings the experience
+  criterion hides where the board's level is above the request **and the title
+  is silent** (the middle row of the "Rejected because" table). It is built
+  from the application's own functions, as [Control](#control) describes, so it
+  measures the rule as shipped.
+* **How.** A DeepEval `GEval` (LLM-as-judge) metric. Each test case is the
+  requested experience, the posting's title and its description. The judge
+  answers one question: on the description's own evidence (years required,
+  scope, reporting line), is this role genuinely above the requested level? It
+  is not shown the board's label, so it cannot simply repeat it.
+* **Calibration first.** A small hand-labelled golden set (around 20 postings,
+  labelled by the operator) fixes the judge's criteria and threshold before any
+  verdict counts. A judge that disagrees with the operator on the golden set
+  measures nothing.
+* **The indicator.** The judged *false-rejection rate*: the share of the
+  contested set the judge says is **not** above the request.
+* **What would reopen this record**, either of:
+  * the false-rejection rate exceeds **25%**; or
+  * the contested set grows as a share of everything the experience criterion
+    hides (25 of 82 today, about 30%).
+
+  On either, evaluate **option A** (the title must corroborate the label before
+  it may hide) on the then-current corpus, running the same suite over A's
+  rejections for comparison.
+* **How it runs.** Behind its own marker (for example `--eval`), never in the
+  default suite. It needs an LLM API key and costs money on every run, and a
+  judge's output is evidence, not a test that should fail a build.
+
+The 25% threshold is a proposal; it is the operator's to move.
 
 ## Consequences
-
-Until this is settled:
 
 * On LinkedIn-heavy corpora with an entry- or junior-level profile, a majority
   of postings will be withheld from the queue. They remain reachable at
@@ -149,10 +195,11 @@ whether a coarse pre-filter hides things the scorer would have wanted.
 
 ## Control
 
-Re-measure before deciding. The split by decisive signal can be reproduced from
+Re-measure before revisiting, and run the DeepEval indicator above once it
+exists. The split by decisive signal can be reproduced from
 the application's own functions (`app.filters.levels.parse_level`,
 `level_from_title`, `admits_any`, over
 `app.db.attribution.requested_experience_by_posting`), and the corpus will have
 grown. If the "board label, title silent" row has become a small fraction of the
-hidden set, the question has largely answered itself; if it has grown, the cost
-of deferring is rising and this should be settled.
+hidden set, the decision has held up; if it has grown, that is the second
+reopening trigger in the follow-up above.

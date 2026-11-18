@@ -257,6 +257,41 @@ def test_the_profiles_page_states_how_the_levels_combine(client):
     assert "filter --all" in html
 
 
+def test_the_add_form_says_how_to_word_the_search_term(client):
+    """ADR-0020: JobSpy has no experience parameter, so the term is the only
+    collection lever — and seniority in it loses roles unrecoverably (FR-012)."""
+    html = client.get("/profiles").text
+    assert 'id="term-hint"' in html
+    assert "plain keyword search" in html
+    assert "can't be recovered later" in html
+    assert "<strong>second</strong> profile" in html
+
+
+def test_the_experience_hint_appears_on_both_forms(client, factory):
+    pid = _make_profile(factory, name="Has a form")
+    html = client.get("/profiles").text
+    assert 'id="experience-hint"' in html  # the add form
+    assert f'id="exp-{pid}-hint"' in html  # the per-profile filter rules form
+    assert "it never narrows the search" in html
+    assert "Indeed postings on title words only" in html
+
+
+def test_every_experience_word_the_hint_lists_is_understood(client, factory):
+    """Keeps the help text honest: if a synonym is dropped from filters.levels,
+    the page must stop advertising it."""
+    import re
+
+    from app.filters.levels import parse_requested
+
+    html = client.get("/profiles").text
+    hint = re.search(r'<p class="hint" id="experience-hint">(.*?)</p>', html, re.S).group(1)
+    words = re.findall(r"<code>(.*?)</code>", hint)
+
+    assert len(words) == 9
+    unreadable = [w for w in words if parse_requested(w) is None]
+    assert not unreadable, unreadable
+
+
 def test_the_add_form_accepts_title_patterns(client, factory):
     r = client.post(
         "/profiles",
