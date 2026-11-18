@@ -15,6 +15,7 @@ from app.normalise.country import NAME_TO_ISO2, parse_country
         "القاهرة, C, EG",  # OBSERVED — Indeed, city localised to Arabic
         "Cairo, Egypt",  # OBSERVED — LinkedIn
         "Cairo, Cairo, Egypt",  # OBSERVED — LinkedIn, governorate repeated
+        "القاهرة, C, Egypt",  # Indeed as JobSpy 1.4.1 renders it (from its source, not live)
     ],
 )
 def test_observed_egyptian_forms_all_resolve_to_eg(location_raw):
@@ -80,7 +81,30 @@ def test_map_excludes_non_countries():
     assert all(len(v) == 2 for v in NAME_TO_ISO2.values())
 
 
-def test_map_derived_from_jobspy_is_populated():
-    """Guards against a JobSpy upgrade silently changing the Country enum shape."""
-    assert len(NAME_TO_ISO2) > 50
-    assert NAME_TO_ISO2["egypt"] == "eg"
+def test_the_frozen_map_is_complete():
+    """The map no longer follows JobSpy's Country enum, which 1.4.0 emptied of
+    codes (it would have resolved nothing). Pins its size and the region the
+    operator searches, so an edit that drops entries is caught."""
+    assert len(NAME_TO_ISO2) == 148
+    expected = {
+        "egypt": "eg",
+        "saudi arabia": "sa",
+        "united arab emirates": "ae",
+        "qatar": "qa",
+        "kuwait": "kw",
+        "bahrain": "bh",
+        "oman": "om",
+        "morocco": "ma",
+        "united kingdom": "gb",
+        "usa": "us",
+    }
+    assert {name: NAME_TO_ISO2[name] for name in expected} == expected
+
+
+def test_the_map_does_not_depend_on_jobspy():
+    """Fingerprints include the country, so its vocabulary must not move when
+    the library does."""
+    import app.normalise.country as country
+
+    assert "jobspy" not in country.__dict__
+    assert "Country" not in country.__dict__

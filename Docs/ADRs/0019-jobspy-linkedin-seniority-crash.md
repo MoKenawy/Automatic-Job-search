@@ -1,17 +1,21 @@
 # ADR-0019: JobSpy's LinkedIn seniority parse — guarding against a whole-search crash
 
-* Status: proposed
+* Status: accepted — option C (18 November 2026)
 * Deciders: Mohammed
-* Date: 17 November 2026
+* Date: 17 November 2026; decided 18 November 2026
 
 Technical Story: writing contract tests against JobSpy's real `job_level` output
 (`app/tests/test_jobspy_contract.py`) turned up a latent defect in the library: a
 LinkedIn job page that loads but carries no English "Seniority level" heading
 makes JobSpy raise, and the raise discards the **whole** LinkedIn search for that
-term, not one row. This record states the evidence and the options and
-**decides nothing**. It is proposed, not accepted — see [Decision](#decision).
+term, not one row. The record was opened as proposed; it is now accepted with
+option C — the defect was fixed upstream and the pin moved to a release that
+carries the fix. See [Decision](#decision).
 
 ## Context and Problem Statement
+
+*The context below describes JobSpy 1.1.82, as it stood when this record was
+opened. File and line references are to that version.*
 
 **How JobSpy 1.1.82 produces `job_level`.** Only the LinkedIn scraper sets it, and
 only with `linkedin_fetch_description` on (it is read from the job page, which is
@@ -83,21 +87,57 @@ signal).
 
 ## Decision
 
-**Deferred.** No behaviour changes with this record. It stays *proposed* until
-the operator chooses, and becomes accepted (with the chosen option stated here)
-or superseded.
+**Option C — fixed upstream, pinned to the fix.** The defect was reported and
+fixed in JobSpy itself: [speedyapply/JobSpy#354](https://github.com/speedyapply/JobSpy/pull/354)
+("fix(linkedin): handle None job_level when LinkedIn omits 'Seniority level'"),
+merged 29 September 2026 and released in **1.2.0** (2 October 2026; its release
+notes: "a missing seniority level no longer crash[es]"). The upstream fix moves
+the lowercasing into the parser and passes the value through, so a page without
+the heading yields `None` instead of raising.
+
+We pin **`python-jobspy>=1.4.1,<2`**, not merely 1.2.0. From 1.2.0 a failing
+board logs instead of raising; only from 1.4.0 does it report the failure in the
+frame (`attrs["errors"]`), which is what lets the collector keep recording it in
+`runs.error`. A 1.2.x/1.3.x pin would have fixed this crash and silenced every
+other one.
+
+No monkeypatch (option B) and no description-less retry (option D) was needed.
+
+### What the upgrade changed in this application
+
+| Change in JobSpy 1.2.0 – 1.4.1 | What we did |
+|---|---|
+| Failing boards log instead of raising; `attrs["errors"]` / `["warnings"]` on the frame (1.4.0) | `collect/client.py` copies `attrs["errors"]` into `CollectionResult.errors` (so `runs.error`) and logs warnings. Rows a board returned before failing are now kept *and* the error recorded |
+| `linkedin_fetch_description` deprecated for `fetch_description` (1.2.0; removed in 2.0) | `collect/sites.py` sends `fetch_description`; the setting keeps its name, so stored settings need no migration |
+| `Country` enum reduced to bare names, ten countries dropped (1.4.0) | `normalise/country.py` built its name→ISO2 map from that enum; it came out **empty**, which would have changed every fingerprint. Our country table is now frozen in our code, identical to the one 1.1.82 produced (148 entries), and imports nothing from JobSpy. A separate mapper, `collect/jobspy_country.py`, translates our countries to JobSpy 1.4's `Country` values for `country_indeed` (`united kingdom` → `uk`, `turkey` → `türkiye`) and refuses, per site, the ten countries 1.4.0 dropped |
+| A page that cannot be fetched keeps the job (1.3.0); its `job_level` is `None`, not `""` | Both already mean "the board said nothing" downstream (FR-005); contract test updated |
+| `desired_order` removed; columns are `JobPost`'s fields (1.4.0) | Contract test checks `JobPost.model_fields` |
+| Indeed renders the country name ("Egypt") where it rendered the code ("EG") | Both resolve to `EG`; covered in `test_country.py` |
 
 ## Consequences
 
-Until this is settled:
-
-* A LinkedIn page without an English "Seniority level" heading loses that
-  search's LinkedIn rows for the run. `runs.error` and `counts_by_site` show it;
-  nothing else does.
-* The next scheduled run re-searches, so a transient cause (one odd posting)
-  usually heals itself; a structural one (LinkedIn markup change) would not.
-* A JobSpy upgrade is caught by the version-pin test before it can change this
-  behaviour unobserved.
+* A LinkedIn page without an English "Seniority level" heading now costs that
+  posting its label, not the search its rows. The posting falls back to the title
+  (FR-006) and is admitted when the title is silent (FR-005).
+* A board that fails reaches `runs.error` as `BoardError: <message>`, alongside
+  whatever rows it returned first. Exceptions out of `scrape_jobs` are now mostly
+  bad arguments (`ValueError` / `TypeError`), still caught per source.
+* **One-off, at the upgrade:** JobSpy 1.2.0/1.3.0 stopped inferring `is_remote`
+  from descriptions (LinkedIn, Indeed) and from "hybrid" (Indeed). `is_remote`
+  selects the fingerprint's location token (`REMOTE` vs the country), so a
+  posting first collected as remote under 1.1.82 and re-collected now may land
+  as a second posting. Only postings still inside the `hours_old` window are
+  exposed; the effect does not recur.
+* Two country vocabularies, one seam. Ours (the fingerprint's) no longer
+  follows JobSpy; JobSpy's (what `country_indeed` accepts) is reached only
+  through `collect/jobspy_country.py`. A country JobSpy learns to render that is
+  not in our table resolves to `UNKNOWN` and is counted per run, as before.
+* A profile whose country JobSpy cannot search (unknown, or one of the ten it
+  dropped) now fails its Indeed/Glassdoor search with `UnsupportedCountry` in
+  `runs.error`, without a request; LinkedIn, which ignores the country, still
+  runs. Before, an unknown value went to JobSpy unchecked.
+* `linkedin_fetch_description` must become `fetch_description` before JobSpy 2.0;
+  the `<2` bound holds that until someone decides it.
 
 ## Relationship to other records
 
@@ -110,7 +150,20 @@ the boards that never supply it.
 
 ## Control
 
-Watch `runs.error` for `NoneType` / `lower` on LinkedIn. Re-run
-`uv run pytest --live tests/test_jobspy_contract.py` after any JobSpy upgrade and
-periodically; if `test_live_linkedin_labels_are_all_readable` fails with the
-crash, the risk has become an incident and this should be settled.
+`tests/test_jobspy_contract.py`:
+
+* `test_jobspy_is_the_version_these_contracts_were_written_against` pins 1.4.1;
+  any upgrade turns it red and names what to re-read.
+* `test_a_page_without_an_english_seniority_heading_yields_no_label` — formerly a
+  strict xfail reproducing the crash — is now a positive test, and
+  `test_such_a_page_no_longer_costs_the_whole_search` drives `scrape_jobs` end to
+  end to prove the search survives.
+* `uv run pytest --live tests/test_jobspy_contract.py` checks the real boards;
+  run it after any upgrade. It passed against LinkedIn and Indeed on
+  18 November 2026.
+
+`tests/test_collect.py` pins that a board error reported in the frame reaches
+`CollectionResult.errors`; `tests/test_country.py` pins the frozen country map;
+`tests/test_jobspy_country.py` checks the mapper against the installed JobSpy —
+every mapped value is a valid `Country`, every `Country` is mapped, and our
+codes equal JobSpy's own — so an upgrade that moves a country fails there.

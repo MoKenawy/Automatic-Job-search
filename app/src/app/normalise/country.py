@@ -4,6 +4,7 @@ This exists because `scrape_jobs` flattens JobSpy's internal Location object to 
 display string, and boards disagree on how to render it (design §7.3.1):
 
     Indeed     'القاهرة, C, EG'          city localised to Arabic, ISO2 country
+    Indeed     'القاهرة, C, Egypt'       the same, as JobSpy >= 1.4 renders it
     LinkedIn   'Cairo, Egypt'            English city, country name
     LinkedIn   'Cairo, Cairo, Egypt'     governorate repeated
 
@@ -16,35 +17,112 @@ to country rather than city.
 import re
 import unicodedata
 
-from jobspy.model import Country
-
-# Country enum entries that are not countries and must not enter the map
-_NOT_COUNTRIES = {"WORLDWIDE", "US_CANADA"}
+# {ISO2: English names} as JobSpy 1.1.82's Country enum rendered them, frozen.
+#
+# This used to be derived from `jobspy.model.Country` at import. JobSpy 1.4.0
+# reshaped that enum to bare names (no codes) and dropped ten countries, which
+# left the derived map empty — every posting's country would have resolved to
+# None and every fingerprint would have changed. The country is part of the
+# dedup fingerprint (design §7.3), so the vocabulary must not move when the
+# library does: it is owned here now.
+#
+# Kept verbatim, quirks included: Slovenia is "sl" (JobSpy's subdomain, not the
+# ISO "si") because fingerprints already stored use it.
+_ISO2_NAMES: dict[str, tuple[str, ...]] = {
+    "ae": ("united arab emirates",),
+    "ar": ("argentina",),
+    "at": ("austria",),
+    "au": ("australia",),
+    "bd": ("bangladesh",),
+    "be": ("belgium",),
+    "bg": ("bulgaria",),
+    "bh": ("bahrain",),
+    "br": ("brazil",),
+    "ca": ("canada",),
+    "ch": ("switzerland",),
+    "cl": ("chile",),
+    "cn": ("china",),
+    "co": ("colombia",),
+    "cr": ("costa rica",),
+    "cy": ("cyprus",),
+    "cz": (
+        "czech republic",
+        "czechia",
+    ),
+    "de": ("germany",),
+    "dk": ("denmark",),
+    "ec": ("ecuador",),
+    "ee": ("estonia",),
+    "eg": ("egypt",),
+    "es": ("spain",),
+    "fi": ("finland",),
+    "fr": ("france",),
+    "gb": (
+        "uk",
+        "united kingdom",
+    ),
+    "gr": ("greece",),
+    "hk": ("hong kong",),
+    "hr": ("croatia",),
+    "hu": ("hungary",),
+    "id": ("indonesia",),
+    "ie": ("ireland",),
+    "il": ("israel",),
+    "in": ("india",),
+    "it": ("italy",),
+    "jp": ("japan",),
+    "kr": ("south korea",),
+    "kw": ("kuwait",),
+    "lt": ("lithuania",),
+    "lu": ("luxembourg",),
+    "lv": ("latvia",),
+    "ma": ("morocco",),
+    "mt": ("malta",),
+    "mx": ("mexico",),
+    "my": ("malaysia",),
+    "ng": ("nigeria",),
+    "nl": ("netherlands",),
+    "no": ("norway",),
+    "nz": ("new zealand",),
+    "om": ("oman",),
+    "pa": ("panama",),
+    "pe": ("peru",),
+    "ph": ("philippines",),
+    "pk": ("pakistan",),
+    "pl": ("poland",),
+    "pt": ("portugal",),
+    "qa": ("qatar",),
+    "ro": ("romania",),
+    "sa": ("saudi arabia",),
+    "se": ("sweden",),
+    "sg": ("singapore",),
+    "sk": ("slovakia",),
+    "sl": ("slovenia",),
+    "th": ("thailand",),
+    "tr": (
+        "turkey",
+        "türkiye",
+    ),
+    "tw": ("taiwan",),
+    "ua": ("ukraine",),
+    "us": (
+        "united states",
+        "usa",
+    ),
+    "uy": ("uruguay",),
+    "ve": ("venezuela",),
+    "vn": ("vietnam",),
+    "za": ("south africa",),
+}
 
 
 def _build_name_map() -> dict[str, str]:
-    """Derive {country name or code: ISO2} from JobSpy's own Country enum.
-
-    Enum values are (comma-separated names, 'subdomain[:iso2]', [glassdoor domain]),
-    e.g. EGYPT -> ('egypt', 'eg'), UK -> ('uk,united kingdom', 'uk:gb').
-    The ISO2 is the segment after the colon where present, else the subdomain.
-    """
+    """{country name or ISO2: ISO2} from the frozen table."""
     mapping: dict[str, str] = {}
-    for country in Country:
-        if country.name in _NOT_COUNTRIES:
-            continue
-        value = country.value
-        if not isinstance(value, tuple) or len(value) < 2:
-            continue
-        names, domain = value[0], value[1]
-        iso2 = domain.split(":")[-1].strip().lower()
-        if len(iso2) != 2:
-            continue
-        for name in names.split(","):
-            name = name.strip().lower()
-            if name:
-                mapping[name] = iso2
+    for iso2, names in _ISO2_NAMES.items():
         mapping[iso2] = iso2
+        for name in names:
+            mapping[name] = iso2
     return mapping
 
 
