@@ -109,7 +109,7 @@ No monkeypatch (option B) and no description-less retry (option D) was needed.
 |---|---|
 | Failing boards log instead of raising; `attrs["errors"]` / `["warnings"]` on the frame (1.4.0) | `collect/client.py` copies `attrs["errors"]` into `CollectionResult.errors` (so `runs.error`) and logs warnings. Rows a board returned before failing are now kept *and* the error recorded |
 | `linkedin_fetch_description` deprecated for `fetch_description` (1.2.0; removed in 2.0) | `collect/sites.py` sends `fetch_description`; the setting keeps its name, so stored settings need no migration |
-| `Country` enum reduced to bare names, ten countries dropped (1.4.0) | `normalise/country.py` built its name→ISO2 map from that enum; it came out **empty**, which would have changed every fingerprint. The map is now a frozen table in our code, byte-identical to the one 1.1.82 produced (148 entries) |
+| `Country` enum reduced to bare names, ten countries dropped (1.4.0) | `normalise/country.py` built its name→ISO2 map from that enum; it came out **empty**, which would have changed every fingerprint. Our country table is now frozen in our code, identical to the one 1.1.82 produced (148 entries), and imports nothing from JobSpy. A separate mapper, `collect/jobspy_country.py`, translates our countries to JobSpy 1.4's `Country` values for `country_indeed` (`united kingdom` → `uk`, `turkey` → `türkiye`) and refuses, per site, the ten countries 1.4.0 dropped |
 | A page that cannot be fetched keeps the job (1.3.0); its `job_level` is `None`, not `""` | Both already mean "the board said nothing" downstream (FR-005); contract test updated |
 | `desired_order` removed; columns are `JobPost`'s fields (1.4.0) | Contract test checks `JobPost.model_fields` |
 | Indeed renders the country name ("Egypt") where it rendered the code ("EG") | Both resolve to `EG`; covered in `test_country.py` |
@@ -128,9 +128,14 @@ No monkeypatch (option B) and no description-less retry (option D) was needed.
   posting first collected as remote under 1.1.82 and re-collected now may land
   as a second posting. Only postings still inside the `hours_old` window are
   exposed; the effect does not recur.
-* The country vocabulary no longer follows JobSpy. A country JobSpy learns to
-  render that is not in the table resolves to `UNKNOWN` and is counted per run,
-  as before.
+* Two country vocabularies, one seam. Ours (the fingerprint's) no longer
+  follows JobSpy; JobSpy's (what `country_indeed` accepts) is reached only
+  through `collect/jobspy_country.py`. A country JobSpy learns to render that is
+  not in our table resolves to `UNKNOWN` and is counted per run, as before.
+* A profile whose country JobSpy cannot search (unknown, or one of the ten it
+  dropped) now fails its Indeed/Glassdoor search with `UnsupportedCountry` in
+  `runs.error`, without a request; LinkedIn, which ignores the country, still
+  runs. Before, an unknown value went to JobSpy unchecked.
 * `linkedin_fetch_description` must become `fetch_description` before JobSpy 2.0;
   the `<2` bound holds that until someone decides it.
 
@@ -158,4 +163,7 @@ the boards that never supply it.
   18 November 2026.
 
 `tests/test_collect.py` pins that a board error reported in the frame reaches
-`CollectionResult.errors`; `tests/test_country.py` pins the frozen country map.
+`CollectionResult.errors`; `tests/test_country.py` pins the frozen country map;
+`tests/test_jobspy_country.py` checks the mapper against the installed JobSpy —
+every mapped value is a valid `Country`, every `Country` is mapped, and our
+codes equal JobSpy's own — so an upgrade that moves a country fails there.
