@@ -25,7 +25,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "python-jobspy>=1.1.80",
+    "python-jobspy>=1.4.1,<2",
     "sqlalchemy>=2.0.30",
     "alembic>=1.13",
     "psycopg[binary]>=3.2",

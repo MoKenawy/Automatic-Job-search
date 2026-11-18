@@ -71,6 +71,53 @@ def test_failing_source_is_recorded_not_raised(monkeypatch):
     assert result.total == 1
 
 
+def _frame(rows, errors=None, warnings=None):
+    df = pd.DataFrame(rows)
+    df.attrs = {"errors": errors or {}, "warnings": warnings or {}}
+    return df
+
+
+def test_a_board_error_reported_in_the_frame_is_recorded(monkeypatch):
+    """JobSpy >= 1.2.0 logs a board failure instead of raising, and 1.4.0
+    reports it in `attrs["errors"]`. It must still reach `runs.error`, or a
+    blocked board would look like a quiet zero."""
+    blocked = _frame([], errors={"linkedin": "response status code 429 (blocked: use a proxy)"})
+    monkeypatch.setattr("app.collect.client.scrape_jobs", lambda **_: blocked)
+
+    result = collect_one(SearchSpec(term="x", sites=["linkedin"]), CFG)
+
+    assert result.errors == {
+        "linkedin": "BoardError: response status code 429 (blocked: use a proxy)"
+    }
+    assert result.counts_by_site == {"linkedin": 0}
+
+
+def test_rows_a_board_returned_before_failing_are_kept(monkeypatch):
+    """A board that fails on page 2 still hands back page 1; both the rows and
+    the error are recorded."""
+    partial = _frame(
+        [{"title": "a"}], errors={"linkedin": "unexpected page with no jobs (blocked?)"}
+    )
+    monkeypatch.setattr("app.collect.client.scrape_jobs", lambda **_: partial)
+
+    result = collect_one(SearchSpec(term="x", sites=["linkedin"]), CFG)
+
+    assert result.total == 1
+    assert "linkedin" in result.errors
+
+
+def test_board_warnings_are_not_errors(monkeypatch):
+    noisy = _frame(
+        [{"title": "a"}], warnings={"linkedin": ["is_remote isn't supported, ignoring it"]}
+    )
+    monkeypatch.setattr("app.collect.client.scrape_jobs", lambda **_: noisy)
+
+    result = collect_one(SearchSpec(term="x", sites=["linkedin"]), CFG)
+
+    assert result.errors == {}
+    assert result.total == 1
+
+
 def test_counts_recorded_per_site(monkeypatch):
     """Per-site counts are how a single source silently dying becomes visible."""
 
@@ -118,7 +165,8 @@ def test_linkedin_description_fetch_passed_only_for_linkedin(monkeypatch, site, 
     monkeypatch.setattr("app.collect.client.scrape_jobs", capture)
     collect_one(SearchSpec(term="x", country="egypt", sites=[site]), CFG)
 
-    assert ("linkedin_fetch_description" in seen) is expect_fetch
+    assert seen.get("fetch_description", False) is expect_fetch
+    assert "linkedin_fetch_description" not in seen  # deprecated in JobSpy 1.2.0
 
 
 def test_request_delay_applied_between_sites(monkeypatch):
@@ -158,4 +206,5 @@ def test_linkedin_description_fetch_can_be_disabled(monkeypatch):
     config = RunConfig(linkedin_fetch_description=False)
     collect_one(SearchSpec(term="x", sites=["linkedin"]), config)
 
+    assert "fetch_description" not in seen
     assert "linkedin_fetch_description" not in seen

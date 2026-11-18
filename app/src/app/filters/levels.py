@@ -57,12 +57,14 @@ class Level(IntEnum):
 # associate, director and the empty string all occur; internship and executive are
 # documented members of the vocabulary not yet seen.
 #
-# In practice "the boards" is one board. Under JobSpy 1.1.82 only the LinkedIn
-# scraper sets `job_level`, and only when `linkedin_fetch_description` is on: it
-# reads the text beside the English "Seniority level" heading on the job page and
-# lowercases it. No other scraper sets the field (ADR-0020). The library's output
-# is pinned against this table by tests/test_jobspy_contract.py, and a label that
-# escapes it is logged by stage 2 rather than silently left unpromoted.
+# In practice "the boards" is one board. Under JobSpy 1.4.1 only the LinkedIn
+# scraper sets `job_level`, and only when `linkedin_fetch_description` is on
+# (passed to JobSpy as `fetch_description`): it reads the text beside the English
+# "Seniority level" heading on the job page and lowercases it, or leaves None
+# when there is no such heading (ADR-0019). No other scraper sets the field
+# (ADR-0020). The library's output is pinned against this table by
+# tests/test_jobspy_contract.py, and a label that escapes it is logged by stage 2
+# rather than silently left unpromoted.
 BOARD_LABELS: dict[str, Level] = {
     "internship": Level.INTERNSHIP,
     "entry level": Level.ENTRY,

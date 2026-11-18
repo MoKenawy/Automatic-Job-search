@@ -55,6 +55,25 @@ def _rows_from_frame(df: pd.DataFrame | None, site: str) -> list[dict[str, Any]]
     return records
 
 
+def _record_board_reports(
+    df: pd.DataFrame | None, site: str, spec: SearchSpec, result: CollectionResult
+) -> None:
+    """Carry a board's own failure report into `result.errors`.
+
+    Since JobSpy 1.2.0 a failing board logs instead of raising, and since 1.4.0
+    it reports through `frame.attrs["errors"]` / `["warnings"]` ({site: ...}).
+    Without this, a blocked board would reach `runs.error` as nothing at all —
+    just a quiet zero in `counts_by_site` (design §7.4).
+    """
+    attrs = getattr(df, "attrs", None) or {}
+    for board, message in (attrs.get("errors") or {}).items():
+        log.warning("collection failed: site=%s term=%r: %s", board, spec.term, message)
+        result.errors[board or site] = f"BoardError: {message}"
+    for board, messages in (attrs.get("warnings") or {}).items():
+        for message in messages:
+            log.info("collection warning: site=%s term=%r: %s", board, spec.term, message)
+
+
 def collect_one(spec: SearchSpec, config: RunConfig) -> CollectionResult:
     """Run a single search spec across its configured sources.
 
@@ -87,11 +106,14 @@ def collect_one(spec: SearchSpec, config: RunConfig) -> CollectionResult:
         try:
             df = scrape_jobs(**kwargs)
         except Exception as exc:  # noqa: BLE001 - a failing source must not end the run
+            # Since JobSpy 1.4.0 this is mostly a bad argument (ValueError /
+            # TypeError); a board failing is reported in the frame instead.
             log.warning("collection failed: site=%s term=%r: %s", site, spec.term, exc)
             result.errors[site] = f"{type(exc).__name__}: {exc}"
             result.counts_by_site[site] = result.counts_by_site.get(site, 0)
             continue
 
+        _record_board_reports(df, site, spec, result)
         rows = _rows_from_frame(df, site)
         if not rows:
             log.warning("collection empty: site=%s term=%r", site, spec.term)

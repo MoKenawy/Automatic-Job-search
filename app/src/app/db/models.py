@@ -14,7 +14,7 @@ ADR-0016):
                         filter's primary input. Note the coupling: LinkedIn
                         supplies it only when descriptions are fetched, so
                         `linkedin_fetch_description` is a switch on this field.
-                        Under JobSpy 1.1.82 the LinkedIn scraper is the only
+                        Under JobSpy 1.4.1 the LinkedIn scraper is the only
                         one that sets it: the text beside the English
                         "Seniority level" heading, lowercased (ADR-0019,
                         ADR-0020). A label `filters.levels` cannot read is not

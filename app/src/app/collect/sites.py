@@ -27,9 +27,14 @@ def _google(spec: SearchSpec, config: RunConfig) -> dict[str, Any]:
 def _linkedin(spec: SearchSpec, config: RunConfig) -> dict[str, Any]:
     """LinkedIn omits the description from list results; this fetches each
     posting's page to obtain it (and the direct job URL). Slower, but the
-    description feeds both the detail view and the stage 3 scorer."""
+    description feeds both the detail view and the stage 3 scorer.
+
+    Our setting keeps its name, `linkedin_fetch_description`, so stored settings
+    need no migration; JobSpy 1.2.0 renamed the kwarg to `fetch_description`
+    (the old one is deprecated and goes in 2.0). It is still passed for LinkedIn
+    only: on other boards it would add a page fetch per posting."""
     if config.linkedin_fetch_description:
-        return {"linkedin_fetch_description": True}
+        return {"fetch_description": True}
     return {}
 
 
