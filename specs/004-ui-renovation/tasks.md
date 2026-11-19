@@ -210,7 +210,7 @@ strip, and no external requests.
 Check that the active tab is marked, there is no horizontal page scroll, the network log
 shows the application's origin only, and the keyboard reaches the skip link first.
 
-- [ ] T023 [P] [US1] Write `T/test_web_a11y_markup.py`. For each GET page (`/`, `/postings`,
+- [x] T023 [P] [US1] Write `T/test_web_a11y_markup.py`. For each GET page (`/`, `/postings`,
       a posting detail, `/reports`, the three reports, `/blacklist`, `/profiles`,
       `/settings`, `/runs`), and using only `html.parser`, assert:
       - exactly one `aria-current="page"`;
@@ -227,7 +227,7 @@ shows the application's origin only, and the keyboard reaches the skip link firs
       Pages not yet renovated are listed in `PENDING = {...}` and xfail **non-strict**, so
       checks that `base.html` already satisfies don't XPASS-fail. Each page phase removes
       its own entry.
-- [ ] T024 [US1] Rewrite `W/templates/base.html`:
+- [x] T024 [US1] Rewrite `W/templates/base.html`:
       - `<link rel="stylesheet" href="/static/css/app.css?v={{ asset_version }}">`;
       - font preload of the latin woff2;
       - `<script src="/static/vendor/htmx-2.0.3.min.js" integrity="sha384-…" crossorigin="anonymous">`,
@@ -244,10 +244,10 @@ shows the application's origin only, and the keyboard reaches the skip link firs
       - a `<div id="announcer" class="visually-hidden" aria-live="polite">`.
 
       Delete the inline `<style>`.
-- [ ] T024a [US1] (moved from T012) Write a test in `T/test_web.py` that renders `/` with a
+- [x] T024a [US1] (moved from T012) Write a test in `T/test_web.py` that renders `/` with a
       seeded `Run` and with no runs. It checks for the shell's last-run text ("No runs yet" /
       the run's status) and a link to `/runs` (FR-013). Green once T019, T020 and T024 are in.
-- [ ] T025 [US1] In `base.html`, add one inline script (an IIFE, about 25 lines, delegated
+- [x] T025 [US1] In `base.html`, add one inline script (an IIFE, about 25 lines, delegated
       from `document`, so it survives the bulk body swap, contract C-3). It does five
       things (analysis H2: FR-020/FR-008 announcements):
       - **(a)** On load, it scrolls the `aria-current` tab into view
@@ -263,22 +263,22 @@ shows the application's origin only, and the keyboard reaches the skip link firs
         swapped row itself would be destroyed by the `outerHTML` swap.
 
       A comment cites R9, R10 and the constitution III allowance.
-- [ ] T026 [US1] In `app.css`, add the shell styles:
+- [x] T026 [US1] In `app.css`, add the shell styles:
       - the sticky header;
       - the tab strip: below 768 px it is single-line with `overflow-x: auto`, scroll-snap
         and edge fades; at 768 px and above it is inline (FR-019);
       - the last-run pill variants;
       - the page header (`h1` plus `.page-sub` description);
       - the `.banner` placement at the top of `<main>` (FR-018).
-- [ ] T027 [US1] Add `{% block title %}` to every page template:
+- [x] T027 [US1] Add `{% block title %}` to every page template:
       - `index.html`, `postings.html`, `detail.html` (keep it);
       - `blacklist.html`, `profiles.html`, `settings.html`, `runs.html`;
       - `reports/index.html`, `reports/employers.html`, `reports/sources.html`,
         `reports/profiles.html`.
-- [ ] T028 [US1] Remove the `xfail` marks from T009 (external URL and colour literals in
+- [x] T028 [US1] Remove the `xfail` marks from T009 (external URL and colour literals in
       `base.html`). Any colour literal left in a page template moves into
       `T/test_web_assets.py::PENDING_LITERALS`, which each page phase empties.
-- [ ] T029 [US1] ⏺ Gates, then the manual shell check: quickstart steps 1, 2 and 5 on any
+- [ ] T029 [US1] ⏺ Gates (done), then the manual shell check: quickstart steps 1, 2 and 5 on any
       two pages. Commit:
       `feat(ui): new shell — tabs, last-run status, skip link, live region (FR-013, FR-019)`.
 

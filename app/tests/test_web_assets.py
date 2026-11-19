@@ -102,7 +102,6 @@ def test_vendored_assets_are_served(client, path):
 COLOUR_LITERAL = re.compile(r"#[0-9a-fA-F]{3,8}\b|\brgba?\(")
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in Phase 3 (T024/T028)")
 def test_templates_have_no_colour_literals():
     """SC-007, FR-005: colours come from the token stylesheet only."""
     offenders = {}
@@ -116,7 +115,6 @@ def test_templates_have_no_colour_literals():
     assert not offenders
 
 
-@pytest.mark.xfail(strict=True, reason="fixed in Phase 3 (T024/T028)")
 @pytest.mark.parametrize("path", PAGES)
 def test_pages_load_nothing_from_other_origins(client, path):
     """SC-005, constitution II."""

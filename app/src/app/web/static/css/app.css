@@ -127,8 +127,10 @@
 *, *::before, *::after { box-sizing: border-box; }
 html {
   -webkit-text-size-adjust: 100%;
-  scroll-padding-top: calc(var(--shell-h) + var(--space-lg)); /* WCAG 2.4.11 */
+  /* WCAG 2.4.11: below 768 px the shell is two rows (bar + tab strip). */
+  scroll-padding-top: calc(var(--shell-h) + 2.5rem + var(--space-lg));
 }
+@media (min-width: 768px) { html { scroll-padding-top: calc(var(--shell-h) + var(--space-lg)); } }
 body {
   margin: 0;
   background: var(--surface);
@@ -303,6 +305,42 @@ label { color: var(--on-surface); font-weight: 500; }
   min-height: 3px; background: repeating-linear-gradient(45deg, var(--error) 0 2px, transparent 2px 4px);
   border: 1px solid var(--error);
 }
+
+/* Shell: sticky header, wordmark, tab strip, last-run pill (FR-013, FR-015, FR-019). */
+.shell { position: sticky; top: 0; z-index: 10; background: var(--surface-container-lowest); border-bottom: 1px solid var(--outline-variant); }
+.shell-inner {
+  max-width: 80rem; margin: 0 auto; min-height: var(--shell-h); padding: 0 var(--space-lg);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-xl);
+}
+.wordmark { font-weight: 600; font-size: var(--fs-md); letter-spacing: var(--ls-md); color: var(--on-surface); text-decoration: none; padding: var(--space-md) 0; }
+.wordmark span { color: var(--primary); }
+.shell nav { order: 3; flex: 1 0 100%; min-width: 0; position: relative; }
+.shell nav ul {
+  display: flex; gap: var(--space-xs); margin: 0; padding: 0 0 0 0; list-style: none;
+  overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
+}
+.shell nav li { flex: none; scroll-snap-align: start; }
+.shell nav a {
+  display: flex; align-items: center; min-height: 2.5rem; padding: 0 var(--space-md);
+  color: var(--on-surface-variant); font-weight: 500; text-decoration: none; border-bottom: 3px solid transparent;
+}
+.shell nav a:hover { color: var(--on-surface); background: var(--surface-container-low); }
+.shell nav a[aria-current="page"] { color: var(--primary); border-bottom-color: var(--primary-container); }
+.shell nav::after {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1.5rem; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface-container-lowest));
+}
+.last-run { margin-left: auto; min-height: 1.75rem; }
+@media (min-width: 768px) {
+  .shell-inner { padding: 0 var(--space-xl); flex-wrap: nowrap; }
+  .shell nav { order: 0; flex: 1 1 auto; align-self: stretch; }
+  .shell nav ul { height: 100%; }
+  .shell nav a { min-height: var(--shell-h); }
+  .shell nav::after { display: none; }
+}
+.page-head { margin-bottom: var(--space-xl); }
+.page-sub { margin: var(--space-xs) 0 0; color: var(--on-surface-variant); font-size: var(--fs-body); }
+main > .banner:first-child { margin-top: 0; }
 
 /* ========================= 4. LEGACY ALIASES =========================== */
 /* removed in Phase 12: map today's class names onto the tokens above so pages that are
