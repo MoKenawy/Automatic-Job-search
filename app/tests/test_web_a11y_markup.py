@@ -30,7 +30,7 @@ PAGES = [
 ]
 
 # Pages whose own phase has not landed yet (tasks Phases 4-11).
-PENDING = set(PAGES) - {"/postings"}
+PENDING = set(PAGES) - {"/postings", "/postings/1", "/"}
 
 
 @pytest.fixture

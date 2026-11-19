@@ -343,7 +343,7 @@ the no-htmx run.
       (FR-009).
 - [x] T034 [US2] Remove `/postings` from the `PENDING` list in `T/test_web_a11y_markup.py`,
       and from the pending colour literals.
-- [ ] T035 [US2] ⏺ Gates, then the manual quickstart steps 1–5 on `/postings`. Commit:
+- [x] T035 [US2] ⏺ Gates, then the manual quickstart steps 1–5 on `/postings`. Commit:
       `feat(ui): renovate the postings triage list (US2)`.
 
 **🛑 Review checkpoint: first full page.** Stop for operator review.
@@ -358,9 +358,9 @@ control, then the banners, then a two-column body.
 **Independent Test**: on a detail page, change the status, blacklist (after confirming),
 then un-blacklist. The redirects should match today's, and the layout should hold at 375 px.
 
-- [ ] T036 [US3] Rewrite `W/templates/_status_control.html`, the same way as T031 but with
+- [x] T036 [US3] Rewrite `W/templates/_status_control.html`, the same way as T031 but with
       `variant=detail` (contract C-2, FR-017).
-- [ ] T037 [US3] Rewrite `W/templates/detail.html`. Build:
+- [x] T037 [US3] Rewrite `W/templates/detail.html`. Build:
       - a back link;
       - the `h1` title, with the employer, location and remote status beneath it;
       - the status control;
@@ -377,9 +377,9 @@ then un-blacklist. The redirects should match today's, and the layout should hol
         - the record card.
 
       Remove the inline `style=` attributes.
-- [ ] T038 [US3] In `app.css`, add `.detail-grid`, `.desc` (wrapping, readable line length)
+- [x] T038 [US3] In `app.css`, add `.detail-grid`, `.desc` (wrapping, readable line length)
       and `dl.meta` in the new tokens.
-- [ ] T039 [US3] ⏺ Clear the detail page from PENDING, run the gates and do the manual checks.
+- [x] T039 [US3] ⏺ Clear the detail page from PENDING, run the gates and do the manual checks.
       Commit: `feat(ui): renovate the posting detail page (US3)`.
 
 ---
@@ -392,7 +392,7 @@ source health.
 **Independent Test**: compare every number with today's and follow every link. Seed one
 source at zero, and check it can be told apart without relying on colour.
 
-- [ ] T040 [US4] Rewrite `W/templates/index.html`. Build:
+- [x] T040 [US4] Rewrite `W/templates/index.html`. Build:
       - **Four metric cards, using `metric()`.**
         - Postings links to `/postings`.
         - Published links to `/postings?published=true`.
@@ -407,9 +407,9 @@ source at zero, and check it can be told apart without relying on colour.
         series. Each bar carries `aria-hidden`, plus a visually hidden list giving every
         value (FR-008). Zero bars show a hatched style as well as a colour (US4 AS-3).
       - **Empty states.**
-- [ ] T041 [US4] In `app.css`, add `.metric-grid`, `.distribution`, and `.bars` for zero and
+- [x] T041 [US4] In `app.css`, add `.metric-grid`, `.distribution`, and `.bars` for zero and
       hatched bars.
-- [ ] T042 [US4] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
+- [x] T042 [US4] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
       Commit: `feat(ui): renovate the overview dashboard (US4)`.
 
 ---

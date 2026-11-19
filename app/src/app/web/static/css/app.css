@@ -373,6 +373,33 @@ main > .banner:first-child { margin-top: 0; }
 .pager .btn { min-width: 2.25rem; }
 .pager .page-current { background: var(--secondary-container); border-color: var(--primary); color: var(--on-secondary-container); cursor: default; }
 
+/* Posting detail (US3). */
+.back-link { margin: 0 0 var(--space-md); }
+.back-link .flip { transform: scaleX(-1); }
+.detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center; margin-bottom: var(--space-lg); }
+.detail-actions form, .inline-form { display: inline; margin: 0; }
+.detail-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-xl); align-items: start; }
+@media (min-width: 768px) { .detail-grid { grid-template-columns: 2fr 1fr; } }
+.detail-grid h2 { margin-top: 0; }
+.detail-grid section + section { margin-top: var(--space-xl); }
+.detail-grid h3 { margin: var(--space-lg) 0 var(--space-xs); }
+.detail-grid .card { min-width: 0; }
+.big-score { font-size: var(--fs-xl-mobile); line-height: var(--lh-xl-mobile); }
+.big-score .muted { font-size: var(--fs-sm); font-weight: 400; }
+.small { font-size: var(--fs-label); }
+
+/* Overview (US4). */
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-md); }
+.distribution { display: grid; gap: var(--space-sm); }
+.dist-row { display: grid; grid-template-columns: 7rem 3rem 1fr 3rem; gap: var(--space-md); align-items: center; }
+.dist-count, .dist-pct { font-variant-numeric: tabular-nums; text-align: right; }
+.dist-pct { color: var(--on-surface-variant); }
+.dist-bar { display: block; height: 0.5rem; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; }
+.dist-bar i { display: block; height: 100%; background: var(--primary-container); }
+.health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-md); }
+.health-grid h3 { margin-bottom: var(--space-xs); }
+.metric-value-sm { margin: 0 0 var(--space-sm); font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
+
 /* ========================= 4. LEGACY ALIASES =========================== */
 /* removed in Phase 12: map today's class names onto the tokens above so pages that are
    not renovated yet keep rendering. */
