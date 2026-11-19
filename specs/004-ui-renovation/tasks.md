@@ -96,7 +96,7 @@ checkpoint** together with Phase 3 (US1).
 
 ### Tests first
 
-- [ ] T010 [P] Write `T/test_design_tokens.py`. It parses the light and dark custom-property
+- [x] T010 [P] Write `T/test_design_tokens.py`. It parses the light and dark custom-property
       blocks of `W/static/css/app.css` and asserts WCAG ratios for a `PAIRS` table:
       - text on every surface ≥4.5;
       - `outline` against control backgrounds ≥3.0;
@@ -105,7 +105,7 @@ checkpoint** together with Phase 3 (US1).
         `success-container`, and `on-error-container` on `error-container`, each ≥4.5.
 
       Both palettes are checked (SC-002, FR-008a, research R6/R7).
-- [ ] T011 [P] Write `T/test_web_formatting.py`, unit tests for `relative_age`:
+- [x] T011 [P] Write `T/test_web_formatting.py`, unit tests for `relative_age`:
       "today", "1d ago", "6d ago", "3w ago", the absolute date beyond 60 days, and `None`
       giving "—" (research R13).
 - [ ] ~~T012~~ Moved to Phase 3 as T024a: it needs the `base.html` shell from T024, so it
@@ -113,7 +113,7 @@ checkpoint** together with Phase 3 (US1).
 
 ### Implementation
 
-- [ ] T013 Create `W/static/css/app.css`, section 1, the **tokens**.
+- [x] T013 Create `W/static/css/app.css`, section 1, the **tokens**.
       - **Light palette.** Every DESIGN.md YAML colour role as a custom property, plus
         `--success`, `--success-container` and `--on-success-container` (R6 C10).
       - **Focus ring.** `--focus-ring`.
@@ -127,7 +127,7 @@ checkpoint** together with Phase 3 (US1).
         `font-display: swap`).
 
       Comments cite DESIGN.md, ADR-0021 and R6/R7. Run T010; it goes green.
-- [ ] T014 `W/static/css/app.css`, section 2, **base and layout**.
+- [x] T014 `W/static/css/app.css`, section 2, **base and layout**.
       - Reset; `body` font and colours.
       - Headings: one `h1` scale and the section `h2`.
       - Links.
@@ -139,7 +139,7 @@ checkpoint** together with Phase 3 (US1).
       - `@media (prefers-reduced-motion: reduce)`, which turns off all transitions and
         animation.
       - `@media (forced-colors: active)` rules (plan §Component rules).
-- [ ] T015 `W/static/css/app.css`, section 3, **components**:
+- [x] T015 `W/static/css/app.css`, section 3, **components**:
       - buttons: `.btn` outlined, `.btn-primary`, `.btn-ghost`, sizes ≥24 px and 36 px;
       - `.chip`, with an active state;
       - `.pill`, with status variants `new`, `shortlist`, `applied`, `rejected`, `running`,
@@ -159,16 +159,16 @@ checkpoint** together with Phase 3 (US1).
       - `.card-link`, a stretched `::after` overlay for whole-card links (T055).
 
       Elevation and radii follow DESIGN.md.
-- [ ] T016 `W/static/css/app.css`, section 4, **legacy aliases**. Map today's class names
+- [x] T016 `W/static/css/app.css`, section 4, **legacy aliases**. Map today's class names
       (see the header of this file) onto the new tokens and components, so that pages that
       haven't been renovated still render correctly. Each alias gets the comment
       "removed in Phase 12".
-- [ ] T017 [P] Create `W/formatting.py` with `relative_age(value, now) -> Markup`. It
+- [x] T017 [P] Create `W/formatting.py` with `relative_age(value, now) -> Markup`. It
       renders `<time datetime="…" title="DD Mon YYYY">…</time>`. Run T011; it goes green.
-- [ ] T018 [P] Add `latest_run(session) -> Run | None` to `app/src/app/services/queries.py`.
+- [x] T018 [P] Add `latest_run(session) -> Run | None` to `app/src/app/services/queries.py`.
       It is read-only, ordered by `started_at desc`, and its docstring cites FR-013 and plan
       R8. Leave `totals()` untouched.
-- [ ] T019 In `W/deps.py`:
+- [x] T019 In `W/deps.py`:
       - add `shell_context(request, db=Depends(get_db))`, which sets
         `request.state.shell = {"last_run": queries.latest_run(db), "now": datetime.now(tz)}`;
       - pass `context_processors=[_shell_processor]` to `Jinja2Templates`, where
@@ -176,10 +176,10 @@ checkpoint** together with Phase 3 (US1).
       - register the filter `TEMPLATES.env.filters["relative_age"] = relative_age`.
 
       Depends on T017 and T018.
-- [ ] T020 In `W/app.py`, attach `dependencies=[Depends(shell_context)]` to each
+- [x] T020 In `W/app.py`, attach `dependencies=[Depends(shell_context)]` to each
       `include_router` call and to the `/` route. `/healthz` and `/static` are excluded
       (R8). Depends on T019.
-- [ ] T021 [P] Create `W/templates/_macros.html` with these macros:
+- [x] T021 [P] Create `W/templates/_macros.html` with these macros:
       - `icon(name, label=None, cls="")`: `aria-hidden` when there is no label, otherwise a
         visually hidden label;
       - `status_pill(status)`: text plus icon, never colour alone (FR-007);
@@ -190,7 +190,7 @@ checkpoint** together with Phase 3 (US1).
         (contracts C-8);
       - `table_wrap(label)`: a call-block with `tabindex="0"`, `role="region"` and
         `aria-label`.
-- [ ] T022 ⏺ Run the gates. Commit:
+- [x] T022 ⏺ Run the gates. Commit:
       `feat(ui): design tokens, components and dark palette from DESIGN.md`
       (T013–T016, T010). Commit:
       `feat(web): shell context with latest run and relative-age filter`

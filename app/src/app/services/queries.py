@@ -398,6 +398,17 @@ def recent_runs(session: Session, limit: int = 30) -> list[Run]:
     return runs
 
 
+def latest_run(session: Session) -> Run | None:
+    """The most recent run, for the shell's last-run indicator on every page.
+
+    Read-only and one indexed query (FR-013, spec 004 plan R8). Kept separate from
+    `totals()` so each page does not pay for five aggregate queries.
+    """
+    return session.scalars(
+        select(Run).order_by(Run.started_at.desc(), Run.id.desc()).limit(1)
+    ).first()
+
+
 def source_health(session: Session, limit: int = 14) -> dict[str, Any]:
     """Per-source counts across recent runs.
 
