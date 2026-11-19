@@ -1,7 +1,6 @@
 """Structural accessibility checks over every GET page (spec 004 T023; constitution VI).
 
-Only `html.parser`: no browser. Pages that are not renovated yet are listed in PENDING and
-xfail (non-strict); each page phase removes its own entry, and T063 deletes the set.
+Only `html.parser`: no browser. Every page is renovated, so every page is held to every check.
 """
 
 from html.parser import HTMLParser
@@ -28,9 +27,6 @@ PAGES = [
     "/settings",
     "/runs",
 ]
-
-# Pages whose own phase has not landed yet (tasks Phases 4-11).
-PENDING = set(PAGES) - {"/postings", "/postings/1", "/"}
 
 
 @pytest.fixture
@@ -84,7 +80,7 @@ class _Audit(HTMLParser):
         self.label_for: set[str] = set()
         self.controls: list[dict] = []
         self.wrap_issues = 0
-        self._svg_stack: list[bool] = []
+        self._in_label = 0
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -102,10 +98,12 @@ class _Audit(HTMLParser):
             self._in_thead = True
         if tag == "th" and self._in_thead and "scope" not in a:
             self.problems.append("thead th without scope")
-        if tag == "label" and a.get("for"):
-            self.label_for.add(a["for"])
+        if tag == "label":
+            self._in_label += 1
+            if a.get("for"):
+                self.label_for.add(a["for"])
         if tag in {"input", "select", "textarea"} and a.get("type") not in {"hidden", "submit"}:
-            self.controls.append(a)
+            self.controls.append({**a, "_wrapped": self._in_label > 0})
         if (
             tag == "svg"
             and a.get("aria-hidden") != "true"
@@ -118,6 +116,8 @@ class _Audit(HTMLParser):
             self.problems.append("table-wrap without tabindex=0 and aria-label")
 
     def handle_endtag(self, tag):
+        if tag == "label":
+            self._in_label -= 1
         if tag == "title":
             self._in_title = False
         if tag == "thead":
@@ -130,8 +130,6 @@ class _Audit(HTMLParser):
 
 @pytest.mark.parametrize("path", PAGES)
 def test_page_markup(client, path):
-    if path in PENDING:
-        pytest.xfail("page not renovated yet")  # replaced by real checks as phases land
     response = client.get(path)
     assert response.status_code == 200
     audit = _Audit()
@@ -142,9 +140,12 @@ def test_page_markup(client, path):
     assert audit.h1 == 1, "exactly one h1"
     assert audit.title.strip() and audit.title.strip() != "Job discovery", "page-specific title"
     for c in audit.controls:
-        assert c.get("aria-label") or c.get("aria-labelledby") or c.get("id") in audit.label_for, (
-            f"unlabelled control {c}"
-        )
+        assert (
+            c.get("aria-label")
+            or c.get("aria-labelledby")
+            or c["_wrapped"]
+            or c.get("id") in audit.label_for
+        ), f"unlabelled control {c}"
     assert not audit.problems, audit.problems
 
 

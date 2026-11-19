@@ -1,6 +1,6 @@
 /* Job discovery: hand-written design tokens and components (ADR-0021, no build step).
    Source of truth: DESIGN.md (YAML tokens win over its prose; spec C1-C11, research R6/R7).
-   1 tokens, 2 base and layout, 3 components, 4 legacy aliases (removed in Phase 12). */
+   1 tokens, 2 base and layout, 3 components. */
 
 /* ============================== 1. TOKENS ============================== */
 
@@ -400,39 +400,68 @@ main > .banner:first-child { margin-top: 0; }
 .health-grid h3 { margin-bottom: var(--space-xs); }
 .metric-value-sm { margin: 0 0 var(--space-sm); font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
 
-/* ========================= 4. LEGACY ALIASES =========================== */
-/* removed in Phase 12: map today's class names onto the tokens above so pages that are
-   not renovated yet keep rendering. */
+/* Runs (US5). */
+.delta { margin: 0 0 var(--space-sm); font-size: var(--fs-label); color: var(--on-surface-variant); font-weight: 500; }
+.delta.down { color: var(--error); }
+.run-error td { background: var(--error-container); color: var(--on-error-container); font-size: var(--fs-label); }
 
-/* removed in Phase 12 */
-.sub { color: var(--on-surface-variant); font-size: var(--fs-body-sm); margin: var(--space-xs) 0 var(--space-xl); }
+/* Schedules (US6) and forms (US7). */
+.profile-list td { vertical-align: top; }
+.rules-row td { padding-top: 0; border-top: 0; }
+.rules-row summary { cursor: pointer; color: var(--on-surface-variant); font-size: var(--fs-label); padding: var(--space-xs) 0; }
+.rules-form { margin: var(--space-md) 0; }
+.field { display: flex; flex-direction: column; gap: var(--space-xs); margin: 0 0 var(--space-lg); min-width: 0; border: 0; padding: 0; }
+.field.inline { flex-direction: row; align-items: center; gap: var(--space-sm); margin: 0; }
+.field input[type="text"], .field input[type="number"], .field input:not([type]), .field select, .field textarea { width: 100%; }
+.field legend { padding: 0; font-weight: 500; margin-bottom: var(--space-xs); }
+.hint { margin: 0; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--on-surface-variant); }
+.form-grid-2 { display: grid; grid-template-columns: 1fr; gap: 0 var(--space-2xl); }
+@media (min-width: 768px) { .form-grid-2 { grid-template-columns: 1fr 1fr; } }
+fieldset.form-col { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset.form-col > legend { font-size: var(--fs-sm); font-weight: 600; padding: 0; margin-bottom: var(--space-md); }
+.checks { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-lg); }
+.check { display: inline-flex; align-items: center; gap: var(--space-sm); font-weight: 400; min-height: 1.5rem; }
+.narrow { width: 4.5rem; }
+.form-footer {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md) var(--space-lg);
+  margin-top: var(--space-md); padding-top: var(--space-lg); border-top: 1px solid var(--outline-variant);
+}
+.spacer { flex: 1; }
+.kv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-md); }
+.kv { display: flex; flex-direction: column; gap: var(--space-xs); word-break: break-word; }
+h2 .icon { margin-right: var(--space-sm); }
+
+/* Reports (US9). */
+.report-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-md); }
+.report-list .card-link { padding-right: 3rem; }
+.report-list h2 { margin: 0 0 var(--space-xs); font-size: var(--fs-md); }
+.report-list p { margin: 0; }
+.report-list .go { position: absolute; right: var(--space-lg); top: 50%; transform: translateY(-50%); }
+.banner.caveat p { margin: 0; }
+.pie-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--space-lg); }
+.pie-card { text-align: center; }
+.pie-card h3 { margin: 0 0 var(--space-md); }
+.pie { width: 7.5rem; height: 7.5rem; border-radius: var(--radius-full); margin: 0 auto var(--space-md); }
+.pie-empty { background: var(--outline-variant); }
+.legend { list-style: none; margin: 0 0 var(--space-sm); padding: 0; text-align: left; font-size: var(--fs-body-sm); }
+.legend li { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs) 0; }
+.legend li .num { margin-left: auto; }
+.legend .dot { width: 0.625rem; height: 0.625rem; border-radius: var(--radius-full); flex: none; }
+
+/* Helpers kept from the earlier markup, now on the tokens. */
 .muted { color: var(--on-surface-variant); }
 .score { font-variant-numeric: tabular-nums; font-weight: 600; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: var(--space-md); }
-.card .n { font-size: var(--fs-lg); font-weight: 600; letter-spacing: var(--ls-lg); font-variant-numeric: tabular-nums; }
-.card .k { color: var(--on-surface-variant); font-size: var(--fs-label); text-transform: uppercase; letter-spacing: var(--ls-label-sm); }
-.filters { display: flex; gap: var(--space-sm); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-md); }
-.filters a { display: inline-flex; align-items: center; min-height: 1.75rem; padding: 0 var(--space-md); border: 1px solid var(--outline-variant); border-radius: var(--radius); background: var(--surface-container-low); color: var(--on-surface-variant); font-size: var(--fs-label); text-decoration: none; }
-.filters a.on { background: var(--secondary-container); border-color: var(--primary); color: var(--on-secondary-container); }
-.btn-xs { min-height: 1.5rem; padding: 0 var(--space-sm); font-size: var(--fs-label); }
-.empty { padding: var(--space-3xl) var(--space-lg); text-align: center; color: var(--on-surface-variant); }
 .statusbox { display: inline-flex; gap: var(--space-xs); align-items: center; flex-wrap: wrap; }
 .statusbox form { margin: 0; }
-.bulkbar { display: flex; gap: var(--space-md); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-md); padding: var(--space-sm) var(--space-md); border: 1px solid var(--outline-variant); border-radius: var(--radius-lg); background: var(--surface-container-lowest); }
-.flash { margin-bottom: var(--space-md); padding: var(--space-md) var(--space-lg); border: 1px solid var(--success); border-radius: var(--radius-lg); background: var(--success-container); color: var(--on-success-container); }
-.flash.err { border-color: var(--error); background: var(--error-container); color: var(--on-error-container); }
 .formgrid { display: grid; grid-template-columns: 13.75rem 1fr; gap: var(--space-md) var(--space-lg); align-items: center; }
 .formgrid input[type="text"], .formgrid input[type="number"], .formgrid input:not([type]), .formgrid textarea { width: 100%; }
-.formgrid .hint { grid-column: 2; margin: calc(var(--space-sm) * -1) 0 var(--space-xs); font-size: var(--fs-label); color: var(--on-surface-variant); }
+.formgrid .hint { grid-column: 2; margin: calc(var(--space-sm) * -1) 0 var(--space-xs); }
 @media (max-width: 640px) {
   .formgrid { grid-template-columns: 1fr; gap: var(--space-xs) 0; }
   .formgrid .hint { grid-column: 1; margin: 0 0 var(--space-sm); }
 }
 .desc { white-space: pre-wrap; font-size: var(--fs-body); line-height: 1.6; max-height: 28.75rem; overflow-y: auto; padding-right: var(--space-sm); }
-.split { display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-xl); align-items: start; }
-@media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
 dl.meta { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: var(--space-xs) var(--space-lg); font-size: var(--fs-body-sm); }
 dl.meta dt { color: var(--on-surface-variant); }
 dl.meta dd { margin: 0; word-break: break-word; }
-.scroll-x { overflow-x: auto; }
 .pager { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-top: var(--space-md); font-size: var(--fs-body-sm); }

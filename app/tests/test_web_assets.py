@@ -31,10 +31,6 @@ FIRST_LOAD_BUDGET = 150 * 1024  # SC-009
 
 PAGES = ["/", "/postings", "/reports", "/blacklist", "/profiles", "/settings", "/runs"]
 
-# Templates that still carry colour literals, emptied as each page is renovated
-# (tasks T028, Phases 4-11; the set is deleted in T063).
-PENDING_LITERALS: set[str] = set()
-
 
 @pytest.fixture
 def client():
@@ -107,8 +103,6 @@ def test_templates_have_no_colour_literals():
     offenders = {}
     for path in TEMPLATES.rglob("*.html"):
         rel = path.relative_to(TEMPLATES).as_posix()
-        if rel in PENDING_LITERALS:
-            continue
         hits = COLOUR_LITERAL.findall(path.read_text(encoding="utf-8"))
         if hits:
             offenders[rel] = hits[:3]
