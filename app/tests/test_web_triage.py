@@ -200,3 +200,20 @@ def test_rejected_filter_orders_by_status_changed_at_desc(client):
     pos1 = html.index("Data Engineer 2")
     pos2 = html.index("Data Engineer 0")  # rejected first -> last
     assert pos0 < pos1 < pos2
+
+
+# --- Spec 004 contracts C-1, C-3 -------------------------------------------
+
+
+def test_row_forms_disable_their_button_while_in_flight(client):
+    """FR-020: busy state via hx-disabled-elt, and the variant field order is pinned."""
+    html = client.get("/postings").text
+    assert html.count('hx-disabled-elt="find button"') >= 4
+    assert html.count('name="variant" value="row"') >= 4
+
+
+def test_bulk_form_contract_is_unchanged(client):
+    html = client.get("/postings").text
+    assert 'id="bulkform"' in html
+    assert 'hx-target="body"' in html
+    assert 'hx-swap="innerHTML"' in html

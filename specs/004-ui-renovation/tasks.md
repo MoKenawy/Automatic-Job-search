@@ -278,7 +278,7 @@ shows the application's origin only, and the keyboard reaches the skip link firs
 - [x] T028 [US1] Remove the `xfail` marks from T009 (external URL and colour literals in
       `base.html`). Any colour literal left in a page template moves into
       `T/test_web_assets.py::PENDING_LITERALS`, which each page phase empties.
-- [ ] T029 [US1] ⏺ Gates (done), then the manual shell check: quickstart steps 1, 2 and 5 on any
+- [x] T029 [US1] ⏺ Gates, then the manual shell check: quickstart steps 1, 2 and 5 on any
       two pages. Commit:
       `feat(ui): new shell — tabs, last-run status, skip link, live region (FR-013, FR-019)`.
 
@@ -296,12 +296,12 @@ with an icon and label, and the numbered pager.
 facets, a row change by mouse and by keyboard, a bulk change on page 2, a forced error, and
 the no-htmx run.
 
-- [ ] T030 [P] [US2] Extend `T/test_web_triage.py` with two tests.
+- [x] T030 [P] [US2] Extend `T/test_web_triage.py` with two tests.
       - Each row status form has `hx-disabled-elt`, and still has
         `name="variant" value="row"` in that exact order.
       - The bulk form keeps `id="bulkform"`, `hx-target="body"` and `hx-swap="innerHTML"`
         (contracts C-1 and C-3).
-- [ ] T031 [US2] Rewrite `W/templates/_row_status.html`. Keep:
+- [x] T031 [US2] Rewrite `W/templates/_row_status.html`. Keep:
       - the root `id="status-{{ p.id }}"`;
       - the forms, actions, `hx-post`, `hx-target`, `hx-swap` and the hidden fields.
 
@@ -310,7 +310,7 @@ the no-htmx run.
       shortlist, `send` for applied and `cancel` for rejected. Each target is ≥24 px. If
       `find button` isn't supported in 2.0.3, fall back to `this` on each button, and
       record the fallback in research R9.
-- [ ] T032 [US2] Rewrite `W/templates/postings.html`, keeping every contract in C-3, C-4,
+- [x] T032 [US2] Rewrite `W/templates/postings.html`, keeping every contract in C-3, C-4,
       C-5 and C-8. Build these parts:
       - **Page header.** The title and the "Showing … ranked by score" line, unchanged.
       - **Status chips.** `.chip` links with no counts (US2 AS-8), with `aria-current` on
@@ -336,12 +336,12 @@ the no-htmx run.
 
       Keep the inline select-all script and its ids (`selall`, `selcount`, `bulkapply`,
       `.selrow`).
-- [ ] T033 [US2] In `app.css`, add the Postings components: `.filter-bar`, `.bulk-bar`,
+- [x] T033 [US2] In `app.css`, add the Postings components: `.filter-bar`, `.bulk-bar`,
       `.score-badge`, `.row-actions`, and the pager.
 
       Below 768 px, the filter bar stacks and the table scrolls inside `.table-wrap`
       (FR-009).
-- [ ] T034 [US2] Remove `/postings` from the `PENDING` list in `T/test_web_a11y_markup.py`,
+- [x] T034 [US2] Remove `/postings` from the `PENDING` list in `T/test_web_a11y_markup.py`,
       and from the pending colour literals.
 - [ ] T035 [US2] ⏺ Gates, then the manual quickstart steps 1–5 on `/postings`. Commit:
       `feat(ui): renovate the postings triage list (US2)`.

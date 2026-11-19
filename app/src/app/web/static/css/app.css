@@ -342,6 +342,37 @@ label { color: var(--on-surface); font-weight: 500; }
 .page-sub { margin: var(--space-xs) 0 0; color: var(--on-surface-variant); font-size: var(--fs-body); }
 main > .banner:first-child { margin-top: 0; }
 
+/* Postings: chips, filter bar, bulk bar, table cells, row actions, pager (US2, FR-009). */
+.chip { text-transform: capitalize; }
+.filter-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-md); margin-bottom: var(--space-lg); }
+.filter-bar .field { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
+.filter-bar label { font-size: var(--fs-label); color: var(--on-surface-variant); }
+.filter-bar input[type="search"] { min-width: 14rem; }
+@media (max-width: 767px) {
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .filter-bar input[type="search"], .filter-bar select { width: 100%; }
+}
+.bulk-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md);
+  padding: var(--space-sm) var(--space-md); border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg); background: var(--surface-container-lowest);
+}
+.bulk-bar #selcount { color: var(--on-surface-variant); font-weight: 500; margin-right: auto; }
+.score-badge {
+  display: inline-block; min-width: 2.25rem; padding: 0 var(--space-sm); border-radius: var(--radius);
+  background: var(--secondary-container); color: var(--on-secondary-container);
+  font-weight: 600; text-align: center; font-variant-numeric: tabular-nums;
+}
+.initial {
+  display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem;
+  margin-right: var(--space-sm); border-radius: var(--radius-md); background: var(--surface-container-high);
+  color: var(--on-surface-variant); font-size: var(--fs-label); font-weight: 600; vertical-align: middle;
+}
+.row-actions { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-sm); align-items: center; }
+.row-actions form { display: inline; margin: 0; }
+.pager .btn { min-width: 2.25rem; }
+.pager .page-current { background: var(--secondary-container); border-color: var(--primary); color: var(--on-secondary-container); cursor: default; }
+
 /* ========================= 4. LEGACY ALIASES =========================== */
 /* removed in Phase 12: map today's class names onto the tokens above so pages that are
    not renovated yet keep rendering. */

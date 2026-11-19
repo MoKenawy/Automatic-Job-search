@@ -30,7 +30,7 @@ PAGES = [
 ]
 
 # Pages whose own phase has not landed yet (tasks Phases 4-11).
-PENDING = set(PAGES)
+PENDING = set(PAGES) - {"/postings"}
 
 
 @pytest.fixture
@@ -142,7 +142,9 @@ def test_page_markup(client, path):
     assert audit.h1 == 1, "exactly one h1"
     assert audit.title.strip() and audit.title.strip() != "Job discovery", "page-specific title"
     for c in audit.controls:
-        assert c.get("aria-label") or c.get("id") in audit.label_for, f"unlabelled control {c}"
+        assert c.get("aria-label") or c.get("aria-labelledby") or c.get("id") in audit.label_for, (
+            f"unlabelled control {c}"
+        )
     assert not audit.problems, audit.problems
 
 

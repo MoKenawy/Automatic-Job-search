@@ -1,18 +1,23 @@
+{% from "_macros.html" import status_pill, icon %}
 {# Inline list-row triage control (US1). One click per transition, updating the
    status cell in place. Mirrors _status_control.html but compact for a table row
    and carries variant=row so the endpoint returns this fragment. Posts normally
-   without HTMX (endpoint redirects to /postings). #}
-<span class="statusbox" id="status-{{ p.id }}">
-  <span class="pill {{ p.status }}">{{ p.status }}</span>
+   without HTMX (endpoint redirects to /postings).
+   Contract C-1 (specs/004-ui-renovation): id, hx-*, field names and the exact
+   `name="variant" value="row"` order stay. Each action is icon + visible label (FR-017). #}
+{% set labels = {"new": "New", "shortlist": "Shortlist", "applied": "Applied", "rejected": "Reject"} %}
+{% set icons = {"new": "fiber_new", "shortlist": "check_circle", "applied": "send", "rejected": "cancel"} %}
+<span class="statusbox row-actions" id="status-{{ p.id }}">
+  {{ status_pill(p.status) }}
   {% for s in statuses %}{% if s != p.status %}
   <form method="post" action="/postings/{{ p.id }}/status"
         hx-post="/postings/{{ p.id }}/status"
         hx-target="#status-{{ p.id }}"
         hx-swap="outerHTML"
-        style="display:inline">
+        hx-disabled-elt="find button">
     <input type="hidden" name="status" value="{{ s }}">
     <input type="hidden" name="variant" value="row">
-    <button class="btn btn-xs" type="submit" title="Set {{ s }}">{{ s }}</button>
+    <button class="btn btn-sm" type="submit" title="Set {{ s }}">{{ icon(icons.get(s, "check")) }}{{ labels.get(s, s) }}</button>
   </form>
   {% endif %}{% endfor %}
 </span>
