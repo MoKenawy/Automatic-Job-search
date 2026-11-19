@@ -1,21 +1,22 @@
 {% extends "base.html" %}
+{% from "_macros.html" import empty_state, table_wrap, metric %}
 {% set active = 'reports' %}
 {% block title %}Source coverage — Reports — Job discovery{% endblock %}
 {% block content %}
 
-<h1>Source coverage and overlap</h1>
+<div class="page-head"><h1>Source coverage and overlap</h1></div>
 {% include "reports/_caveat.html" %}
 
-<div class="cards">
-  <div class="card"><div class="n">{{ overlap.total }}</div><div class="k">Postings</div></div>
-  <div class="card"><div class="n">{{ overlap.contested }}</div><div class="k">On 2+ boards</div></div>
-  <div class="card"><div class="n">{{ overlap.ties }}</div><div class="k">Same-run ties</div></div>
+<div class="metric-grid">
+  {{ metric("Postings", overlap.total) }}
+  {{ metric("On 2+ boards", overlap.contested) }}
+  {{ metric("Same-run ties", overlap.ties) }}
 </div>
 
 <h2>Per board</h2>
-<div class="panel scroll-x">
+{% call table_wrap("Postings per board") %}
   <table>
-    <thead><tr><th>Board</th><th class="num">Postings</th><th class="num">Share</th></tr></thead>
+    <thead><tr><th scope="col">Board</th><th scope="col" class="num">Postings</th><th scope="col" class="num">Share</th></tr></thead>
     <tbody>
       {% for site, count in overlap.per_site.items() %}
       <tr>
@@ -24,20 +25,20 @@
         <td class="num">{{ (count / overlap.total * 100) | round | int if overlap.total else 0 }}%</td>
       </tr>
       {% else %}
-      <tr><td colspan="3" class="empty">No postings collected yet.</td></tr>
+      <tr><td colspan="3">{{ empty_state("No postings collected yet.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 <h2>Board combinations</h2>
-<p class="sub">
+<p class="page-sub">
   How often a role was carried by exactly this set of boards. A board appearing
   alone is unique coverage &mdash; the roles you would lose by dropping it.
 </p>
-<div class="panel scroll-x">
+{% call table_wrap("Board combinations") %}
   <table>
-    <thead><tr><th>Boards</th><th class="num">Postings</th></tr></thead>
+    <thead><tr><th scope="col">Boards</th><th scope="col" class="num">Postings</th></tr></thead>
     <tbody>
       {% for combo, count in overlap.combinations %}
       <tr>
@@ -45,22 +46,22 @@
         <td class="num">{{ count }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="2" class="empty">No postings collected yet.</td></tr>
+      <tr><td colspan="2">{{ empty_state("No postings collected yet.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 <h2>Which board surfaced it first</h2>
-<p class="sub">
+<p class="page-sub">
   Over the {{ overlap.contested }} posting{{ '' if overlap.contested == 1 else 's' }}
   carried by more than one board. Boards collected in the same run record the same
   instant, so a tie means both had the role at that collection &mdash; not that
   neither won.
 </p>
-<div class="panel scroll-x">
+{% call table_wrap("First surfaced by board") %}
   <table>
-    <thead><tr><th>Board</th><th class="num">First</th></tr></thead>
+    <thead><tr><th scope="col">Board</th><th scope="col" class="num">First</th></tr></thead>
     <tbody>
       {% for site, count in overlap.first_by.items() %}
       <tr><td>{{ site }}</td><td class="num">{{ count }}</td></tr>
@@ -71,16 +72,16 @@
       </tr>
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 <h2>Boards queried recently</h2>
-<p class="sub">
+<p class="page-sub">
   Coverage above is only comparable across boards that were actually asked. A
   board absent here explains its own low share.
 </p>
-<div class="panel scroll-x">
+{% call table_wrap("Boards queried recently") %}
   <table>
-    <thead><tr><th>Board</th><th style="width:55%">Recent runs</th><th class="num">Latest</th></tr></thead>
+    <thead><tr><th scope="col">Board</th><th scope="col">Recent runs</th><th scope="col" class="num">Latest</th></tr></thead>
     <tbody>
       {% for site in health.sites %}
         {% set series = health.series[site] %}
@@ -88,21 +89,22 @@
         <tr>
           <td>{{ site }}</td>
           <td>
-            <div class="bars">
+            <div class="bars" aria-hidden="true">
               {% for _, count in series %}
-              <i class="{{ 'zero' if count == 0 }}"
-                 style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"
-                 title="{{ count }}"></i>
+              <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
               {% endfor %}
             </div>
+            <ul class="visually-hidden">
+              {% for when, count in series %}<li>{{ when.strftime('%d %b %H:%M') }}: {{ count }}</li>{% endfor %}
+            </ul>
           </td>
           <td class="num">{{ series[-1][1] if series else 0 }}</td>
         </tr>
       {% else %}
-      <tr><td colspan="3" class="empty">No runs recorded yet.</td></tr>
+      <tr><td colspan="3">{{ empty_state("No runs recorded yet.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 {% endblock %}
