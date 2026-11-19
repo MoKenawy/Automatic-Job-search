@@ -287,3 +287,17 @@ def test_a_run_the_filter_never_touched_reads_as_unknown_not_zero(runs_client):
     body = runs_client.get("/runs").text
     row = [line for line in body.splitlines() if "34" in line or "—" in line]
     assert any("—" in line for line in row)
+
+
+def test_a_failed_run_reads_as_text_with_its_error(runs_client):
+    """FR-007: status is text, not just colour; the error text stays visible (US5 AS-1)."""
+    from app.db.models import Run
+    from app.web.app import app as web_app
+    from app.web.app import get_db as db_dep
+
+    session = next(web_app.dependency_overrides[db_dep]())
+    session.add(Run(status="failed", error="boom: board unreachable"))
+    session.commit()
+    body = runs_client.get("/runs").text
+    assert "failed" in body
+    assert "boom: board unreachable" in body
