@@ -423,11 +423,11 @@ funnel with status pills.
 filter never touched. Check that statuses read as text and icon, that the untouched run
 shows "—", that the error text shows, and that the trend values are available as text.
 
-- [ ] T043 [P] [US5] Add a test to `T/test_web_filter.py` or `T/test_web.py`. It asserts:
+- [x] T043 [P] [US5] Add a test to `T/test_web_filter.py` or `T/test_web.py`. It asserts:
       - a failed run renders with the text "failed" and its error text;
       - a run with no filter counts still renders "—" in Passed and Rejected;
       - the existing `>11<` and `>14<` assertions still hold.
-- [ ] T044 [US5] Rewrite `W/templates/runs.html`. Build:
+- [x] T044 [US5] Rewrite `W/templates/runs.html`. Build:
       - **Per-source trend cards.** One card per site, with bars for each run, a text list of
         values, the latest count, and a yield delta against the previous run. The delta is
         shown only when two or more runs exist, and it is computed in the template from
@@ -438,7 +438,7 @@ shows "—", that the error text shows, and that the trend values are available 
         - "—" kept per the R5 comment;
         - counts that are each the sole text of their cell (C-8);
         - the error row restyled as `.run-error`.
-- [ ] T045 [US5] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
+- [x] T045 [US5] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
       Commit: `feat(ui): renovate the runs history (US5)`.
 
 ---
@@ -451,7 +451,7 @@ filter-rules disclosure) and a grouped add form.
 **Independent Test**: add a profile, trigger a validation error, toggle a profile, run it,
 edit its rules and delete it. Each outcome should match today's.
 
-- [ ] T046 [US6] Rewrite `W/templates/profiles.html`, keeping every field, id and copy in
+- [x] T046 [US6] Rewrite `W/templates/profiles.html`, keeping every field, id and copy in
       C-7 and C-8.
       - **Profile list.**
         - The name, with the role underneath.
@@ -474,9 +474,9 @@ edit its rules and delete it. Each outcome should match today's.
         `<button type="reset">Cancel</button>`, and "Save schedule" as the one primary
         button.
       - **"Run settings" link** to `/settings`.
-- [ ] T047 [US6] In `app.css`, add `.profile-list`, `.switch`, `.form-grid-2`
+- [x] T047 [US6] In `app.css`, add `.profile-list`, `.switch`, `.form-grid-2`
       (one column below 768 px) and `.form-footer`.
-- [ ] T048 [US6] ⏺ Clear the page from PENDING, run the gates (`T/test_web_config.py` must
+- [x] T048 [US6] ⏺ Clear the page from PENDING, run the gates (`T/test_web_config.py` must
       pass unchanged) and do the manual checks. Commit:
       `feat(ui): renovate the schedules page (US6)`.
 
@@ -490,10 +490,10 @@ with inline hints, and a read-only block.
 **Independent Test**: save valid and invalid values. The messages and stored values should
 match today's, and `database_url` must never appear.
 
-- [ ] T049 [P] [US7] Add a test to `T/test_settings.py` or `T/test_web_config.py`. It
+- [x] T049 [P] [US7] Add a test to `T/test_settings.py` or `T/test_web_config.py`. It
       asserts that the `/settings` response contains no `postgresql://` string and no
       substring of the configured database URL (FR-012).
-- [ ] T050 [US7] Rewrite `W/templates/settings.html`.
+- [x] T050 [US7] Rewrite `W/templates/settings.html`.
       - Keep the field macro, the field names and the order of submission.
       - **Group 1, "Execution & scoring".** Results per search, hours old, request delay,
         publish threshold (with its "0–100" hint), scoring model (still a text field), and
@@ -505,7 +505,7 @@ match today's, and `database_url` must never appear.
         the next run." (US7 AS-1). The error becomes an error banner.
       - **Read-only block.** A `lock` icon, the "Read-only (restart required)" heading, a
         grid of key/value tiles, and `database_url` shown as "hidden — environment only".
-- [ ] T051 [US7] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
+- [x] T051 [US7] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
       Commit: `feat(ui): renovate the settings page (US7)`.
 
 ---
@@ -518,11 +518,11 @@ plain-POST Remove (FR-016), the FR-013 callout and an empty state.
 **Independent Test**: remove one employer. Their postings should reappear with the prior
 status, and you should land on an intact Blacklist page.
 
-- [ ] T052 [P] [US8] Add tests to `T/test_blacklist.py`.
+- [x] T052 [P] [US8] Add tests to `T/test_blacklist.py`.
       - The `/blacklist` markup contains no `hx-post` (contract C-6).
       - The Remove form still posts to `/employers/{id}/unblacklist` with
         `return_to=/blacklist`.
-- [ ] T053 [US8] Rewrite `W/templates/blacklist.html`.
+- [x] T053 [US8] Rewrite `W/templates/blacklist.html`.
       - **Header and rule copy.** Keep both, including the legacy-blacklist note.
       - **Two figures**, derived in the template from `employers`: "Employers blacklisted"
         (the row count) and "Postings hidden" (the sum of counts).
@@ -532,7 +532,7 @@ status, and you should land on an intact Blacklist page.
       - **FR-013 callout.** Built with `banner('info')`.
       - **Empty state.** "No employers blacklisted. Blacklist one from a posting's detail
         page." (US8 AS-2).
-- [ ] T054 [US8] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
+- [x] T054 [US8] ⏺ Clear the page from PENDING, run the gates and do the manual checks.
       Commit (behaviour fix): `fix(web): make blacklist Remove a plain form post (FR-016)`.
       Commit (styling): `feat(ui): renovate the blacklist page (US8)`.
 
@@ -546,19 +546,19 @@ shared design language with their caveats kept.
 **Independent Test**: open each report from the index. Every figure and caveat should match
 today's.
 
-- [ ] T055 [P] [US9] Rewrite `W/templates/reports/index.html`. Each report is a `.card` whose
+- [x] T055 [P] [US9] Rewrite `W/templates/reports/index.html`. Each report is a `.card` whose
       title is the single link, stretched over the whole card with the `::after` overlay
       technique. Each card has the blurb and an `arrow_forward` icon. There are no badges and
       no previews (classification table: backend work).
-- [ ] T056 [P] [US9] Rewrite `W/templates/reports/employers.html`. Its toggles become
+- [x] T056 [P] [US9] Rewrite `W/templates/reports/employers.html`. Its toggles become
       `.chip` links with `aria-current` (C-7), and its table goes in `table_wrap`.
-- [ ] T057 [P] [US9] Rewrite `W/templates/reports/sources.html`, with tables in
+- [x] T057 [P] [US9] Rewrite `W/templates/reports/sources.html`, with tables in
       `table_wrap`. Any bars get a text equivalent.
-- [ ] T058 [P] [US9] Rewrite `W/templates/reports/profiles.html`: toggles as chips, and
+- [x] T058 [P] [US9] Rewrite `W/templates/reports/profiles.html`: toggles as chips, and
       tables in `table_wrap`.
-- [ ] T059 [P] [US9] Restyle `W/templates/reports/_caveat.html` as `banner('info')`, with
+- [x] T059 [P] [US9] Restyle `W/templates/reports/_caveat.html` as `banner('info')`, with
       its copy unchanged.
-- [ ] T060 [US9] ⏺ Clear the pages from PENDING, run the gates (`T/test_web_reports.py`
+- [x] T060 [US9] ⏺ Clear the pages from PENDING, run the gates (`T/test_web_reports.py`
       and `T/test_reports.py` must pass unchanged) and do the manual checks. Commit:
       `feat(ui): renovate the reports pages (US9)`.
 
@@ -566,16 +566,16 @@ today's.
 
 ## Phase 12: Polish & cross-cutting
 
-- [ ] T061 Delete the legacy alias section from `W/static/css/app.css` (T016). Grep the
+- [x] T061 Delete the legacy alias section from `W/static/css/app.css` (T016). Grep the
       templates to confirm that no alias class is still used.
-- [ ] T062 Grep `W/templates/` for `style="`. The only inline styles left should be dynamic
+- [x] T062 Grep `W/templates/` for `style="`. The only inline styles left should be dynamic
       values (bar heights, as percentages). Move everything else into classes.
-- [ ] T063 Confirm that `PENDING` in `T/test_web_a11y_markup.py` and `PENDING_LITERALS` in
+- [x] T063 Confirm that `PENDING` in `T/test_web_a11y_markup.py` and `PENDING_LITERALS` in
       `T/test_web_assets.py` are empty, then delete both constants.
-- [ ] T064 Re-run the C-8 grep: list every string asserted in `tests/test_web*.py`,
+- [x] T064 Re-run the C-8 grep: list every string asserted in `tests/test_web*.py`,
       `test_blacklist.py`, `test_profiles.py` and `test_settings.py`, and confirm each one is
       still rendered.
-- [ ] T065 Measure the real `app.css` size, update research R15 and plan §Performance, and
+- [x] T065 Measure the real `app.css` size, update research R15 and plan §Performance, and
       confirm that the SC-009 test margin holds.
 - [ ] T066 Write `specs/004-ui-renovation/verification.md`. It covers:
       - for every page: light and dark mode × 375, 768 and 1280 px (plus the 320 px reflow
@@ -588,9 +588,9 @@ today's.
       - a list of every test assertion that was changed, with the reason (SC-006);
       - the mock-up elements deliberately left out, with reasons (from the classification
         table).
-- [ ] T067 Update the `README.md` and `Docs/development-guide.md` references to the web UI,
+- [x] T067 Update the `README.md` and `Docs/development-guide.md` references to the web UI,
       if any of them describe the inline CSS or the htmx CDN.
-- [ ] T068 ⏺ Run the final gates. Commit:
+- [x] T068 ⏺ Run the final gates. Commit:
       `chore(ui): remove legacy style aliases and inline styles`. Commit:
       `docs(ui): verification report for 004`.
 

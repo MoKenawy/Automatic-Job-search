@@ -320,12 +320,12 @@ brand-owned, not third-party.
 
 | Asset | Bytes | First load | Cached after |
 |---|---|---|---|
-| `app.css` (estimate) | ~25,000 | yes | yes |
+| `app.css` (measured) | 26,645 | yes | yes |
 | Inter latin variable woff2 | 48,256 | yes | yes |
 | Inter latin-ext woff2 | 85,068 | only if needed | yes |
-| `icons.svg` (~20 glyphs) | ~10,000 | yes | yes |
+| `icons.svg` (20 glyphs, measured) | 7,387 | yes | yes |
 | htmx 2.0.3 | 50,387 | yes | yes |
-| **Total, first load** | **~133,600** | | |
+| **Total, first load** | **132,675** | | |
 
 The ≤150 KB budget in SC-009 covers the "yes" rows. `test_web_assets.py` enforces it against
 the real file sizes.
