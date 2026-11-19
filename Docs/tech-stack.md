@@ -124,6 +124,8 @@ app/
         ├── collect/        # Stage 1 — JobSpy
         ├── normalise/      # Stage 2 — fingerprint + dedup
         ├── score/          # Stage 3 — title filter + Ollama + Pydantic
+        │                   #   (as built, the title filter moved out to
+        │                   #   filters/ + pipeline/filter_stage.py — ADR-0016)
         └── publish/        # Stage 4 — Notion
 ```
 

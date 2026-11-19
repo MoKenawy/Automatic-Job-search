@@ -104,7 +104,7 @@ Automatic-Job-search/
     │   │   ├── collect_stage.py   # Stage 1 persistence
     │   │   ├── normalise_stage.py # Stage 2 dedup upsert
     │   │   └── filter_stage.py    # Filter verdicts and the run funnel
-    │   ├── db/                    # SQLAlchemy models and session
+    │   ├── db/                    # SQLAlchemy models, session, read-time seams
     │   │   ├── visibility.py      # Read-time withholding (ADR-0015, ADR-0016)
     │   │   └── attribution.py     # Posting → run → profile traversal
     │   └── web/                   # FastAPI triage interface
@@ -115,7 +115,12 @@ Automatic-Job-search/
 
 ## Document status
 
-All documents describe the system as at 21 July 2026. Stages 1 and 2 (collection
-and deduplication) are implemented and operating; stages 3 and 4 (scoring and
+Stages 1 and 2 (collection and deduplication) are implemented and operating. So
+is the filter that runs between stages 2 and 3, which records title and
+experience verdicts (ADR-0016, ADR-0018). Stages 3 and 4 (scoring and
 publication) are specified but not yet implemented. Where a document describes
 unimplemented behaviour it is marked **(planned)**.
+
+The design record and the technology stack are dated snapshots of the original
+plan. Where they differ from the code, System Architecture and the ADRs describe
+the system as built.
