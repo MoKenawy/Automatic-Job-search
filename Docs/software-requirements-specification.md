@@ -176,6 +176,14 @@ converge on the same set of postings without creating duplicates.
 model invocations. The filter shall operate on the title only and shall not be
 used for requirement analysis. *(D6)*
 
+> *Implemented, though stage 3 is still unbuilt.* FR-16 is met by the filter
+> step that runs between stages 2 and 3 (`pipeline/filter_stage.py`, ADR-0016).
+> That step also applies an experience criterion and per-profile title rules
+> (ADR-0018). Stage 3 will score the postings the filter did not withhold rather
+> than filter them itself. Its detailed requirements are in
+> `specs/003-collect-stage-filtering/spec.md`, and the design is in
+> [System Architecture §5.2a](design/system-architecture.md#52a-filter--relevance-and-experience).
+
 **FR-17.** The system shall score each filtered posting against the CV using a
 locally hosted instruction-tuned model via Ollama, producing a 0–100 score,
 matched skills, gaps, and a rationale. *(D5, D8)*
