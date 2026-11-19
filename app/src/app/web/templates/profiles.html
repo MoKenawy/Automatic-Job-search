@@ -1,14 +1,20 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icon, banner, empty_state, table_wrap %}
 {% set active = 'profiles' %}
 {% block title %}Schedules — Job discovery{% endblock %}
 {% block content %}
 
-<h1>Search schedules</h1>
-<p class="sub">
-  Each profile is a saved job survey with its own role, sites, and run time. Enabled
-  profiles run automatically at their scheduled time; any can be run now (ADR-0005).
-</p>
-<p class="sub">
+{% if error %}{{ banner('error', error, focusable=True) }}{% endif %}
+
+<div class="page-head">
+  <h1>Search schedules</h1>
+  <p class="page-sub">
+    Each profile is a saved job survey with its own role, sites, and run time. Enabled
+    profiles run automatically at their scheduled time; any can be run now (ADR-0005).
+    <a href="/settings">{{ icon('settings') }}Run settings</a>
+  </p>
+</div>
+<p class="page-sub">
   Each profile can also carry its own filter rules. They apply <strong>in addition to</strong>
   the title patterns on the <a href="/settings">settings</a> page, never instead of them, and
   exclude always beats include. A posting found by more than one profile is kept if any one
@@ -17,46 +23,47 @@
   <code>filter --all</code>; nothing is re-collected.
 </p>
 
-{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
-
-<div class="panel scroll-x">
-  <table>
+{% call table_wrap("Search profiles") %}
+  <table class="profile-list">
     <thead>
       <tr>
-        <th>Name</th><th>Role</th><th>Location</th><th>Remote</th>
-        <th>Sites</th><th>Experience</th><th>Runs at</th><th>Enabled</th><th></th>
+        <th scope="col">Profile</th><th scope="col">Location</th>
+        <th scope="col">Sites</th><th scope="col">Experience</th><th scope="col">Runs at</th>
+        <th scope="col">Enabled</th><th scope="col">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for p in profiles %}
       <tr>
-        <td>{{ p.name }}</td>
-        <td>{{ p.term }}</td>
-        <td class="muted">{{ p.location or '—' }}</td>
-        <td class="muted">{{ 'yes' if p.is_remote else '—' }}</td>
-        <td class="muted">{{ p.sites | join(', ') }}</td>
+        <td><strong>{{ p.name }}</strong><br><span class="muted">{{ p.term }}</span></td>
+        <td class="muted">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill">remote</span>{% endif %}</td>
+        <td>{% for s in p.sites %}<span class="pill">{{ s }}</span> {% endfor %}</td>
         <td class="muted">{{ p.experience or '—' }}</td>
         <td>{{ '%02d:%02d' | format(p.schedule_hour, p.schedule_minute) }}</td>
         <td>
-          <form method="post" action="/profiles/{{ p.id }}/enabled" style="display:inline">
+          {# Contract C-7: stays a submit button in the same form; the switch look and
+             role are layered on, and the state is also text (US6 AS-1). #}
+          <form method="post" action="/profiles/{{ p.id }}/enabled" class="inline-form">
             <input type="hidden" name="enabled" value="{{ 'false' if p.enabled else 'true' }}">
-            <button class="btn btn-xs" type="submit">{{ 'disable' if p.enabled else 'enable' }}</button>
+            <button class="switch" type="submit" role="switch" aria-checked="{{ 'true' if p.enabled else 'false' }}">{{ 'Enabled' if p.enabled else 'Disabled' }}</button>
           </form>
         </td>
-        <td style="white-space:nowrap">
-          <form method="post" action="/profiles/{{ p.id }}/run" style="display:inline">
-            <button class="btn btn-xs" type="submit" title="Run this profile now">run now</button>
-          </form>
-          <form method="post" action="/profiles/{{ p.id }}/delete" style="display:inline"
-                onsubmit="return confirm('Delete profile {{ p.name }}?');">
-            <button class="btn btn-xs" type="submit">delete</button>
-          </form>
+        <td>
+          <div class="row-actions">
+            <form method="post" action="/profiles/{{ p.id }}/run" class="inline-form">
+              <button class="btn btn-sm" type="submit" title="Run this profile now">{{ icon('play_arrow') }}Run now</button>
+            </form>
+            <form method="post" action="/profiles/{{ p.id }}/delete" class="inline-form"
+                  onsubmit="return confirm('Delete profile {{ p.name }}?');">
+              <button class="btn btn-sm" type="submit">{{ icon('delete') }}Delete</button>
+            </form>
+          </div>
         </td>
       </tr>
-      <tr>
-        <td colspan="9" style="padding-top:0;border-top:0">
+      <tr class="rules-row">
+        <td colspan="7">
           <details>
-            <summary class="muted" style="font-size:12px;cursor:pointer">
+            <summary>
               Filter rules —
               {% if p.experience or p.title_include_pattern or p.title_exclude_pattern %}
                 {% if p.experience %}experience <code>{{ p.experience }}</code>{% endif %}
@@ -65,7 +72,7 @@
               {% else %}none set (hides nothing)
               {% endif %}
             </summary>
-            <form method="post" action="/profiles/{{ p.id }}/filters" class="formgrid" style="margin:10px 0">
+            <form method="post" action="/profiles/{{ p.id }}/filters" class="formgrid rules-form">
               <label for="exp-{{ p.id }}">Experience</label>
               <input id="exp-{{ p.id }}" name="experience" value="{{ p.experience or '' }}"
                      aria-describedby="exp-{{ p.id }}-hint"
@@ -84,80 +91,101 @@
               <input id="exc-{{ p.id }}" name="title_exclude_pattern" value="{{ p.title_exclude_pattern or '' }}"
                      placeholder="regular expression, optional — wins over the include pattern">
               <span></span>
-              <span><button class="btn btn-xs" type="submit">Save filter rules</button></span>
+              <span><button class="btn" type="submit">Save filter rules</button></span>
             </form>
           </details>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="9" class="empty">No profiles. Add one below.</td></tr>
+      <tr><td colspan="7">{{ empty_state("No profiles. Add one below.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 <h2>Add a profile</h2>
-<form method="post" action="/profiles" class="panel" style="padding:18px">
-  <div class="formgrid">
-    <label for="name">Name</label>
-    <input id="name" name="name" required placeholder="e.g. Senior data engineer, remote">
+<form method="post" action="/profiles" class="card">
+  <div class="form-grid-2">
+    <div class="form-col">
+      <div class="field">
+        <label for="name">Name</label>
+        <input id="name" name="name" required placeholder="e.g. Senior data engineer, remote">
+      </div>
 
-    <label for="term">Role / search term</label>
-    <input id="term" name="term" required placeholder="data engineer" aria-describedby="term-hint">
-    <p class="hint" id="term-hint">
-      Sent to each board as a plain keyword search. Name the role only (<em>data engineer</em>) and put
-      seniority in <strong>Experience</strong>, not here: a word like <em>junior</em> in the term makes
-      the board drop plainly titled roles before they are collected, and they can't be recovered later.
-      Want more entry-level results? Add a <strong>second</strong> profile with e.g.
-      <em>junior data engineer</em> alongside the plain one; don't replace it.
-    </p>
+      <div class="field">
+        <label for="term">Role / search term</label>
+        <input id="term" name="term" required placeholder="data engineer" aria-describedby="term-hint">
+        <p class="hint" id="term-hint">
+          Sent to each board as a plain keyword search. Name the role only (<em>data engineer</em>) and put
+          seniority in <strong>Experience</strong>, not here: a word like <em>junior</em> in the term makes
+          the board drop plainly titled roles before they are collected, and they can't be recovered later.
+          Want more entry-level results? Add a <strong>second</strong> profile with e.g.
+          <em>junior data engineer</em> alongside the plain one; don't replace it.
+        </p>
+      </div>
 
-    <label for="location">Location</label>
-    <input id="location" name="location" placeholder="Cairo, Egypt (blank for remote)">
+      <div class="field">
+        <label for="location">Location</label>
+        <input id="location" name="location" placeholder="Cairo, Egypt (blank for remote)">
+      </div>
 
-    <label for="country">Country</label>
-    <input id="country" name="country" value="egypt">
+      <div class="field">
+        <label for="country">Country</label>
+        <input id="country" name="country" value="egypt">
+      </div>
+    </div>
 
-    <label>Sites</label>
-    <span>
-      {% for s in sites %}
-      <label style="font-weight:normal;margin-right:12px">
-        <input type="checkbox" name="sites" value="{{ s }}" checked> {{ s }}
-      </label>
-      {% endfor %}
-    </span>
+    <div class="form-col">
+      <fieldset class="field">
+        <legend>Sites</legend>
+        <div class="checks">
+          {% for s in sites %}
+          <label class="check"><input type="checkbox" name="sites" value="{{ s }}" checked> {{ s }}</label>
+          {% endfor %}
+        </div>
+      </fieldset>
 
-    <label for="experience">Experience</label>
-    <input id="experience" name="experience" placeholder="e.g. entry level (optional)"
-           aria-describedby="experience-hint">
-    <p class="hint" id="experience-hint">
-      Hides postings above this level <em>after</em> they are collected; it never narrows the search.
-      Understood: <code>intern</code> · <code>entry level</code> / <code>junior</code> / <code>graduate</code>
-      · <code>associate</code> · <code>mid</code> / <code>senior</code> · <code>director</code> · <code>executive</code>.
-      Blank means no seniority filtering. LinkedIn postings are judged on the board's own seniority
-      label, Indeed postings on title words only.
-    </p>
+      <div class="field">
+        <label for="experience">Experience</label>
+        <input id="experience" name="experience" placeholder="e.g. entry level (optional)"
+               aria-describedby="experience-hint">
+        <p class="hint" id="experience-hint">
+          Hides postings above this level <em>after</em> they are collected; it never narrows the search.
+          Understood: <code>intern</code> · <code>entry level</code> / <code>junior</code> / <code>graduate</code>
+          · <code>associate</code> · <code>mid</code> / <code>senior</code> · <code>director</code> · <code>executive</code>.
+          Blank means no seniority filtering. LinkedIn postings are judged on the board's own seniority
+          label, Indeed postings on title words only.
+        </p>
+      </div>
 
-    <label for="title_include_pattern">Title must match</label>
-    <input id="title_include_pattern" name="title_include_pattern"
-           placeholder="regular expression (optional)">
+      <div class="field">
+        <label for="title_include_pattern">Title must match</label>
+        <input id="title_include_pattern" name="title_include_pattern"
+               placeholder="regular expression (optional)">
+      </div>
 
-    <label for="title_exclude_pattern">Title must not match</label>
-    <input id="title_exclude_pattern" name="title_exclude_pattern"
-           placeholder="regular expression (optional)">
-
-    <label for="is_remote">Remote only</label>
-    <input id="is_remote" name="is_remote" type="checkbox">
-
-    <label for="schedule_hour">Runs at (hour : minute)</label>
-    <span>
-      <input id="schedule_hour" name="schedule_hour" type="number" min="0" max="23" value="6" style="width:70px">
-      :
-      <input name="schedule_minute" type="number" min="0" max="59" value="0" style="width:70px">
-    </span>
+      <div class="field">
+        <label for="title_exclude_pattern">Title must not match</label>
+        <input id="title_exclude_pattern" name="title_exclude_pattern"
+               placeholder="regular expression (optional)">
+      </div>
+    </div>
   </div>
 
-  <div style="margin-top:16px"><button class="btn" type="submit">Add profile</button></div>
+  <div class="form-footer">
+    <label class="check" for="is_remote"><input id="is_remote" name="is_remote" type="checkbox"> Remote only</label>
+    <div class="field inline">
+      <label for="schedule_hour">Runs at (hour : minute)</label>
+      <span>
+        <input id="schedule_hour" name="schedule_hour" type="number" min="0" max="23" value="6" class="narrow">
+        :
+        <input name="schedule_minute" type="number" min="0" max="59" value="0" class="narrow" aria-label="Minute">
+      </span>
+    </div>
+    <span class="spacer"></span>
+    <button class="btn" type="reset">Cancel</button>
+    <button class="btn btn-primary" type="submit">Save schedule</button>
+  </div>
 </form>
 
 {% endblock %}
