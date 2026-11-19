@@ -276,3 +276,27 @@ def test_detail_route_loads_for_suppressed_employers_posting(factory):
     assert r.status_code == 200
     assert "employer blacklisted" in r.text
     assert "Remove from blacklist" in r.text
+
+
+def test_blacklist_page_remove_is_a_plain_form_post(factory):
+    """FR-016, contract C-6: no hx-post, so the redirect lands on a whole page."""
+    with factory() as s:
+        emp = _employer_with_postings(s, "Spammer", suppressed=True, statuses=[STATUS_NEW])
+        emp_id = emp.id
+
+    def override():
+        sess = factory()
+        try:
+            yield sess
+        finally:
+            sess.close()
+
+    app.dependency_overrides[get_db] = override
+    try:
+        html = TestClient(app).get("/blacklist").text
+    finally:
+        app.dependency_overrides.clear()
+
+    assert "hx-post" not in html
+    assert f'action="/employers/{emp_id}/unblacklist"' in html
+    assert 'name="return_to" value="/blacklist"' in html
