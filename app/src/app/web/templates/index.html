@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, empty_state, metric, status_pill, table_wrap %}
+{% from "_macros.html" import banner, empty_state, icon, metric, status_pill, table_wrap %}
 {% set active = 'index' %}
 {% block title %}Overview — Job discovery{% endblock %}
 {% block content %}
@@ -23,46 +23,70 @@
 {{ banner('info', 'Scoring not yet run: ' ~ totals.postings ~ ' postings collected and deduplicated, none scored. Stage 3 requires a CV at data/cv.txt to build the prompt.') }}
 {% endif %}
 
-<h2>Triage</h2>
-<div class="card distribution">
-  {% set total = totals.by_status.values() | sum %}
-  {% for status, count in totals.by_status.items() %}
-  <div class="dist-row">
-    <a class="pill {{ status }}" href="/postings?status={{ status }}">{{ status }}</a>
-    <span class="dist-count">{{ count }}</span>
-    {% set pct = ((count / total * 100) | round | int) if total else 0 %}
-    <span class="dist-bar" aria-hidden="true"><i style="width: {{ pct }}%"></i></span>
-    <span class="dist-pct">{{ pct }}%</span>
-  </div>
-  {% else %}
-  {{ empty_state("No postings yet. Run a search profile from Schedules to collect some.", "/profiles", "Open Schedules") }}
-  {% endfor %}
-</div>
+<div class="overview-grid">
 
-<h2>Source health</h2>
-<p class="page-sub">
-  Per-source counts across recent runs. A source trending toward zero while runs
-  keep succeeding is the signal to investigate (§7.4).
-</p>
-<div class="health-grid">
-  {% for site in health.sites %}
-    {% set series = health.series[site] %}
-    {% set peak = (series | map(attribute=1) | max) or 1 %}
-    <div class="card">
-      <h3>{{ site }}</h3>
-      <p class="metric-value-sm">{{ series[-1][1] if series else 0 }}{% if series and series[-1][1] == 0 %} <span class="pill failed">zero in latest run</span>{% endif %}</p>
-      <div class="bars" aria-hidden="true">
-        {% for _, count in series %}
-        <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
-        {% endfor %}
+  {# Triage distribution, with its own header and footer link (UX doc §4). #}
+  <section class="card overview-card">
+    {% set total = totals.by_status.values() | sum %}
+    <div class="card-head">
+      <div>
+        <h2>Triage</h2>
+        <p class="page-sub">Review status distribution.</p>
       </div>
-      <ul class="visually-hidden">
-        {% for when, count in series %}<li>{{ when.strftime('%d %b %H:%M') }}: {{ count }}</li>{% endfor %}
-      </ul>
+      <span class="pill">{{ total }} in total</span>
     </div>
-  {% else %}
-  <div class="card">{{ empty_state("No runs recorded yet.") }}</div>
-  {% endfor %}
+    <div class="distribution">
+      {% for status, count in totals.by_status.items() %}
+      <div class="dist-row">
+        <a class="pill {{ status }}" href="/postings?status={{ status }}">{{ status }}</a>
+        <span class="dist-count">{{ count }}</span>
+        {% set pct = ((count / total * 100) | round | int) if total else 0 %}
+        <span class="dist-bar" aria-hidden="true"><i style="width: {{ pct }}%"></i></span>
+        <span class="dist-pct">{{ pct }}%</span>
+      </div>
+      {% else %}
+      {{ empty_state("No postings yet. Run a search profile from Schedules to collect some.", "/profiles", "Open Schedules") }}
+      {% endfor %}
+    </div>
+    <div class="card-foot">
+      <a href="/postings">Explore all in Postings {{ icon('arrow_forward') }}</a>
+    </div>
+  </section>
+
+  {# Source health. A source trending toward zero while runs keep succeeding is
+     the signal to investigate (§7.4). #}
+  <section class="card overview-card">
+    <div class="card-head">
+      <div>
+        <h2>Source health</h2>
+        <p class="page-sub">Per-source counts across recent runs.</p>
+      </div>
+    </div>
+    <div class="health-grid">
+      {% for site in health.sites %}
+        {% set series = health.series[site] %}
+        {% set peak = (series | map(attribute=1) | max) or 1 %}
+        <div class="source">
+          <h3>{{ site }}</h3>
+          <p class="metric-value-sm">{{ series[-1][1] if series else 0 }}{% if series and series[-1][1] == 0 %} <span class="pill failed">zero in latest run</span>{% endif %}</p>
+          <div class="bars" aria-hidden="true">
+            {% for _, count in series %}
+            <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+            {% endfor %}
+          </div>
+          <ul class="visually-hidden">
+            {% for when, count in series %}<li>{{ when.strftime('%d %b %H:%M') }}: {{ count }}</li>{% endfor %}
+          </ul>
+        </div>
+      {% else %}
+      <div class="source">{{ empty_state("No runs recorded yet.") }}</div>
+      {% endfor %}
+    </div>
+    <div class="card-foot">
+      <a href="/runs">Run history and logs {{ icon('arrow_forward') }}</a>
+    </div>
+  </section>
+
 </div>
 
 {% endblock %}

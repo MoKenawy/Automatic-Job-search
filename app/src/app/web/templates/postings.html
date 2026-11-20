@@ -28,6 +28,8 @@
 </p>
 {% endif %}
 
+{# Chips and query controls share one surface, as in the mock-ups. #}
+<div class="toolbar">
 {# Status chips are plain links (contract C-4); no counts, because the page has none (US2 AS-8). #}
 <nav aria-label="Status filter">
   <ul class="chips">
@@ -73,6 +75,7 @@
   {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
   <button class="btn" type="submit">{{ icon('search') }}Search</button>
 </form>
+</div>
 
 {# US2 — bulk action bar. The form holds only the bar; row checkboxes live in the
    table and associate with it via the HTML5 form= attribute. This keeps the row
@@ -125,7 +128,7 @@
         <td class="num"><span class="score-badge">{{ p.score if p.score is not none else '—' }}</span></td>
         <td><a id="title-{{ p.id }}" href="/postings/{{ p.id }}">{{ p.title }}</a></td>
         <td><span class="initial" aria-hidden="true">{{ employer.name[:1] | upper }}</span>{{ employer.name }}</td>
-        <td class="muted">{{ 'Remote' if p.is_remote else (p.country_code or '—') }}</td>
+        <td class="muted">{{ icon('location_on') }} {{ 'Remote' if p.is_remote else (p.country_code or '—') }}</td>
         <td>
           {% for site in p.sources.keys() %}<span class="pill">{{ site }}</span> {% endfor %}
           {% if p.sources | length > 1 %}<span class="pill">×{{ p.sources | length }}</span>{% endif %}

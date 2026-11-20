@@ -148,6 +148,15 @@ The spec records the resolutions (C1–C9), and the measurements below add two m
   (WCAG 1.4.11). **Resolution:** control boundaries use `--outline` (4.50:1 on white).
   `--outline-variant` is used only for decorative hairlines between rows and cards, which
   1.4.11 does not cover.
+- **C12 (new) — `on-secondary-container` retargeted.** The YAML value `#5c647a` is replaced
+  by `#3f465c` (the YAML's own `on-secondary-fixed-variant`) so text on `secondary-container`
+  (new-status pill, score badge, info banner) keeps comfortable AA headroom.
+- **C13 (new) — `code` is monospace.** DESIGN.md `code-sm` is Inter 12/16, but regexes and
+  paths are ambiguous in a proportional face, so `code` uses a system monospace stack at the
+  same size. This is a deliberate, local divergence from the token file.
+- **C14 (new) — the page title grows with the viewport.** `h1` is `--fs-lg` (24 px) on
+  mobile and `--fs-xl-mobile` (28 px) from 768 px, and KPI figures are 24 px on mobile and
+  `--fs-xl` (36 px) from 768 px, so the figure outranks the title.
 
 ### Measured contrast, light palette (DESIGN.md YAML)
 

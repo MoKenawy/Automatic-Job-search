@@ -139,11 +139,13 @@ body {
   overflow-wrap: break-word;
 }
 h1, h2, h3 { margin: 0; color: var(--on-surface); font-weight: 600; }
-h1 { font-size: var(--fs-xl-mobile); line-height: var(--lh-xl-mobile); letter-spacing: var(--ls-lg); }
+h1 { font-size: var(--fs-lg); line-height: var(--lh-lg); letter-spacing: var(--ls-lg); }
 h2 { font-size: var(--fs-md); line-height: var(--lh-md); letter-spacing: var(--ls-md); margin: var(--space-2xl) 0 var(--space-md); }
 h3 { font-size: var(--fs-sm); line-height: var(--lh-sm); letter-spacing: var(--ls-sm); }
+/* DESIGN.md headline-xl-mobile is the reduction of a larger desktop headline, not the
+   other way round: the page title grows with the viewport (C14). */
 @media (min-width: 768px) {
-  h1 { font-size: var(--fs-lg); line-height: var(--lh-lg); }
+  h1 { font-size: var(--fs-xl-mobile); line-height: var(--lh-xl-mobile); }
 }
 p { margin: 0 0 var(--space-md); }
 a { color: var(--primary); text-underline-offset: 0.15em; }
@@ -187,6 +189,13 @@ main {
 
 .icon { width: 1.125rem; height: 1.125rem; fill: currentColor; flex: none; vertical-align: -0.2em; }
 
+/* State changes ease rather than snap (DESIGN.md "calm focus"). The
+   prefers-reduced-motion block above cancels every one of these. */
+.btn, .chip, .pill, .card-link, .metric, .shell nav a, tbody tr, .switch {
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
 /* Buttons: one filled primary per area (SC-010); the rest outlined or ghost. */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--space-xs);
@@ -220,9 +229,11 @@ main {
   font: 500 var(--fs-label)/var(--lh-label) var(--font); text-decoration: none;
 }
 .chip:hover { background: var(--surface-container-high); }
+/* Segmented-control treatment for the selected filter, as in the mock-ups. */
 .chip[aria-current], .chip.on {
-  background: var(--secondary-container); border-color: var(--primary); color: var(--on-secondary-container);
+  background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-on-surface);
 }
+.chip[aria-current]:hover, .chip.on:hover { background: var(--inverse-surface); }
 
 /* Status pill: text plus icon, never colour alone (FR-007). */
 .pill {
@@ -252,6 +263,10 @@ main {
 
 .metric { display: block; text-decoration: none; color: inherit; }
 .metric .metric-value { display: block; font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; letter-spacing: var(--ls-lg); font-variant-numeric: tabular-nums; color: var(--on-surface); }
+/* The figure outranks the page title, as DESIGN.md headline-xl intends. */
+@media (min-width: 768px) {
+  .metric .metric-value { font-size: var(--fs-xl); line-height: var(--lh-xl); letter-spacing: var(--ls-xl); }
+}
 .metric .metric-label { display: block; color: var(--on-surface-variant); font: 500 var(--fs-label)/var(--lh-label) var(--font); text-transform: uppercase; letter-spacing: var(--ls-label-sm); }
 a.metric:hover { border-color: var(--outline); box-shadow: var(--shadow-2); }
 
@@ -344,6 +359,14 @@ main > .banner:first-child { margin-top: 0; }
 
 /* Postings: chips, filter bar, bulk bar, table cells, row actions, pager (US2, FR-009). */
 .chip { text-transform: capitalize; }
+.toolbar {
+  display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between;
+  gap: var(--space-md) var(--space-xl); margin-bottom: var(--space-lg); padding: var(--space-md);
+  background: var(--surface-container-lowest); border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
+}
+.toolbar > * { min-width: 0; }
+.toolbar .chips, .toolbar .filter-bar { margin: 0; }
 .filter-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-md); margin-bottom: var(--space-lg); }
 .filter-bar .field { display: flex; flex-direction: column; gap: var(--space-xs); min-width: 0; }
 .filter-bar label { font-size: var(--fs-label); color: var(--on-surface-variant); }
@@ -390,13 +413,26 @@ main > .banner:first-child { margin-top: 0; }
 
 /* Overview (US4). */
 .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-md); }
+.overview-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-lg); margin-top: var(--space-2xl); }
+@media (min-width: 1024px) { .overview-grid { grid-template-columns: 5fr 7fr; } }
+.overview-card { display: flex; flex-direction: column; min-width: 0; }
+.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-lg); }
+.card-head h2 { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); letter-spacing: var(--ls-sm); }
+.card-head .page-sub { font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
+.card-foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-sm);
+  margin-top: auto; padding-top: var(--space-lg); font-size: var(--fs-body-sm);
+}
+.card-foot a { display: inline-flex; align-items: center; gap: var(--space-xs); font-weight: 500; }
+/* Inner panel inside a card: tone, not a second border (DESIGN.md level 1 is not nested). */
+.source { padding: var(--space-md); border-radius: var(--radius-lg); background: var(--surface-container-low); min-width: 0; }
 .distribution { display: grid; gap: var(--space-sm); }
 .dist-row { display: grid; grid-template-columns: 7rem 3rem 1fr 3rem; gap: var(--space-md); align-items: center; }
 .dist-count, .dist-pct { font-variant-numeric: tabular-nums; text-align: right; }
 .dist-pct { color: var(--on-surface-variant); }
 .dist-bar { display: block; height: 0.5rem; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; }
 .dist-bar i { display: block; height: 100%; background: var(--primary-container); }
-.health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-md); }
+.health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--space-md); }
 .health-grid h3 { margin-bottom: var(--space-xs); }
 .metric-value-sm { margin: 0 0 var(--space-sm); font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
 
