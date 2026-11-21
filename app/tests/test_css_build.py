@@ -113,3 +113,46 @@ def test_declared_source_paths_exist():
     assert paths, "input.css declares no @source"
     for rel in paths:
         assert (WEB / "styles" / rel).resolve().is_dir(), f"@source path missing: {rel}"
+
+
+# --- Status class maps (spec 006 FR-018, research R9) -------------------------------------
+
+POSTING_STATUSES = ("new", "shortlist", "applied", "rejected")
+RUN_STATUSES = ("running", "success", "failed")
+
+
+def _macros():
+    from app.web.deps import TEMPLATES
+
+    return TEMPLATES.env.get_template("_macros.html").module
+
+
+def test_status_maps_only_name_defined_classes():
+    macros = _macros()
+    defined = _defined_classes(BUILT_CSS)
+    for status in (*POSTING_STATUSES, *RUN_STATUSES):
+        classes = macros.pill_class(status).split()
+        assert classes, f"pill status {status!r} has no mapped classes"
+        assert set(classes) <= defined, (status, sorted(set(classes) - defined))
+    for kind in ("success", "error"):
+        assert set(macros.banner_class(kind).split()) <= defined
+
+
+@pytest.mark.parametrize("unknown", ["", "banana", "NEW", None])
+def test_unknown_status_gets_the_neutral_style(unknown):
+    macros = _macros()
+    assert macros.pill_class(unknown).strip() == ""
+    assert macros.banner_class(unknown).strip() == ""
+    assert macros.banner_class("info").strip() == ""
+
+
+def test_pill_and_banner_class_names_are_never_concatenated():
+    # Only the complete-string helpers may interpolate into a pill/banner class list, so the
+    # scanner can always see the full class names. (`pill {{ status }}` would hide them.)
+    bad = re.compile(r'class="[^"]*\b(?:pill|banner)\b[^"]*\{\{(?!\s*(?:pill|banner)_class\()')
+    offenders = [
+        f"{path.relative_to(WEB)}: {m.group(0)}"
+        for path in (WEB / "templates").rglob("*.html")
+        for m in bad.finditer(path.read_text(encoding="utf-8"))
+    ]
+    assert not offenders, offenders

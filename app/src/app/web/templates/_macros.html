@@ -5,12 +5,39 @@
 <svg class="icon {{ cls }}" {% if label %}role="img" aria-label="{{ label }}"{% else %}aria-hidden="true" focusable="false"{% endif %}><use href="/static/icons.svg#{{ name }}"></use></svg>
 {%- endmacro %}
 
+{# Status class maps (spec 006 FR-018, R9). One dict per status family; every value is a COMPLETE
+   literal utility string, so the Tailwind scanner sees it. Never build a class name by
+   concatenation. `pill` / `banner` stay in the markup as behaviour hooks (FR-019); an unknown
+   status gets the neutral style, which is the base `.pill` rule. #}
+{%- macro pill_class(status) -%}
+{%- set posting = {
+  "new": "bg-secondary-container text-on-secondary-container border-transparent",
+  "shortlist": "bg-surface-container-lowest text-primary border-primary",
+  "applied": "bg-success-container text-on-success-container border-transparent",
+  "rejected": "bg-error-container text-on-error-container border-transparent",
+} -%}
+{%- set run = {
+  "running": "bg-surface-container-lowest text-primary border-primary",
+  "success": "bg-success-container text-on-success-container border-transparent",
+  "failed": "bg-error-container text-on-error-container border-transparent",
+} -%}
+{{ posting.get(status) or run.get(status) or "" }}
+{%- endmacro %}
+
+{%- macro banner_class(kind) -%}
+{%- set kinds = {
+  "success": "bg-success-container text-on-success-container border-success",
+  "error": "bg-error-container text-on-error-container border-error",
+} -%}
+{{ kinds.get(kind) or "" }}
+{%- endmacro %}
+
 {# Status pill: text plus icon, never colour alone (FR-007). Unknown statuses stay neutral. #}
 {% macro status_pill(status, href=None) -%}
 {% set icons = {"new": "fiber_new", "shortlist": "check_circle", "applied": "send", "rejected": "cancel",
                 "running": "progress_activity", "success": "check_circle", "failed": "error"} %}
 {% set known = status in icons %}
-{% if href %}<a class="pill {{ status if known }}" href="{{ href }}">{% else %}<span class="pill {{ status if known }}">{% endif %}
+{% if href %}<a class="pill {{ pill_class(status) }}" href="{{ href }}">{% else %}<span class="pill {{ pill_class(status) }}">{% endif %}
 {%- if known %}{{ icon(icons[status]) }}{% endif %}{{ status }}
 {%- if href %}</a>{% else %}</span>{% endif %}
 {%- endmacro %}
@@ -18,7 +45,7 @@
 {# Inline status banner (FR-018). Announced via role; focusable ones can receive focus after a body swap. #}
 {% macro banner(kind, message, focusable=False) -%}
 {% set icons = {"info": "info", "success": "check_circle", "error": "error"} %}
-<div class="banner {{ kind }}" role="{{ 'alert' if kind == 'error' else 'status' }}"{% if focusable %} tabindex="-1"{% endif %}>
+<div class="banner {{ banner_class(kind) }}" role="{{ 'alert' if kind == 'error' else 'status' }}"{% if focusable %} tabindex="-1"{% endif %}>
   {{ icon(icons.get(kind, "info")) }}<div>{{ message }}</div>
 </div>
 {%- endmacro %}

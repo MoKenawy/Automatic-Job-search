@@ -267,13 +267,6 @@ main {
     animation: none !important; transition: none !important; scroll-behavior: auto !important;
   }
 }
-@media (forced-colors: active) {
-  :focus-visible { outline-color: Highlight; }
-  .pill, .chip, .banner, .bars i, .score-badge { border: 1px solid CanvasText; }
-  nav a[aria-current] { border-bottom: 3px solid Highlight; }
-  .icon { forced-color-adjust: auto; fill: currentColor; }
-  .btn-primary { border: 1px solid ButtonText; }
-}
 /* WCAG 1.4.12: nothing may depend on fixed-height text boxes. */
 .btn, .chip, .pill, th, td, label, dd, dt { overflow-wrap: anywhere; }
 
@@ -335,10 +328,6 @@ main {
   font: 500 var(--fs-label)/var(--lh-label) var(--font); white-space: nowrap; text-decoration: none;
 }
 .pill .icon { width: 0.875rem; height: 0.875rem; }
-.pill.new { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
-.pill.shortlist, .pill.running { background: var(--surface-container-lowest); color: var(--primary); border-color: var(--primary); }
-.pill.applied, .pill.success { background: var(--success-container); color: var(--on-success-container); border-color: transparent; }
-.pill.rejected, .pill.failed { background: var(--error-container); color: var(--on-error-container); border-color: transparent; }
 
 .card, .panel {
   background: var(--surface-container-lowest); border: 1px solid var(--outline-variant);
@@ -367,8 +356,6 @@ a.metric:hover { border-color: var(--outline); box-shadow: var(--shadow-2); }
   padding: var(--space-md) var(--space-lg); border: 1px solid var(--outline-variant);
   border-radius: var(--radius-lg); background: var(--secondary-container); color: var(--on-secondary-container);
 }
-.banner.success { background: var(--success-container); color: var(--on-success-container); border-color: var(--success); }
-.banner.error { background: var(--error-container); color: var(--on-error-container); border-color: var(--error); }
 
 .empty-state { padding: var(--space-3xl) var(--space-lg); text-align: center; color: var(--on-surface-variant); }
 .empty-state p { margin-bottom: var(--space-md); }
@@ -593,4 +580,15 @@ dl.meta { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: var(--
 dl.meta dt { color: var(--on-surface-variant); }
 dl.meta dd { margin: 0; word-break: break-word; }
 .pager { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-top: var(--space-md); font-size: var(--fs-body-sm); }
+}
+
+/* Forced colours (spec 006 FR-020, research R5). UNLAYERED on purpose: an unlayered rule outranks
+   every layered one, so it keeps winning over utilities such as `border-transparent` that now
+   style pills and banners. Do not move it back into a layer. */
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  .pill, .chip, .banner, .bars i, .score-badge { border: 1px solid CanvasText; }
+  nav a[aria-current] { border-bottom: 3px solid Highlight; }
+  .icon { forced-color-adjust: auto; fill: currentColor; }
+  .btn-primary { border: 1px solid ButtonText; }
 }

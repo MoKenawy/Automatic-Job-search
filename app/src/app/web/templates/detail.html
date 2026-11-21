@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, status_pill %}
+{% from "_macros.html" import icon, banner, banner_class, empty_state, pill_class, status_pill %}
 {% set active = 'postings' %}
 {% block title %}{{ p.title }} — Job discovery{% endblock %}
 {% block content %}
@@ -25,10 +25,10 @@
 </div>
 
 {% if employer.suppressed %}
-<div class="banner error" role="alert">
+<div class="banner {{ banner_class('error') }}" role="alert">
   {{ icon('block') }}
   <div>
-    <span class="pill rejected">employer blacklisted</span>
+    <span class="pill {{ pill_class('rejected') }}">employer blacklisted</span>
     <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline-form">
       <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
       <button class="btn" type="submit">{{ icon('undo') }}Remove from blacklist</button>
@@ -46,7 +46,7 @@
 <div class="banner" role="status">
   {{ icon('warning') }}
   <div>
-  <span class="pill rejected">filtered out</span>
+  <span class="pill {{ pill_class('rejected') }}">filtered out</span>
   {% if verdict.rejected %}
     Turned away on
     {% if verdict.grounds == 'both' %}title and experience
