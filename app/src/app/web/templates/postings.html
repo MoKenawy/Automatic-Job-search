@@ -96,7 +96,7 @@
   <input type="hidden" name="page" value="{{ pager.number }}">
   <div class="bulk-bar" id="bulkbar">
     <span id="selcount">0 selected</span>
-    <label class="visually-hidden" for="bulk-status">Bulk status</label>
+    <label class="sr-only" for="bulk-status">Bulk status</label>
     <select id="bulk-status" name="status">
       {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
     </select>

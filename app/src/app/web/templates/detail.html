@@ -120,7 +120,7 @@
         <dl class="meta">
           {% for site, info in p.sources.items() %}
           <dt>{{ site }}</dt>
-          <dd><a href="{{ info.url }}" target="_blank" rel="noopener">open {{ icon('open_in_new') }}<span class="visually-hidden">{{ site }} posting in a new tab</span></a></dd>
+          <dd><a href="{{ info.url }}" target="_blank" rel="noopener">open {{ icon('open_in_new') }}<span class="sr-only">{{ site }} posting in a new tab</span></a></dd>
           {% endfor %}
         </dl>
       </div>

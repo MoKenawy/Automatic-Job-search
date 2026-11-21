@@ -61,11 +61,11 @@ dependency on an unfinished task.
 
 **Goal**: new layout via utilities; low-risk cleanup. **Test**: `--visual` clean, no removed class still referenced.
 
-- [ ] T020 [US2] Create sub-branch `006-2` from updated `006-tailwind` (on user confirmation)
-- [ ] T021 [US2] Regroup `input.css` components by existing order (buttons, chips/pills, cards, tables, forms, shell, feedback, page-specific); rewrite component internals as `@apply` compositions of theme utilities only where it reads better; keep render-time variants (`pill {{ status }}`, `banner {{ kind }}`, `delta down`, `bars i.zero`) as selectors on semantic classes (FR-014)
-- [ ] T022 [P] [US2] For each helper (`.visually-hidden`, `.spacer`, `.muted`, others found): grep templates, macros, scripts and tests, replace uses with `sr-only` / equivalent utilities in `app/src/app/web/templates/**`, then delete the rule (FR-015)
-- [ ] T023 [US2] Add a `@source inline(...)` safelist entry only for classes `test_css_build.py` reports as rendered-but-missing (US2 AS-3)
-- [ ] T024 [US2] Phase 1 gate: pytest, ruff, `--visual` 44/44, drift check; record the stylesheet size as the hybrid baseline in `verification.md`
+- [X] T020 [US2] Create sub-branch `006-2` from updated `006-tailwind` (on user confirmation)
+- [X] T021 [US2] Regroup `input.css` components by existing order (buttons, chips/pills, cards, tables, forms, shell, feedback, page-specific); rewrite component internals as `@apply` compositions of theme utilities only where it reads better; keep render-time variants (`pill {{ status }}`, `banner {{ kind }}`, `delta down`, `bars i.zero`) as selectors on semantic classes (FR-014)
+- [X] T022 [P] [US2] For each helper (`.visually-hidden`, `.spacer`, `.muted`, others found): grep templates, macros, scripts and tests, replace uses with `sr-only` / equivalent utilities in `app/src/app/web/templates/**`, then delete the rule (FR-015)
+- [X] T023 [US2] Add a `@source inline(...)` safelist entry only for classes `test_css_build.py` reports as rendered-but-missing (US2 AS-3)
+- [X] T024 [US2] Phase 1 gate: pytest, ruff, `--visual` 44/44, drift check; record the stylesheet size as the hybrid baseline in `verification.md`
 
 ## Phase 5: User Story 3 — templates to utilities, group by group (P3)
 
