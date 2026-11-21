@@ -193,7 +193,42 @@ via a validator. Never read `os.environ` directly elsewhere; go through
 
 ---
 
-## 9. Extending the pipeline
+## 9. Styles
+
+Styling is authored in `src/app/web/styles/input.css` (Tailwind v4, ADR-0022) and built into
+`src/app/web/static/css/app.css`, which is **generated and committed**. Never edit
+`app.css` by hand.
+
+```powershell
+uv run python scripts/build_css.py            # rebuild (minified)
+uv run python scripts/build_css.py --watch    # rebuild while authoring
+```
+
+- The Tailwind version is pinned in `pyproject.toml` under `[tool.app.tailwind]`. The first
+  build downloads a checksum-verified binary; no Node is involved.
+- CI rebuilds and runs `git diff --exit-code` on `app.css`: commit the rebuilt file with the
+  change that needs it. After a merge conflict in it, rebuild.
+- Layout of `input.css`: theme mapping, font faces, design tokens on `:root` (light, then
+  dark), `@layer base` (restores for Tailwind's Preflight), `@layer components` (the
+  semantic component rules).
+- Do not use a bare Tailwind utility name (`inline`, `block`, `hidden`, `table`, `filter`)
+  as a bespoke class: the generated utility beats component rules.
+- Tests: `tests/test_css_build.py` (every rendered class is defined; tokens and `@source`
+  paths exist) and `tests/test_design_tokens.py` (contrast, read from `input.css`) run in the
+  default suite. The pixel gate is opt-in:
+
+```powershell
+uv sync --group visual
+uv run playwright install chromium
+uv run pytest --visual                      # 44 snapshots against tests/__snapshots__
+uv run pytest --visual --update-snapshots   # only for a recorded decision
+```
+
+Baselines are Windows-rendered; CI does not run `--visual`.
+
+---
+
+## 10. Extending the pipeline
 
 To implement a new stage (e.g. stage 3, scoring):
 
