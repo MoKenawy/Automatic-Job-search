@@ -324,9 +324,9 @@ label { color: var(--on-surface); font-weight: 500; }
 .switch[aria-checked="true"] { background: var(--success-container); color: var(--on-success-container); border-color: var(--success); }
 .switch[aria-checked="true"]::before { background: var(--success); border-color: var(--success); }
 
-/* Bars: aria-hidden visual plus a visually hidden text list (FR-008). */
-.bars { display: flex; gap: 3px; align-items: flex-end; height: 2.125rem; }
-.bars i { flex: 1; min-width: 3px; display: block; background: var(--primary); border-radius: 1px 1px 0 0; }
+/* Bars: aria-hidden visual plus a visually hidden text list (FR-008). Everything else about the
+   bars is utilities in the templates; the striped zero bar is the one-off with no utility
+   (spec 006 FR-022). The element must not also carry bg-* (a utility would beat this). */
 .bars i.zero {
   min-height: 3px; background: repeating-linear-gradient(45deg, var(--error) 0 2px, transparent 2px 4px);
   border: 1px solid var(--error);
@@ -339,32 +339,6 @@ label { color: var(--on-surface); font-weight: 500; }
   background: linear-gradient(to right, transparent, var(--surface-container-lowest));
 }
 @media (min-width: 768px) { .tab-fade::after { display: none; } }
-.page-sub { margin: var(--space-xs) 0 0; color: var(--on-surface-variant); font-size: var(--fs-body); }
-
-/* Overview (US4). */
-.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-md); }
-.overview-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-lg); margin-top: var(--space-2xl); }
-@media (min-width: 1024px) { .overview-grid { grid-template-columns: 5fr 7fr; } }
-.overview-card { display: flex; flex-direction: column; min-width: 0; }
-.card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); margin-bottom: var(--space-lg); }
-.card-head h2 { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); letter-spacing: var(--ls-sm); }
-.card-head .page-sub { font-size: var(--fs-body-sm); line-height: var(--lh-body-sm); }
-.card-foot {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-sm);
-  margin-top: auto; padding-top: var(--space-lg); font-size: var(--fs-body-sm);
-}
-.card-foot a { display: inline-flex; align-items: center; gap: var(--space-xs); font-weight: 500; }
-/* Inner panel inside a card: tone, not a second border (DESIGN.md level 1 is not nested). */
-.source { padding: var(--space-md); border-radius: var(--radius-lg); background: var(--surface-container-low); min-width: 0; }
-.distribution { display: grid; gap: var(--space-sm); }
-.dist-row { display: grid; grid-template-columns: 7rem 3rem 1fr 3rem; gap: var(--space-md); align-items: center; }
-.dist-count, .dist-pct { font-variant-numeric: tabular-nums; text-align: right; }
-.dist-pct { color: var(--on-surface-variant); }
-.dist-bar { display: block; height: 0.5rem; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; }
-.dist-bar i { display: block; height: 100%; background: var(--primary-container); }
-.health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--space-md); }
-.health-grid h3 { margin-bottom: var(--space-xs); }
-.metric-value-sm { margin: 0 0 var(--space-sm); font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* Runs (US5). */
 .delta { margin: 0 0 var(--space-sm); font-size: var(--fs-label); color: var(--on-surface-variant); font-weight: 500; }

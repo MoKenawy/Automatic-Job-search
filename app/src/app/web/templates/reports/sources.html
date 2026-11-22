@@ -7,7 +7,7 @@
 <div class="mb-6"><h1>Source coverage and overlap</h1></div>
 {% include "reports/_caveat.html" %}
 
-<div class="metric-grid">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
   {{ metric("Postings", overlap.total) }}
   {{ metric("On 2+ boards", overlap.contested) }}
   {{ metric("Same-run ties", overlap.ties) }}
@@ -89,9 +89,9 @@
         <tr>
           <td>{{ site }}</td>
           <td>
-            <div class="bars" aria-hidden="true">
+            <div class="bars flex items-end gap-[3px] h-[2.125rem]" aria-hidden="true">
               {% for _, count in series %}
-              <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+              <i class="flex-1 min-w-[3px] block rounded-t-[1px] {{ 'zero' if count == 0 else 'bg-primary' }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
               {% endfor %}
             </div>
             <ul class="sr-only">

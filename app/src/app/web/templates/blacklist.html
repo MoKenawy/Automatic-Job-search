@@ -17,7 +17,7 @@
 {{ banner('info', 'Note: blacklists applied before this change behave differently on removal — their postings stay Rejected rather than returning to their prior status (FR-013).') }}
 
 {# Both figures are derived from the rows already on the page (spec classification table). #}
-<div class="metric-grid">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
   {{ metric("Employers blacklisted", employers | length) }}
   {{ metric("Postings hidden", employers | map(attribute=1) | sum) }}
 </div>

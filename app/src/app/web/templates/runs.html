@@ -13,23 +13,23 @@
 </div>
 
 <h2>Per-source trend</h2>
-<div class="health-grid">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
   {% for site in health.sites %}
     {% set series = health.series[site] %}
     {% set peak = (series | map(attribute=1) | max) or 1 %}
     {% set latest = series[-1][1] if series else 0 %}
     <div class="{{ card_class() }}">
-      <h3>{{ site }}</h3>
-      <p class="metric-value-sm">{{ latest }}</p>
+      <h3 class="mb-1">{{ site }}</h3>
+      <p class="mt-0 mb-2 font-semibold tabular-nums text-(length:--fs-lg) leading-(--lh-lg)">{{ latest }}</p>
       {# Yield delta against the previous run: only with two or more runs, computed
          from the series the page already has (spec classification table). #}
       {% if series | length >= 2 %}
         {% set delta = latest - series[-2][1] %}
         <p class="delta {{ 'down' if delta < 0 }}">{{ '+' if delta > 0 }}{{ delta }} vs previous run</p>
       {% endif %}
-      <div class="bars" aria-hidden="true">
+      <div class="bars flex items-end gap-[3px] h-[2.125rem]" aria-hidden="true">
         {% for _, count in series %}
-        <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+        <i class="flex-1 min-w-[3px] block rounded-t-[1px] {{ 'zero' if count == 0 else 'bg-primary' }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
         {% endfor %}
       </div>
       <ul class="sr-only">
