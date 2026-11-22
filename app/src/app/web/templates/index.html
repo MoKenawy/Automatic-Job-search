@@ -74,7 +74,7 @@
             <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
             {% endfor %}
           </div>
-          <ul class="visually-hidden">
+          <ul class="sr-only">
             {% for when, count in series %}<li>{{ when.strftime('%d %b %H:%M') }}: {{ count }}</li>{% endfor %}
           </ul>
         </div>

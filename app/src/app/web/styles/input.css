@@ -255,10 +255,6 @@ code { font: 500 var(--fs-label)/var(--lh-label) ui-monospace, "Cascadia Mono", 
   background: var(--primary-container); color: var(--on-primary-container); font-weight: 500;
 }
 .skip-link:focus { top: var(--space-sm); }
-.visually-hidden {
-  position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0;
-  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
-}
 main {
   max-width: 80rem; margin: 0 auto; outline: none;
   padding: var(--space-xl) var(--space-lg) var(--space-3xl);
@@ -559,7 +555,6 @@ fieldset.form-col > legend { font-size: var(--fs-sm); font-weight: 600; padding:
   display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md) var(--space-lg);
   margin-top: var(--space-md); padding-top: var(--space-lg); border-top: 1px solid var(--outline-variant);
 }
-.spacer { flex: 1; }
 .kv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-md); }
 .kv { display: flex; flex-direction: column; gap: var(--space-xs); word-break: break-word; }
 h2 .icon { margin-right: var(--space-sm); }

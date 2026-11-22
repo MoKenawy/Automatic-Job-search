@@ -43,3 +43,17 @@ Pin: Tailwind `v4.3.5` (published 2026-11-06, 16 days before Phase 0), in
 
 - Sub-branch PR into `006-tailwind` (opened on request).
 - Nothing is committed yet.
+
+## Phase 1 gate (sub-branch `006-2`), 2026-11-22
+
+| Check | Result |
+|---|---|
+| `pytest` | 731 passed, 46 skipped |
+| `pytest --visual` | 44 of 44 match |
+| ruff, drift (rebuild) | clean |
+| `app.css` size (hybrid baseline) | 28,769 bytes (Phase 0: 28,800) |
+
+- **Helpers removed** after grepping templates, macros, scripts, tests and docs (FR-015): `.visually-hidden` (6 uses → `sr-only`) and `.spacer` (2 uses → `flex-1`).
+- **Kept on purpose:** `.muted` and `.small`. `.small` as `text-label` would also set line-height and letter-spacing (not equivalent), and `.big-score .muted` is a selector that depends on the class. Both move with their templates in Phase 2/3.
+- **Regrouping:** `input.css` already follows the spec's component order (buttons, chips/pills, cards, tables, forms, shell, feedback, page-specific), so no reorder was done; moving rules inside the layer risks source-order cascade changes for no gain.
+- No safelist entry was needed.
