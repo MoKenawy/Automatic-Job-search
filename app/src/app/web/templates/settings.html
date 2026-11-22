@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, btn_class, icon %}
+{% from "_macros.html" import banner, btn_class, card_class, icon %}
 {% set active = 'settings' %}
 {% block title %}Settings — Job discovery{% endblock %}
 {% block content %}
@@ -22,7 +22,7 @@
   </div>
 {% endmacro %}
 
-<form method="post" action="/settings" class="card">
+<form method="post" action="/settings" class="{{ card_class() }}">
   <div class="form-grid-2">
     <fieldset class="form-col">
       <legend>Execution &amp; scoring</legend>
@@ -71,9 +71,9 @@
 <h2>{{ icon('lock') }}Read-only (restart required)</h2>
 <div class="kv-grid">
   {% for key, value in readonly.items() %}
-  <div class="card kv"><span class="metric-label">{{ key }}</span><span>{{ value }}</span></div>
+  <div class="{{ card_class() }} kv"><span>{{ key }}</span><span>{{ value }}</span></div>
   {% endfor %}
-  <div class="card kv"><span class="metric-label">database_url</span><span class="text-on-surface-variant">hidden — environment only</span></div>
+  <div class="{{ card_class() }} kv"><span>database_url</span><span class="text-on-surface-variant">hidden — environment only</span></div>
 </div>
 
 {% endblock %}

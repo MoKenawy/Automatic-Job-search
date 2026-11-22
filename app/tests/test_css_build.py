@@ -147,8 +147,9 @@ def test_unknown_status_gets_the_neutral_style(unknown):
     neutral = html.unescape(macros.pill_class("")).split()
     assert html.unescape(macros.pill_class(unknown)).split() == neutral
     assert "bg-surface-container-low" in neutral
-    assert macros.banner_class(unknown).strip() == ""
-    assert macros.banner_class("info").strip() == ""
+    info = html.unescape(macros.banner_class("info")).split()
+    assert html.unescape(macros.banner_class(unknown)).split() == info
+    assert "bg-secondary-container" in info
 
 
 def test_pill_and_banner_class_names_are_never_concatenated():

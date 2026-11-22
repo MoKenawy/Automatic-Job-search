@@ -35,7 +35,7 @@
         <td><span class="pill {{ pill_class('') }}">{{ count }} postings hidden</span></td>
         <td>
           {# Plain form post (FR-016, contract C-6): no hx-post, so the redirect lands on a whole page. #}
-          <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline-form">
+          <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline m-0">
             <input type="hidden" name="return_to" value="/blacklist">
             <button class="{{ btn_class('ghost') }}" type="submit">{{ icon('undo') }}Remove</button>
           </form>

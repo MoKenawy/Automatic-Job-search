@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, empty_state, icon, metric, pill_class, status_pill, table_wrap %}
+{% from "_macros.html" import banner, card_class, empty_state, icon, metric, pill_class, status_pill, table_wrap %}
 {% set active = 'index' %}
 {% block title %}Overview — Job discovery{% endblock %}
 {% block content %}
@@ -26,7 +26,7 @@
 <div class="overview-grid">
 
   {# Triage distribution, with its own header and footer link (UX doc §4). #}
-  <section class="card overview-card">
+  <section class="{{ card_class() }} overview-card">
     {% set total = totals.by_status.values() | sum %}
     <div class="card-head">
       <div>
@@ -55,7 +55,7 @@
 
   {# Source health. A source trending toward zero while runs keep succeeding is
      the signal to investigate (§7.4). #}
-  <section class="card overview-card">
+  <section class="{{ card_class() }} overview-card">
     <div class="card-head">
       <div>
         <h2>Source health</h2>

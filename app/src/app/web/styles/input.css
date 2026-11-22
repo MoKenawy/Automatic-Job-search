@@ -274,19 +274,18 @@ th, td, label, dd, dt { overflow-wrap: anywhere; }
 
 /* State changes ease rather than snap (DESIGN.md "calm focus"). The
    prefers-reduced-motion block above cancels every one of these. */
-.card-link, .metric, tbody tr, .switch {
+.card-link, tbody tr, .switch {
   transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
     box-shadow 0.12s ease;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.card, .panel {
+.card {
   background: var(--surface-container-lowest); border: 1px solid var(--outline-variant);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
 }
 .card { padding: var(--space-lg); }
-.panel { overflow: hidden; }
 @media (min-width: 768px) { .card { padding: 1.25rem; } }
 .card-link { position: relative; }
 .card-link:hover { border-color: var(--outline); box-shadow: var(--shadow-2); }
@@ -294,20 +293,6 @@ th, td, label, dd, dt { overflow-wrap: anywhere; }
 .card-link a:focus-visible { outline: none; }
 .card-link:has(a:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.metric { display: block; text-decoration: none; color: inherit; }
-.metric .metric-value { display: block; font-size: var(--fs-lg); line-height: var(--lh-lg); font-weight: 600; letter-spacing: var(--ls-lg); font-variant-numeric: tabular-nums; color: var(--on-surface); }
-/* The figure outranks the page title, as DESIGN.md headline-xl intends. */
-@media (min-width: 768px) {
-  .metric .metric-value { font-size: var(--fs-xl); line-height: var(--lh-xl); letter-spacing: var(--ls-xl); }
-}
-.metric .metric-label { display: block; color: var(--on-surface-variant); font: 500 var(--fs-label)/var(--lh-label) var(--font); text-transform: uppercase; letter-spacing: var(--ls-label-sm); }
-a.metric:hover { border-color: var(--outline); box-shadow: var(--shadow-2); }
-
-.banner {
-  display: flex; gap: var(--space-sm); align-items: flex-start; margin: 0 0 var(--space-lg);
-  padding: var(--space-md) var(--space-lg); border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-lg); background: var(--secondary-container); color: var(--on-secondary-container);
-}
 
 table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
 th, td { text-align: left; vertical-align: middle; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--outline-variant); }
@@ -355,19 +340,6 @@ label { color: var(--on-surface); font-weight: 500; }
 }
 @media (min-width: 768px) { .tab-fade::after { display: none; } }
 .page-sub { margin: var(--space-xs) 0 0; color: var(--on-surface-variant); font-size: var(--fs-body); }
-main > .banner:first-child { margin-top: 0; }
-
-/* Posting detail (US3). */
-.back-link { margin: 0 0 var(--space-md); }
-.back-link .flip { transform: scaleX(-1); }
-.detail-actions { display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center; margin-bottom: var(--space-lg); }
-.detail-actions form, .inline-form { display: inline; margin: 0; }
-.detail-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-xl); align-items: start; }
-@media (min-width: 768px) { .detail-grid { grid-template-columns: 2fr 1fr; } }
-.detail-grid h2 { margin-top: 0; }
-.detail-grid section + section { margin-top: var(--space-xl); }
-.detail-grid h3 { margin: var(--space-lg) 0 var(--space-xs); }
-.detail-grid .card { min-width: 0; }
 
 /* Overview (US4). */
 .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--space-md); }
@@ -431,7 +403,6 @@ h2 .icon { margin-right: var(--space-sm); }
 .report-list h2 { margin: 0 0 var(--space-xs); font-size: var(--fs-md); }
 .report-list p { margin: 0; }
 .report-list .go { position: absolute; right: var(--space-lg); top: 50%; transform: translateY(-50%); }
-.banner.caveat p { margin: 0; }
 .pie-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--space-lg); }
 .pie-card { text-align: center; }
 .pie-card h3 { margin: 0 0 var(--space-md); }
@@ -449,10 +420,6 @@ h2 .icon { margin-right: var(--space-sm); }
   .formgrid { grid-template-columns: 1fr; gap: var(--space-xs) 0; }
   .formgrid .hint { grid-column: 1; margin: 0 0 var(--space-sm); }
 }
-.desc { white-space: pre-wrap; font-size: var(--fs-body); line-height: 1.6; max-height: 28.75rem; overflow-y: auto; padding-right: var(--space-sm); }
-dl.meta { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: var(--space-xs) var(--space-lg); font-size: var(--fs-body-sm); }
-dl.meta dt { color: var(--on-surface-variant); }
-dl.meta dd { margin: 0; word-break: break-word; }
 .pager { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-top: var(--space-md); font-size: var(--fs-body-sm); }
 }
 

@@ -75,7 +75,7 @@ convert the listed templates; compare screenshots; for fragments compare markup 
 - [X] T025 [US3] `006-3.1` — `app/src/app/web/templates/_macros.html`: add one dict per status family (posting, run, banner kind) of complete literal class strings with `_neutral` fallback (R9); fill in `contracts/class-contract.md` §2 with the real strings; route `base.html` last-run pill and `index.html` distribution pills through `status_pill()`; extend `test_css_build.py` for unknown-status fallback
 - [X] T026 [US3] `006-3.2` — `base.html`: shell, wordmark, tab strip, last-run pill, skip link, live region, `main`; state variants for `aria-current`/`aria-busy`/focus (FR-020)
 - [X] T027 [US3] `006-3.3` — `postings.html`, `_row_status.html`, `_status_control.html`; assert C-1, C-2, C-3 ids/targets/swaps unchanged and fragment markup equals the full-page region
-- [ ] T028 [US3] `006-3.4` — `detail.html`: detail grid, actions, metadata list, description
+- [X] T028 [US3] `006-3.4` — `detail.html`: detail grid, actions, metadata list, description
 - [ ] T029 [US3] `006-3.5` — `index.html`: metric cards, distribution rows, source-health bars (bar heights stay inline, FR-021)
 - [ ] T030 [US3] `006-3.6` — `runs.html`, `profiles.html`, `blacklist.html`, `settings.html`: forms, tables, switch (`aria-checked`), rules expander
 - [ ] T031 [US3] `006-3.7` — `reports/index.html`, `sources.html`, `employers.html`, `profiles.html`, `_caveat.html`: pie and legend stay as small custom rules with `var(--token)` inline styles
