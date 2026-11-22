@@ -25,7 +25,7 @@
          from the series the page already has (spec classification table). #}
       {% if series | length >= 2 %}
         {% set delta = latest - series[-2][1] %}
-        <p class="delta {{ 'down' if delta < 0 }}">{{ '+' if delta > 0 }}{{ delta }} vs previous run</p>
+        <p class="mt-0 mb-2 text-(length:--fs-label) font-medium {{ 'text-error' if delta < 0 else 'text-on-surface-variant' }}">{{ '+' if delta > 0 }}{{ delta }} vs previous run</p>
       {% endif %}
       <div class="bars flex items-end gap-[3px] h-[2.125rem]" aria-hidden="true">
         {% for _, count in series %}
@@ -87,7 +87,7 @@
         </td>
       </tr>
       {% if r.error %}
-      <tr class="run-error"><td></td><td colspan="10"><strong>Error:</strong> {{ r.error }}</td></tr>
+      <tr class="[&_td]:bg-error-container [&_td]:text-on-error-container [&_td]:text-(length:--fs-label)"><td></td><td colspan="10"><strong>Error:</strong> {{ r.error }}</td></tr>
       {% endif %}
       {% else %}
       <tr><td colspan="11">{{ empty_state("No runs recorded yet.") }}</td></tr>

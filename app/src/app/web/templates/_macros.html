@@ -32,6 +32,21 @@ inline-flex items-center justify-center gap-1 {{ "min-w-9" if wide else "min-w-6
 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1 p-4 md:p-5
 {%- endmacro %}
 
+{# Form field wrapper (label + control), and the inline variant used for "hour : minute". Controls
+   inside it carry their own w-full. #}
+{%- macro field_class(row=False) -%}
+{{ "flex flex-row items-center gap-2 m-0 min-w-0 border-0 p-0" if row else "flex flex-col gap-1 mb-4 min-w-0 border-0 p-0" }}
+{%- endmacro %}
+
+{%- macro check_class() -%}
+inline-flex items-center gap-2 min-h-6 font-normal
+{%- endmacro %}
+
+{# Helper text under a control; `grid` places it in the second column of the rules form. #}
+{%- macro hint_class(grid=False) -%}
+{{ "col-start-2 -mt-2 mb-1 text-label text-on-surface-variant max-sm:col-start-1 max-sm:mt-0 max-sm:mb-2" if grid else "m-0 text-label text-on-surface-variant" }}
+{%- endmacro %}
+
 {# Filter / segmented-control chip; the selected one carries aria-current (no script needed). #}
 {%- macro chip_class() -%}
 chip inline-flex items-center gap-1 min-h-7 px-3 border border-outline-variant rounded bg-surface-container-low text-on-surface-variant text-label font-medium no-underline capitalize wrap-anywhere transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] hover:bg-surface-container-high aria-[current]:bg-inverse-surface aria-[current]:border-inverse-surface aria-[current]:text-inverse-on-surface aria-[current]:hover:bg-inverse-surface

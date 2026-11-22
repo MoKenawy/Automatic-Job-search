@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, btn_class, card_class, icon %}
+{% from "_macros.html" import banner, btn_class, card_class, check_class, field_class, hint_class, icon %}
 {% set active = 'settings' %}
 {% block title %}Settings — Job discovery{% endblock %}
 {% block content %}
@@ -16,23 +16,23 @@
 </div>
 
 {% macro field(key, label, type='text', hint='') %}
-  <div class="field">
+  <div class="{{ field_class() }}">
     <label for="{{ key }}">{{ label }}{% if hint %}<span class="text-on-surface-variant"> — {{ hint }}</span>{% endif %}</label>
-    <input id="{{ key }}" name="{{ key }}" type="{{ type }}" value="{{ values[key] }}">
+    <input class="w-full" id="{{ key }}" name="{{ key }}" type="{{ type }}" value="{{ values[key] }}">
   </div>
 {% endmacro %}
 
 <form method="post" action="/settings" class="{{ card_class() }}">
-  <div class="form-grid-2">
-    <fieldset class="form-col">
-      <legend>Execution &amp; scoring</legend>
+  <div class="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+    <fieldset class="border-0 m-0 p-0 min-w-0">
+      <legend class="p-0 mb-3 font-semibold text-(length:--fs-sm)">Execution &amp; scoring</legend>
       {{ field('results_per_search', 'Results per search', 'number') }}
       {{ field('hours_old', 'Hours old window', 'number') }}
       {{ field('request_delay_seconds', 'Request delay (s)', 'number', 'raise first to ease restriction') }}
       {{ field('publish_threshold', 'Publish threshold', 'number', '0–100') }}
       {{ field('scoring_model', 'Scoring model') }}
-      <div class="field">
-        <label class="check" for="linkedin_fetch_description">
+      <div class="{{ field_class() }}">
+        <label class="{{ check_class() }}" for="linkedin_fetch_description">
           <input id="linkedin_fetch_description" name="linkedin_fetch_description" type="checkbox"
                  {{ 'checked' if values['linkedin_fetch_description'] }}>
           Fetch LinkedIn descriptions<span class="text-on-surface-variant"> — slower</span>
@@ -40,14 +40,14 @@
       </div>
     </fieldset>
 
-    <fieldset class="form-col">
-      <legend>Filters &amp; network</legend>
+    <fieldset class="border-0 m-0 p-0 min-w-0">
+      <legend class="p-0 mb-3 font-semibold text-(length:--fs-sm)">Filters &amp; network</legend>
       {{ field('title_include_pattern', 'Title include regex') }}
       {{ field('title_exclude_pattern', 'Title exclude regex') }}
       {# D6 and ADR-0016. The coupling in the second sentence is invisible from
          this screen, and the filter fails open when it bites, so nothing else
          would tell the operator it had happened. #}
-      <p class="hint">
+      <p class="{{ hint_class() }}">
         Applied to the job title only; empty switches the criterion off. These bind
         every posting; a search profile can add its own on the
         <a href="/profiles">profiles</a> page, but never loosen these. Seniority
@@ -55,25 +55,25 @@
         on — the board declares a posting's level only when descriptions are
         fetched.
       </p>
-      <div class="field">
+      <div class="{{ field_class() }}">
         <label for="proxies">Proxies<span class="text-on-surface-variant"> — one per line</span></label>
-        <textarea id="proxies" name="proxies" rows="2">{{ values['proxies'] | join('\n') }}</textarea>
+        <textarea class="w-full" id="proxies" name="proxies" rows="2">{{ values['proxies'] | join('\n') }}</textarea>
       </div>
     </fieldset>
   </div>
 
-  <div class="form-footer">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mt-3 pt-4 border-t border-outline-variant">
     <span class="flex-1"></span>
     <button class="{{ btn_class('primary') }}" type="submit">Save settings</button>
   </div>
 </form>
 
-<h2>{{ icon('lock') }}Read-only (restart required)</h2>
-<div class="kv-grid">
+<h2>{{ icon('lock', cls='mr-2') }}Read-only (restart required)</h2>
+<div class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-3">
   {% for key, value in readonly.items() %}
-  <div class="{{ card_class() }} kv"><span>{{ key }}</span><span>{{ value }}</span></div>
+  <div class="{{ card_class() }} flex flex-col gap-1 [word-break:break-word]"><span>{{ key }}</span><span>{{ value }}</span></div>
   {% endfor %}
-  <div class="{{ card_class() }} kv"><span>database_url</span><span class="text-on-surface-variant">hidden — environment only</span></div>
+  <div class="{{ card_class() }} flex flex-col gap-1 [word-break:break-word]"><span>database_url</span><span class="text-on-surface-variant">hidden — environment only</span></div>
 </div>
 
 {% endblock %}

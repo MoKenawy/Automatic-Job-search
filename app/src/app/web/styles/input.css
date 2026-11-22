@@ -274,7 +274,7 @@ th, td, label, dd, dt { overflow-wrap: anywhere; }
 
 /* State changes ease rather than snap (DESIGN.md "calm focus"). The
    prefers-reduced-motion block above cancels every one of these. */
-.card-link, tbody tr, .switch {
+.card-link, tbody tr {
   transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
     box-shadow 0.12s ease;
 }
@@ -311,19 +311,6 @@ input::placeholder, textarea::placeholder { color: var(--on-surface-variant); op
 input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--primary); }
 input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; accent-color: var(--primary-container); vertical-align: middle; }
 label { color: var(--on-surface); font-weight: 500; }
-
-.switch {
-  display: inline-flex; align-items: center; gap: var(--space-sm); min-height: 1.75rem;
-  padding: 0 var(--space-md) 0 var(--space-xs); border: 1px solid var(--outline); border-radius: var(--radius-full);
-  background: var(--surface-container-lowest); color: var(--on-surface); font: 500 var(--fs-label)/1 var(--font); cursor: pointer;
-}
-.switch::before {
-  content: ""; width: 1rem; height: 1rem; border-radius: var(--radius-full);
-  background: var(--outline); border: 2px solid var(--outline);
-}
-.switch[aria-checked="true"] { background: var(--success-container); color: var(--on-success-container); border-color: var(--success); }
-.switch[aria-checked="true"]::before { background: var(--success); border-color: var(--success); }
-
 /* Bars: aria-hidden visual plus a visually hidden text list (FR-008). Everything else about the
    bars is utilities in the templates; the striped zero bar is the one-off with no utility
    (spec 006 FR-022). The element must not also carry bg-* (a utility would beat this). */
@@ -340,37 +327,6 @@ label { color: var(--on-surface); font-weight: 500; }
 }
 @media (min-width: 768px) { .tab-fade::after { display: none; } }
 
-/* Runs (US5). */
-.delta { margin: 0 0 var(--space-sm); font-size: var(--fs-label); color: var(--on-surface-variant); font-weight: 500; }
-.delta.down { color: var(--error); }
-.run-error td { background: var(--error-container); color: var(--on-error-container); font-size: var(--fs-label); }
-
-/* Schedules (US6) and forms (US7). */
-.profile-list td { vertical-align: top; }
-.rules-row td { padding-top: 0; border-top: 0; }
-.rules-row summary { cursor: pointer; color: var(--on-surface-variant); font-size: var(--fs-label); padding: var(--space-xs) 0; }
-.rules-form { margin: var(--space-md) 0; }
-.field { display: flex; flex-direction: column; gap: var(--space-xs); margin: 0 0 var(--space-lg); min-width: 0; border: 0; padding: 0; }
-/* Renamed from .field.inline: a bare `inline` class collides with the Tailwind utility (006 US1). */
-.field.field-inline { flex-direction: row; align-items: center; gap: var(--space-sm); margin: 0; }
-.field input[type="text"], .field input[type="number"], .field input:not([type]), .field select, .field textarea { width: 100%; }
-.field legend { padding: 0; font-weight: 500; margin-bottom: var(--space-xs); }
-.hint { margin: 0; font-size: var(--fs-label); line-height: var(--lh-label); color: var(--on-surface-variant); }
-.form-grid-2 { display: grid; grid-template-columns: 1fr; gap: 0 var(--space-2xl); }
-@media (min-width: 768px) { .form-grid-2 { grid-template-columns: 1fr 1fr; } }
-fieldset.form-col { border: 0; margin: 0; padding: 0; min-width: 0; }
-fieldset.form-col > legend { font-size: var(--fs-sm); font-weight: 600; padding: 0; margin-bottom: var(--space-md); }
-.checks { display: flex; flex-wrap: wrap; gap: var(--space-sm) var(--space-lg); }
-.check { display: inline-flex; align-items: center; gap: var(--space-sm); font-weight: 400; min-height: 1.5rem; }
-.narrow { width: 4.5rem; }
-.form-footer {
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md) var(--space-lg);
-  margin-top: var(--space-md); padding-top: var(--space-lg); border-top: 1px solid var(--outline-variant);
-}
-.kv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-md); }
-.kv { display: flex; flex-direction: column; gap: var(--space-xs); word-break: break-word; }
-h2 .icon { margin-right: var(--space-sm); }
-
 /* Reports (US9). */
 .report-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-md); }
 .report-list .card-link { padding-right: 3rem; }
@@ -386,15 +342,6 @@ h2 .icon { margin-right: var(--space-sm); }
 .legend li { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs) 0; }
 .legend .dot { width: 0.625rem; height: 0.625rem; border-radius: var(--radius-full); flex: none; }
 
-/* Helpers kept from the earlier markup, now on the tokens. */
-.formgrid { display: grid; grid-template-columns: 13.75rem 1fr; gap: var(--space-md) var(--space-lg); align-items: center; }
-.formgrid input[type="text"], .formgrid input[type="number"], .formgrid input:not([type]), .formgrid textarea { width: 100%; }
-.formgrid .hint { grid-column: 2; margin: calc(var(--space-sm) * -1) 0 var(--space-xs); }
-@media (max-width: 640px) {
-  .formgrid { grid-template-columns: 1fr; gap: var(--space-xs) 0; }
-  .formgrid .hint { grid-column: 1; margin: 0 0 var(--space-sm); }
-}
-.pager { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; margin-top: var(--space-md); font-size: var(--fs-body-sm); }
 }
 
 /* Forced colours (spec 006 FR-020, research R5). UNLAYERED on purpose: an unlayered rule outranks
