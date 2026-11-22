@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, table_wrap, status_pill %}
+{% from "_macros.html" import icon, banner, empty_state, pill_class, table_wrap, status_pill %}
 {% set active = 'postings' %}
 {% block title %}Postings — Job discovery{% endblock %}
 {% block content %}
@@ -130,8 +130,8 @@
         <td><span class="initial" aria-hidden="true">{{ employer.name[:1] | upper }}</span>{{ employer.name }}</td>
         <td class="muted">{{ icon('location_on') }} {{ 'Remote' if p.is_remote else (p.country_code or '—') }}</td>
         <td>
-          {% for site in p.sources.keys() %}<span class="pill">{{ site }}</span> {% endfor %}
-          {% if p.sources | length > 1 %}<span class="pill">×{{ p.sources | length }}</span>{% endif %}
+          {% for site in p.sources.keys() %}<span class="pill {{ pill_class('') }}">{{ site }}</span> {% endfor %}
+          {% if p.sources | length > 1 %}<span class="pill {{ pill_class('') }}">×{{ p.sources | length }}</span>{% endif %}
         </td>
         <td class="muted">{% if shell.now and p.date_posted %}{{ p.date_posted | relative_age(shell.now) }}{% else %}{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}{% endif %}</td>
         {% if status == 'rejected' %}

@@ -9,7 +9,15 @@
    literal utility string, so the Tailwind scanner sees it. Never build a class name by
    concatenation. `pill` / `banner` stay in the markup as behaviour hooks (FR-019); an unknown
    status gets the neutral style, which is the base `.pill` rule. #}
-{%- macro pill_class(status) -%}
+{# Shared utility clusters (spec 006 FR-017). Complete literal strings, so the scanner sees them. #}
+{% set ui = {
+  "transition": "transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]",
+} %}
+
+{# The pill is the same cluster everywhere, so it lives here and not in each template. The colour
+   set is part of the complete string (two bg-* utilities on one element would conflict). #}
+{%- macro pill_class(status, tall=False) -%}
+{%- set base = ("inline-flex items-center gap-1 min-h-7 px-2 border rounded-full text-label font-medium whitespace-nowrap wrap-anywhere normal-nums no-underline [&_.icon]:size-3.5 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]") if tall else "inline-flex items-center gap-1 min-h-5 px-2 border rounded-full text-label font-medium whitespace-nowrap wrap-anywhere normal-nums no-underline [&_.icon]:size-3.5 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]" -%}
 {%- set posting = {
   "new": "bg-secondary-container text-on-secondary-container border-transparent",
   "shortlist": "bg-surface-container-lowest text-primary border-primary",
@@ -21,7 +29,7 @@
   "success": "bg-success-container text-on-success-container border-transparent",
   "failed": "bg-error-container text-on-error-container border-transparent",
 } -%}
-{{ posting.get(status) or run.get(status) or "" }}
+{{ base }} {{ posting.get(status) or run.get(status) or "bg-surface-container-low text-on-surface-variant border-outline-variant" }}
 {%- endmacro %}
 
 {%- macro banner_class(kind) -%}

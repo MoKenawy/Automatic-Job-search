@@ -65,10 +65,14 @@
   --text-body-sm--line-height: var(--lh-body-sm);
   --text-label: var(--fs-label);
   --text-label--line-height: var(--lh-label);
-  --text-label--letter-spacing: var(--ls-label);
   --text-label-sm: var(--fs-label-sm);
   --text-label-sm--line-height: var(--lh-label-sm);
-  --text-label-sm--letter-spacing: var(--ls-label-sm);
+
+  /* Letter-spacing is separate for the label roles: the components pair it with the size on
+     some elements only (th, .metric-label), so text-label must not add it (006 phase 2). */
+  --tracking-*: initial;
+  --tracking-label: var(--ls-label);
+  --tracking-label-sm: var(--ls-label-sm);
 
   --font-sans: var(--font);
   --spacing: 0.25rem;
@@ -80,6 +84,7 @@
    outrank this layered declaration (R3, verify in Phase 0). */
 @theme static {
   --radius-*: initial;
+  --radius: 0.25rem;
   --radius-sm: 0.125rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
@@ -165,7 +170,6 @@
   /* Spacing and radii. */
   --space-2xs: 0.125rem; --space-xs: 0.25rem; --space-sm: 0.5rem; --space-md: 0.75rem;
   --space-lg: 1rem; --space-xl: 1.5rem; --space-2xl: 2rem; --space-3xl: 3rem;
-  --radius: 0.25rem;
   --control-h: 2.25rem;
   --shell-h: 3.5rem;
 
@@ -249,12 +253,6 @@ a:hover { text-decoration-thickness: 2px; }
 code { font: 500 var(--fs-label)/var(--lh-label) ui-monospace, "Cascadia Mono", Consolas, monospace; }
 :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
-.skip-link {
-  position: absolute; left: var(--space-sm); top: -4rem; z-index: 20;
-  padding: var(--space-sm) var(--space-lg); border-radius: var(--radius);
-  background: var(--primary-container); color: var(--on-primary-container); font-weight: 500;
-}
-.skip-link:focus { top: var(--space-sm); }
 main {
   max-width: 80rem; margin: 0 auto; outline: none;
   padding: var(--space-xl) var(--space-lg) var(--space-3xl);
@@ -268,7 +266,7 @@ main {
   }
 }
 /* WCAG 1.4.12: nothing may depend on fixed-height text boxes. */
-.btn, .chip, .pill, th, td, label, dd, dt { overflow-wrap: anywhere; }
+.btn, .chip, th, td, label, dd, dt { overflow-wrap: anywhere; }
 
 /* =========================== 3. COMPONENTS ============================= */
 
@@ -276,7 +274,7 @@ main {
 
 /* State changes ease rather than snap (DESIGN.md "calm focus"). The
    prefers-reduced-motion block above cancels every one of these. */
-.btn, .chip, .pill, .card-link, .metric, .shell nav a, tbody tr, .switch {
+.btn, .chip, .card-link, .metric, tbody tr, .switch {
   transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
     box-shadow 0.12s ease;
 }
@@ -319,15 +317,6 @@ main {
   background: var(--inverse-surface); border-color: var(--inverse-surface); color: var(--inverse-on-surface);
 }
 .chip[aria-current]:hover, .chip.on:hover { background: var(--inverse-surface); }
-
-/* Status pill: text plus icon, never colour alone (FR-007). */
-.pill {
-  display: inline-flex; align-items: center; gap: var(--space-xs); min-height: 1.25rem;
-  padding: 0 var(--space-sm); border: 1px solid var(--outline-variant); border-radius: var(--radius-full);
-  background: var(--surface-container-low); color: var(--on-surface-variant);
-  font: 500 var(--fs-label)/var(--lh-label) var(--font); white-space: nowrap; text-decoration: none;
-}
-.pill .icon { width: 0.875rem; height: 0.875rem; }
 
 .card, .panel {
   background: var(--surface-container-lowest); border: 1px solid var(--outline-variant);
@@ -400,38 +389,13 @@ label { color: var(--on-surface); font-weight: 500; }
   border: 1px solid var(--error);
 }
 
-/* Shell: sticky header, wordmark, tab strip, last-run pill (FR-013, FR-015, FR-019). */
-.shell { position: sticky; top: 0; z-index: 10; background: var(--surface-container-lowest); border-bottom: 1px solid var(--outline-variant); }
-.shell-inner {
-  max-width: 80rem; margin: 0 auto; min-height: var(--shell-h); padding: 0 var(--space-lg);
-  display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--space-xl);
-}
-.wordmark { font-weight: 600; font-size: var(--fs-md); letter-spacing: var(--ls-md); color: var(--on-surface); text-decoration: none; padding: var(--space-md) 0; }
-.wordmark span { color: var(--primary); }
-.shell nav { order: 3; flex: 1 0 100%; min-width: 0; position: relative; }
-.shell nav ul {
-  display: flex; gap: var(--space-xs); margin: 0; padding: 0 0 0 0; list-style: none;
-  overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none;
-}
-.shell nav li { flex: none; scroll-snap-align: start; }
-.shell nav a {
-  display: flex; align-items: center; min-height: 2.5rem; padding: 0 var(--space-md);
-  color: var(--on-surface-variant); font-weight: 500; text-decoration: none; border-bottom: 3px solid transparent;
-}
-.shell nav a:hover { color: var(--on-surface); background: var(--surface-container-low); }
-.shell nav a[aria-current="page"] { color: var(--primary); border-bottom-color: var(--primary-container); }
-.shell nav::after {
+/* Tab-strip scroll fade: the one shell rule with no exact utility (a gradient on a pseudo-element).
+   Spec 006 FR-022 one-off; everything else in the shell is utilities in base.html. */
+.tab-fade::after {
   content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1.5rem; pointer-events: none;
   background: linear-gradient(to right, transparent, var(--surface-container-lowest));
 }
-.last-run { margin-left: auto; min-height: 1.75rem; }
-@media (min-width: 768px) {
-  .shell-inner { padding: 0 var(--space-xl); flex-wrap: nowrap; }
-  .shell nav { order: 0; flex: 1 1 auto; align-self: stretch; }
-  .shell nav ul { height: 100%; }
-  .shell nav a { min-height: var(--shell-h); }
-  .shell nav::after { display: none; }
-}
+@media (min-width: 768px) { .tab-fade::after { display: none; } }
 .page-head { margin-bottom: var(--space-xl); }
 .page-sub { margin: var(--space-xs) 0 0; color: var(--on-surface-variant); font-size: var(--fs-body); }
 main > .banner:first-child { margin-top: 0; }

@@ -97,11 +97,11 @@
           {% if p.rationale %}<p>{{ p.rationale }}</p>{% endif %}
           {% if p.matched_skills %}
             <h3>Matched</h3>
-            <p>{% for s in p.matched_skills %}<span class="pill">{{ s }}</span> {% endfor %}</p>
+            <p>{% for s in p.matched_skills %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</p>
           {% endif %}
           {% if p.gaps %}
             <h3>Gaps</h3>
-            <p>{% for s in p.gaps %}<span class="pill">{{ s }}</span> {% endfor %}</p>
+            <p>{% for s in p.gaps %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</p>
           {% endif %}
           {% if p.scored_by_model %}
             <p class="muted small">

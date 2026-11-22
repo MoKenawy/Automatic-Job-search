@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, table_wrap %}
+{% from "_macros.html" import icon, banner, empty_state, pill_class, table_wrap %}
 {% set active = 'profiles' %}
 {% block title %}Schedules — Job discovery{% endblock %}
 {% block content %}
@@ -36,8 +36,8 @@
       {% for p in profiles %}
       <tr>
         <td><strong>{{ p.name }}</strong><br><span class="muted">{{ p.term }}</span></td>
-        <td class="muted">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill">remote</span>{% endif %}</td>
-        <td>{% for s in p.sites %}<span class="pill">{{ s }}</span> {% endfor %}</td>
+        <td class="muted">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill {{ pill_class('') }}">remote</span>{% endif %}</td>
+        <td>{% for s in p.sites %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</td>
         <td class="muted">{{ p.experience or '—' }}</td>
         <td>{{ '%02d:%02d' | format(p.schedule_hour, p.schedule_minute) }}</td>
         <td>

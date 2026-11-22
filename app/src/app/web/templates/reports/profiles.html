@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import empty_state %}
+{% from "_macros.html" import empty_state, pill_class %}
 {% set active = 'reports' %}
 {% block title %}Profile triage — Reports — Job discovery{% endblock %}
 {% block content %}
@@ -19,7 +19,7 @@
 <div class="pie-grid">
   {% for row in rows %}
   <div class="card pie-card">
-    <h3>{{ row.profile.name }}{% if not row.profile.enabled %} <span class="pill">disabled</span>{% endif %}</h3>
+    <h3>{{ row.profile.name }}{% if not row.profile.enabled %} <span class="pill {{ pill_class('') }}">disabled</span>{% endif %}</h3>
     {% if row.total %}
       {% set ns = namespace(acc=0) %}
       <div class="pie" aria-hidden="true" style="background: conic-gradient(
