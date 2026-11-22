@@ -1,4 +1,4 @@
-{% from "_macros.html" import status_pill, icon %}
+{% from "_macros.html" import btn_class, icon, status_pill %}
 {# Inline list-row triage control (US1). One click per transition, updating the
    status cell in place. Mirrors _status_control.html but compact for a table row
    and carries variant=row so the endpoint returns this fragment. Posts normally
@@ -7,17 +7,17 @@
    `name="variant" value="row"` order stay. Each action is icon + visible label (FR-017). #}
 {% set labels = {"new": "New", "shortlist": "Shortlist", "applied": "Applied", "rejected": "Reject"} %}
 {% set icons = {"new": "fiber_new", "shortlist": "check_circle", "applied": "send", "rejected": "cancel"} %}
-<span class="statusbox row-actions" id="status-{{ p.id }}">
+<span class="inline-flex flex-wrap items-center gap-1" id="status-{{ p.id }}">
   {{ status_pill(p.status) }}
   {% for s in statuses %}{% if s != p.status %}
-  <form method="post" action="/postings/{{ p.id }}/status"
+  <form class="m-0 inline" method="post" action="/postings/{{ p.id }}/status"
         hx-post="/postings/{{ p.id }}/status"
         hx-target="#status-{{ p.id }}"
         hx-swap="outerHTML"
         hx-disabled-elt="find button">
     <input type="hidden" name="status" value="{{ s }}">
     <input type="hidden" name="variant" value="row">
-    <button class="btn btn-sm" type="submit" title="Set {{ s }}">{{ icon(icons.get(s, "check")) }}{{ labels.get(s, s) }}</button>
+    <button class="{{ btn_class(size='sm') }}" type="submit" title="Set {{ s }}">{{ icon(icons.get(s, "check")) }}{{ labels.get(s, s) }}</button>
   </form>
   {% endif %}{% endfor %}
 </span>

@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, pill_class, table_wrap %}
+{% from "_macros.html" import banner, btn_class, empty_state, icon, pill_class, table_wrap %}
 {% set active = 'profiles' %}
 {% block title %}Schedules — Job discovery{% endblock %}
 {% block content %}
 
 {% if error %}{{ banner('error', error, focusable=True) }}{% endif %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Search schedules</h1>
-  <p class="page-sub">
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
     Each profile is a saved job survey with its own role, sites, and run time. Enabled
     profiles run automatically at their scheduled time; any can be run now (ADR-0005).
     <a href="/settings">{{ icon('settings') }}Run settings</a>
   </p>
 </div>
-<p class="page-sub">
+<p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
   Each profile can also carry its own filter rules. They apply <strong>in addition to</strong>
   the title patterns on the <a href="/settings">settings</a> page, never instead of them, and
   exclude always beats include. A posting found by more than one profile is kept if any one
@@ -35,10 +35,10 @@
     <tbody>
       {% for p in profiles %}
       <tr>
-        <td><strong>{{ p.name }}</strong><br><span class="muted">{{ p.term }}</span></td>
-        <td class="muted">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill {{ pill_class('') }}">remote</span>{% endif %}</td>
+        <td><strong>{{ p.name }}</strong><br><span class="text-on-surface-variant">{{ p.term }}</span></td>
+        <td class="text-on-surface-variant">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill {{ pill_class('') }}">remote</span>{% endif %}</td>
         <td>{% for s in p.sites %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</td>
-        <td class="muted">{{ p.experience or '—' }}</td>
+        <td class="text-on-surface-variant">{{ p.experience or '—' }}</td>
         <td>{{ '%02d:%02d' | format(p.schedule_hour, p.schedule_minute) }}</td>
         <td>
           {# Contract C-7: stays a submit button in the same form; the switch look and
@@ -49,13 +49,13 @@
           </form>
         </td>
         <td>
-          <div class="row-actions">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
             <form method="post" action="/profiles/{{ p.id }}/run" class="inline-form">
-              <button class="btn btn-sm" type="submit" title="Run this profile now">{{ icon('play_arrow') }}Run now</button>
+              <button class="{{ btn_class(size='sm') }}" type="submit" title="Run this profile now">{{ icon('play_arrow') }}Run now</button>
             </form>
             <form method="post" action="/profiles/{{ p.id }}/delete" class="inline-form"
                   onsubmit="return confirm('Delete profile {{ p.name }}?');">
-              <button class="btn btn-sm" type="submit">{{ icon('delete') }}Delete</button>
+              <button class="{{ btn_class(size='sm') }}" type="submit">{{ icon('delete') }}Delete</button>
             </form>
           </div>
         </td>
@@ -91,7 +91,7 @@
               <input id="exc-{{ p.id }}" name="title_exclude_pattern" value="{{ p.title_exclude_pattern or '' }}"
                      placeholder="regular expression, optional — wins over the include pattern">
               <span></span>
-              <span><button class="btn" type="submit">Save filter rules</button></span>
+              <span><button class="{{ btn_class() }}" type="submit">Save filter rules</button></span>
             </form>
           </details>
         </td>
@@ -183,8 +183,8 @@
       </span>
     </div>
     <span class="flex-1"></span>
-    <button class="btn" type="reset">Cancel</button>
-    <button class="btn btn-primary" type="submit">Save schedule</button>
+    <button class="{{ btn_class() }}" type="reset">Cancel</button>
+    <button class="{{ btn_class('primary') }}" type="submit">Save schedule</button>
   </div>
 </form>
 

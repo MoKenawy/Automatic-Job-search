@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, banner_class, empty_state, pill_class, status_pill %}
+{% from "_macros.html" import banner, banner_class, btn_class, empty_state, icon, pill_class, status_pill %}
 {% set active = 'postings' %}
 {% block title %}{{ p.title }} — Job discovery{% endblock %}
 {% block content %}
 
 <p class="back-link"><a href="/postings">{{ icon('arrow_forward', cls='flip') }}Postings</a></p>
 
-<div class="page-head">
+<div class="mb-6">
   <h1>{{ p.title }}</h1>
-  <p class="page-sub">{{ employer.name }}{% if p.country_code %} · {{ p.country_code }}{% endif %}{% if p.is_remote %} · Remote{% endif %}</p>
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">{{ employer.name }}{% if p.country_code %} · {{ p.country_code }}{% endif %}{% if p.is_remote %} · Remote{% endif %}</p>
 </div>
 
 <div class="detail-actions">
@@ -19,7 +19,7 @@
     <form method="post" action="/employers/{{ employer.id }}/blacklist"
           onsubmit="return confirm('Blacklist {{ employer.name }}? All their postings will be rejected.');">
       <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
-      <button class="btn" type="submit">{{ icon('block') }}Blacklist {{ employer.name }}</button>
+      <button class="{{ btn_class() }}" type="submit">{{ icon('block') }}Blacklist {{ employer.name }}</button>
     </form>
   {% endif %}
 </div>
@@ -31,7 +31,7 @@
     <span class="pill {{ pill_class('rejected') }}">employer blacklisted</span>
     <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline-form">
       <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
-      <button class="btn" type="submit">{{ icon('undo') }}Remove from blacklist</button>
+      <button class="{{ btn_class() }}" type="submit">{{ icon('undo') }}Remove from blacklist</button>
     </form>
   </div>
 </div>
@@ -67,7 +67,7 @@
   {% endif %}
   {% if verdict.title_passed is not none or verdict.experience_passed is not none %}
     {% if (verdict.title_passed, verdict.experience_passed) != (current.title_passed, current.experience_passed) %}
-      <br><span class="muted">The criteria, or the profiles that found this
+      <br><span class="text-on-surface-variant">The criteria, or the profiles that found this
       posting, have changed since the filter was last applied — re-apply with
       <code>filter --all</code> to update this verdict.</span>
     {% endif %}
@@ -93,7 +93,7 @@
       <h2 id="h-assess">Assessment</h2>
       <div class="card">
         {% if p.score is not none %}
-          <div class="score big-score">{{ p.score }}<span class="muted">/100</span></div>
+          <div class="font-semibold tabular-nums text-(length:--fs-xl-mobile) leading-(--lh-xl-mobile)">{{ p.score }}<span class="text-(length:--fs-sm) font-normal text-on-surface-variant">/100</span></div>
           {% if p.rationale %}<p>{{ p.rationale }}</p>{% endif %}
           {% if p.matched_skills %}
             <h3>Matched</h3>
@@ -104,7 +104,7 @@
             <p>{% for s in p.gaps %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</p>
           {% endif %}
           {% if p.scored_by_model %}
-            <p class="muted small">
+            <p class="text-on-surface-variant text-(length:--fs-label)">
               {{ p.scored_by_model }}{% if p.scored_at %}, {{ p.scored_at.strftime('%d %b %H:%M') }}{% endif %}
             </p>
           {% endif %}
@@ -143,7 +143,7 @@
           <dt>Seniority</dt><dd>{{ p.job_level or '—' }}</dd>
           <dt>Title filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
           <dt>Experience filter</dt><dd>{{ 'passed' if p.experience_filter_passed else ('rejected' if p.experience_filter_passed is not none else '—') }}</dd>
-          <dt>Fingerprint</dt><dd class="muted small">{{ p.fingerprint[:24] }}…</dd>
+          <dt>Fingerprint</dt><dd class="text-on-surface-variant text-(length:--fs-label)">{{ p.fingerprint[:24] }}…</dd>
         </dl>
       </div>
     </section>

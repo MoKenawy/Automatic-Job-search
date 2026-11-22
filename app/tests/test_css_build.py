@@ -28,8 +28,8 @@ BUILT_CSS = (WEB / "static" / "css" / "app.css").read_text(encoding="utf-8")
 # `selrow` is selected by the bulk-select script; `info` is the default banner kind, which
 # takes the base `.banner` style. Neither has a rule on 49de3dd either. `skip-link` and
 # `last-run` are behaviour hooks (the a11y markup test, the visual mask) kept after their
-# component rules became utilities (spec 006 FR-019).
-HOOK_ONLY: set[str] = {"selrow", "info", "skip-link", "last-run"}
+# component rules became utilities (spec 006 FR-019); `table-wrap` is read by the a11y markup test.
+HOOK_ONLY: set[str] = {"selrow", "info", "skip-link", "last-run", "table-wrap"}
 
 PAGES = [
     "/", "/postings", "/postings/{id}", "/reports", "/reports/sources",

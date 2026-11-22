@@ -4,9 +4,9 @@
 {% block title %}Reports — Job discovery{% endblock %}
 {% block content %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Reports</h1>
-  <p class="page-sub">
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
     Analysis over what the pipeline has collected. Which reports exist, and which
     were considered and deferred, is recorded in ADR-0008.
   </p>
@@ -17,7 +17,7 @@
   {# One link per card: the title link is stretched over the whole card (.card-link). #}
   <li class="card card-link">
     <h2><a href="{{ href }}">{{ title }}</a></h2>
-    <p class="muted">{{ blurb }}</p>
+    <p class="text-on-surface-variant">{{ blurb }}</p>
     {{ icon('arrow_forward', cls='go') }}
   </li>
   {% else %}

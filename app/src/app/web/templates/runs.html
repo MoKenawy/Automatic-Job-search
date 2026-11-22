@@ -4,9 +4,9 @@
 {% block title %}Runs — Job discovery{% endblock %}
 {% block content %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Runs</h1>
-  <p class="page-sub">
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
     The weekly review surface (§7.4). The failure to watch for is not an error but
     a run that succeeds while returning steadily less.
   </p>
@@ -46,41 +46,41 @@
   <table>
     <thead>
       <tr>
-        <th scope="col" class="num">#</th>
+        <th scope="col" class="text-right tabular-nums">#</th>
         <th scope="col">Started</th>
         <th scope="col">Profile</th>
         <th scope="col">Status</th>
-        <th scope="col" class="num">Collected</th>
-        <th scope="col" class="num">Distinct</th>
-        <th scope="col" class="num">Passed</th>
-        <th scope="col" class="num">Rejected</th>
-        <th scope="col" class="num">Scored</th>
-        <th scope="col" class="num">Published</th>
+        <th scope="col" class="text-right tabular-nums">Collected</th>
+        <th scope="col" class="text-right tabular-nums">Distinct</th>
+        <th scope="col" class="text-right tabular-nums">Passed</th>
+        <th scope="col" class="text-right tabular-nums">Rejected</th>
+        <th scope="col" class="text-right tabular-nums">Scored</th>
+        <th scope="col" class="text-right tabular-nums">Published</th>
         <th scope="col">By source</th>
       </tr>
     </thead>
     <tbody>
       {% for r in runs %}
       <tr>
-        <td class="num">{{ r.id }}</td>
+        <td class="text-right tabular-nums">{{ r.id }}</td>
         <td>{{ r.started_at.strftime('%d %b %H:%M') }}</td>
-        <td class="muted">
+        <td class="text-on-surface-variant">
           {% if r.profile_id %}#{{ r.profile_id }} {{ r.profile_name or '(deleted)' }}{% else %}—{% endif %}
         </td>
         <td>{{ status_pill(r.status) }}</td>
-        <td class="num">{{ r.collected_count }}</td>
-        <td class="num">{{ r.deduplicated_count }}</td>
+        <td class="text-right tabular-nums">{{ r.collected_count }}</td>
+        <td class="text-right tabular-nums">{{ r.deduplicated_count }}</td>
         {# A run the filter never touched shows —, not 0. Zero is a claim that
            the filter admitted nothing, and rendering a structurally absent
            figure as zero manufactures a false alarm on a working pipeline
            (reports-implementation-plan.md §R5). The two columns are either both
            written or neither, so one test covers the pair. #}
         {% set filtered = r.filter_passed_count or r.filter_rejected_count %}
-        <td class="num">{{ r.filter_passed_count if filtered else '—' }}</td>
-        <td class="num">{{ r.filter_rejected_count if filtered else '—' }}</td>
-        <td class="num">{{ r.scored_count }}</td>
-        <td class="num">{{ r.published_count }}</td>
-        <td class="muted">
+        <td class="text-right tabular-nums">{{ r.filter_passed_count if filtered else '—' }}</td>
+        <td class="text-right tabular-nums">{{ r.filter_rejected_count if filtered else '—' }}</td>
+        <td class="text-right tabular-nums">{{ r.scored_count }}</td>
+        <td class="text-right tabular-nums">{{ r.published_count }}</td>
+        <td class="text-on-surface-variant">
           {% for site, n in (r.counts_by_site or {}).items() %}
             {{ site }}={{ n }}{% if not loop.last %}, {% endif %}
           {% endfor %}

@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, pill_class, table_wrap, status_pill %}
+{% from "_macros.html" import banner, btn_class, chip_class, empty_state, icon, pill_class, status_pill, table_wrap %}
 {% set active = 'postings' %}
 {% block title %}Postings — Job discovery{% endblock %}
 {% block content %}
 
 {% if flash %}{{ banner('success', flash, focusable=True) }}{% endif %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Postings</h1>
-  <p class="page-sub">
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
     {% if pager.total %}Showing {{ pager.first }}–{{ pager.last }} of {{ pager.total }}{% else %}Nothing to show{% endif %},
     {% if status == 'rejected' %}
       most recently rejected first.
@@ -19,7 +19,7 @@
 </div>
 
 {% if verdict == 'rejected' %}
-<p class="page-sub verdict-note">
+<p class="verdict-note mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
   Postings the filter turned away, under the criteria in force now. They are
   withheld from the queue only while untriaged — anything you have already
   shortlisted or applied to still appears there as well. Loosen the criteria at
@@ -29,29 +29,29 @@
 {% endif %}
 
 {# Chips and query controls share one surface, as in the mock-ups. #}
-<div class="toolbar">
+<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 mb-4 p-3 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1 [&>*]:min-w-0">
 {# Status chips are plain links (contract C-4); no counts, because the page has none (US2 AS-8). #}
 <nav aria-label="Status filter">
-  <ul class="chips">
-    <li><a class="chip" href="/postings"{% if not status and not verdict %} aria-current="true"{% endif %}>All</a></li>
+  <ul class="flex flex-wrap gap-2 m-0 p-0 list-none">
+    <li><a class="{{ chip_class() }}" href="/postings"{% if not status and not verdict %} aria-current="true"{% endif %}>All</a></li>
     {% for s in statuses %}
-    <li><a class="chip" href="/postings?status={{ s }}"{% if status == s and not verdict %} aria-current="true"{% endif %}>{{ s }}</a></li>
+    <li><a class="{{ chip_class() }}" href="/postings?status={{ s }}"{% if status == s and not verdict %} aria-current="true"{% endif %}>{{ s }}</a></li>
     {% endfor %}
     {# FR-017 — what the filter turned away. Deliberately not the complement of the
        normal list: a posting rejected after the operator shortlisted it shows in
        both, because that is the clearest evidence a criterion is too aggressive. #}
-    <li><a class="chip" href="/postings?verdict=rejected"{% if verdict == 'rejected' %} aria-current="true"{% endif %}>filtered out</a></li>
+    <li><a class="{{ chip_class() }}" href="/postings?verdict=rejected"{% if verdict == 'rejected' %} aria-current="true"{% endif %}>filtered out</a></li>
   </ul>
 </nav>
 
-<form class="filter-bar" method="get" action="/postings" role="search">
-  <div class="field">
-    <label for="f-q">Search</label>
-    <input type="search" id="f-q" name="q" value="{{ q }}" placeholder="title or company">
+<form class="flex flex-wrap items-end gap-3 m-0 max-md:flex-col max-md:items-stretch" method="get" action="/postings" role="search">
+  <div class="flex flex-col gap-1 min-w-0 mb-4">
+    <label class="text-(length:--fs-label) text-on-surface-variant" for="f-q">Search</label>
+    <input class="min-w-56 max-md:w-full" type="search" id="f-q" name="q" value="{{ q }}" placeholder="title or company">
   </div>
-  <div class="field">
-    <label for="f-country">Location</label>
-    <select id="f-country" name="country">
+  <div class="flex flex-col gap-1 min-w-0 mb-4">
+    <label class="text-(length:--fs-label) text-on-surface-variant" for="f-country">Location</label>
+    <select class="max-md:w-full" id="f-country" name="country">
       <option value="">Any location</option>
       <option value="remote" {{ 'selected' if country == 'remote' }}>Remote</option>
       {% for c in facets.countries %}
@@ -62,9 +62,9 @@
       {% endif %}
     </select>
   </div>
-  <div class="field">
-    <label for="f-source">Source</label>
-    <select id="f-source" name="source">
+  <div class="flex flex-col gap-1 min-w-0 mb-4">
+    <label class="text-(length:--fs-label) text-on-surface-variant" for="f-source">Source</label>
+    <select class="max-md:w-full" id="f-source" name="source">
       <option value="">Any source</option>
       {% for s in facets.sources %}
       <option value="{{ s }}" {{ 'selected' if source == s }}>{{ s }}</option>
@@ -73,7 +73,7 @@
   </div>
   {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
   {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
-  <button class="btn" type="submit">{{ icon('search') }}Search</button>
+  <button class="{{ btn_class() }}" type="submit">{{ icon('search') }}Search</button>
 </form>
 </div>
 
@@ -94,13 +94,13 @@
   {% if published %}<input type="hidden" name="published" value="true">{% endif %}
   {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
   <input type="hidden" name="page" value="{{ pager.number }}">
-  <div class="bulk-bar" id="bulkbar">
-    <span id="selcount">0 selected</span>
+  <div class="flex flex-wrap items-center gap-3 mb-3 px-3 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest" id="bulkbar">
+    <span class="mr-auto font-medium text-on-surface-variant" id="selcount">0 selected</span>
     <label class="sr-only" for="bulk-status">Bulk status</label>
     <select id="bulk-status" name="status">
       {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
     </select>
-    <button class="btn btn-primary" type="submit" id="bulkapply" disabled>Apply to selected</button>
+    <button class="{{ btn_class('primary') }}" type="submit" id="bulkapply" disabled>Apply to selected</button>
   </div>
 </form>
 
@@ -109,7 +109,7 @@
     <thead>
       <tr>
         <th scope="col"><input type="checkbox" id="selall" aria-label="Select all"></th>
-        <th scope="col" class="num">Score</th>
+        <th scope="col" class="text-right tabular-nums">Score</th>
         <th scope="col">Title</th>
         <th scope="col">Company</th>
         <th scope="col">Location</th>
@@ -125,20 +125,20 @@
       {% for p, employer in pager.rows %}
       <tr>
         <td><input type="checkbox" class="selrow" name="ids" value="{{ p.id }}" form="bulkform" aria-labelledby="title-{{ p.id }}"></td>
-        <td class="num"><span class="score-badge">{{ p.score if p.score is not none else '—' }}</span></td>
+        <td class="text-right tabular-nums"><span class="score-badge inline-block min-w-9 px-2 rounded bg-secondary-container text-on-secondary-container font-semibold text-center tabular-nums">{{ p.score if p.score is not none else '—' }}</span></td>
         <td><a id="title-{{ p.id }}" href="/postings/{{ p.id }}">{{ p.title }}</a></td>
-        <td><span class="initial" aria-hidden="true">{{ employer.name[:1] | upper }}</span>{{ employer.name }}</td>
-        <td class="muted">{{ icon('location_on') }} {{ 'Remote' if p.is_remote else (p.country_code or '—') }}</td>
+        <td><span class="inline-flex items-center justify-center size-6 mr-2 rounded-md bg-surface-container-high text-on-surface-variant text-(length:--fs-label) font-semibold align-middle" aria-hidden="true">{{ employer.name[:1] | upper }}</span>{{ employer.name }}</td>
+        <td class="text-on-surface-variant">{{ icon('location_on') }} {{ 'Remote' if p.is_remote else (p.country_code or '—') }}</td>
         <td>
           {% for site in p.sources.keys() %}<span class="pill {{ pill_class('') }}">{{ site }}</span> {% endfor %}
           {% if p.sources | length > 1 %}<span class="pill {{ pill_class('') }}">×{{ p.sources | length }}</span>{% endif %}
         </td>
-        <td class="muted">{% if shell.now and p.date_posted %}{{ p.date_posted | relative_age(shell.now) }}{% else %}{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}{% endif %}</td>
+        <td class="text-on-surface-variant">{% if shell.now and p.date_posted %}{{ p.date_posted | relative_age(shell.now) }}{% else %}{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}{% endif %}</td>
         {% if status == 'rejected' %}
-        <td class="muted">{{ p.status_changed_at.strftime('%d %b %Y') if p.status_changed_at else '—' }}</td>
+        <td class="text-on-surface-variant">{{ p.status_changed_at.strftime('%d %b %Y') if p.status_changed_at else '—' }}</td>
         {% endif %}
         {% if verdict == 'rejected' %}
-        <td class="muted">
+        <td class="text-on-surface-variant">
           {% if p.title_filter_passed is false and p.experience_filter_passed is false %}title and experience
           {% elif p.title_filter_passed is false %}title
           {% else %}experience{% if p.job_level %} ({{ p.job_level }}){% endif %}
@@ -156,19 +156,19 @@
 {% endcall %}
 
 {% if pager.pages > 1 %}
-<nav class="pager" aria-label="Pagination">
+<nav class="flex flex-wrap items-center gap-2 mt-3 text-(length:--fs-body-sm)" aria-label="Pagination">
   {% if pager.has_prev %}
-  <a class="btn" href="{{ page_url(1) }}" aria-label="First page">« First</a>
-  <a class="btn" href="{{ page_url(pager.number - 1) }}" rel="prev">‹ Prev</a>
+  <a class="{{ btn_class(wide=true) }}" href="{{ page_url(1) }}" aria-label="First page">« First</a>
+  <a class="{{ btn_class(wide=true) }}" href="{{ page_url(pager.number - 1) }}" rel="prev">‹ Prev</a>
   {% endif %}
   {% for n in range([1, pager.number - 2] | max, [pager.pages, pager.number + 2] | min + 1) %}
-    {% if n == pager.number %}<span class="btn page-current" aria-current="true" aria-label="Page {{ n }}, current page">{{ n }}</span>
-    {% else %}<a class="btn" href="{{ page_url(n) }}" aria-label="Page {{ n }}">{{ n }}</a>{% endif %}
+    {% if n == pager.number %}<span class="{{ btn_class('current', wide=true) }}" aria-current="true" aria-label="Page {{ n }}, current page">{{ n }}</span>
+    {% else %}<a class="{{ btn_class(wide=true) }}" href="{{ page_url(n) }}" aria-label="Page {{ n }}">{{ n }}</a>{% endif %}
   {% endfor %}
-  <span class="muted">Page {{ pager.number }} of {{ pager.pages }}</span>
+  <span class="text-on-surface-variant">Page {{ pager.number }} of {{ pager.pages }}</span>
   {% if pager.has_next %}
-  <a class="btn" href="{{ page_url(pager.number + 1) }}" rel="next">Next ›</a>
-  <a class="btn" href="{{ page_url(pager.pages) }}" aria-label="Last page">Last »</a>
+  <a class="{{ btn_class(wide=true) }}" href="{{ page_url(pager.number + 1) }}" rel="next">Next ›</a>
+  <a class="{{ btn_class(wide=true) }}" href="{{ page_url(pager.pages) }}" aria-label="Last page">Last »</a>
   {% endif %}
 </nav>
 {% endif %}
