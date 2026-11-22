@@ -219,6 +219,13 @@
   /* Preflight zeroes every margin; the browser's checkbox and radio margins are kept (R4). */
   input[type="checkbox"] { margin: 3px 3px 3px 4px; }
   input[type="radio"] { margin: 3px 3px 0 5px; }
+  /* Reduced motion (FR-020, R5). `!important` wins over every normal declaration from any layer, so
+     no transition/animation utility (button spinner, hover transitions) can bring motion back. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important; transition: none !important; scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer components {
@@ -260,11 +267,6 @@ main {
 @media (min-width: 768px) { main { padding-inline: var(--space-xl); } }
 @media (min-width: 1024px) { main { padding-inline: var(--space-2xl); } }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation: none !important; transition: none !important; scroll-behavior: auto !important;
-  }
-}
 /* WCAG 1.4.12: nothing may depend on fixed-height text boxes. (Buttons, chips and pills carry
    `wrap-anywhere` themselves.) */
 th, td, label, dd, dt { overflow-wrap: anywhere; }
@@ -274,25 +276,12 @@ th, td, label, dd, dt { overflow-wrap: anywhere; }
 
 /* State changes ease rather than snap (DESIGN.md "calm focus"). The
    prefers-reduced-motion block above cancels every one of these. */
-.card-link, tbody tr {
+tbody tr {
   transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
     box-shadow 0.12s ease;
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-
-.card {
-  background: var(--surface-container-lowest); border: 1px solid var(--outline-variant);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-1);
-}
-.card { padding: var(--space-lg); }
-@media (min-width: 768px) { .card { padding: 1.25rem; } }
-.card-link { position: relative; }
-.card-link:hover { border-color: var(--outline); box-shadow: var(--shadow-2); }
-.card-link a::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
-.card-link a:focus-visible { outline: none; }
-.card-link:has(a:focus-visible) { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
 
 table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
 th, td { text-align: left; vertical-align: middle; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--outline-variant); }
@@ -327,20 +316,6 @@ label { color: var(--on-surface); font-weight: 500; }
 }
 @media (min-width: 768px) { .tab-fade::after { display: none; } }
 
-/* Reports (US9). */
-.report-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-md); }
-.report-list .card-link { padding-right: 3rem; }
-.report-list h2 { margin: 0 0 var(--space-xs); font-size: var(--fs-md); }
-.report-list p { margin: 0; }
-.report-list .go { position: absolute; right: var(--space-lg); top: 50%; transform: translateY(-50%); }
-.pie-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--space-lg); }
-.pie-card { text-align: center; }
-.pie-card h3 { margin: 0 0 var(--space-md); }
-.pie { width: 7.5rem; height: 7.5rem; border-radius: var(--radius-full); margin: 0 auto var(--space-md); }
-.pie-empty { background: var(--outline-variant); }
-.legend { list-style: none; margin: 0 0 var(--space-sm); padding: 0; text-align: left; font-size: var(--fs-body-sm); }
-.legend li { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-2xs) 0; }
-.legend .dot { width: 0.625rem; height: 0.625rem; border-radius: var(--radius-full); flex: none; }
 
 }
 

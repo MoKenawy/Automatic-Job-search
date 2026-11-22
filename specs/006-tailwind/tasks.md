@@ -78,8 +78,8 @@ convert the listed templates; compare screenshots; for fragments compare markup 
 - [X] T028 [US3] `006-3.4` — `detail.html`: detail grid, actions, metadata list, description
 - [X] T029 [US3] `006-3.5` — `index.html`: metric cards, distribution rows, source-health bars (bar heights stay inline, FR-021)
 - [X] T030 [US3] `006-3.6` — `runs.html`, `profiles.html`, `blacklist.html`, `settings.html`: forms, tables, switch (`aria-checked`), rules expander
-- [ ] T031 [US3] `006-3.7` — `reports/index.html`, `sources.html`, `employers.html`, `profiles.html`, `_caveat.html`: pie and legend stay as small custom rules with `var(--token)` inline styles
-- [ ] T032 [US3] Phase 2 closing check: move reduced-motion (`!important`) into `@layer base` and forced-colours into an unlayered block at the end of `input.css` (R5/FR-020); verify keyboard focus indicator (≥2 px, ≥3:1) and forced-colours/reduced-motion behaviour against baseline
+- [X] T031 [US3] `006-3.7` — `reports/index.html`, `sources.html`, `employers.html`, `profiles.html`, `_caveat.html`: pie and legend stay as small custom rules with `var(--token)` inline styles
+- [X] T032 [US3] Phase 2 closing check: move reduced-motion (`!important`) into `@layer base` and forced-colours into an unlayered block at the end of `input.css` (R5/FR-020); verify keyboard focus indicator (≥2 px, ≥3:1) and forced-colours/reduced-motion behaviour against baseline
 
 ## Phase 6: User Story 4 — authored CSS shrinks (P4) (branch `006-4`)
 

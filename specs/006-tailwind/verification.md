@@ -71,3 +71,42 @@ Pin: Tailwind `v4.3.5` (published 2026-11-06, 16 days before Phase 0), in
 - **Forced colours moved out of `@layer components` into an unlayered block** (R5/FR-020): the new `border-transparent` utility would otherwise beat its `border: 1px solid CanvasText`. Pulled forward from T032.
 - **Coverage gap:** the visual seed renders every pill status but not the success/error banners (they appear only after a flash/error), so those two are covered by the class tests and by a one-to-one token translation, not by pixels.
 - New tests: status maps name only defined classes; unknown status is neutral; no pill/banner class is concatenated.
+
+## Phase 2 steps 3.2 to 3.7 (sub-branches `006-3.2` .. `006-3.7`), 2026-11-22
+
+Every step passed its own gate: `pytest` 737 passed / 46 skipped, ruff clean, `pytest --visual`
+44 of 44, rebuild reproducible. Final `app.css` after 3.7 is in the table below.
+
+| Step | Scope | Notes |
+|---|---|---|
+| 3.2 | `base.html` shell, tab strip, skip link, wordmark; the shared pill | Label text roles lost their letter-spacing (separate `tracking-label*` tokens) and `--radius` moved into the theme, so `text-label` and `rounded` are exact. Tab-strip fade stays as one commented custom rule. |
+| 3.3 | `postings.html`, `_row_status.html`, `_status_control.html`; buttons, chips, icon, empty state, table wrap | `btn_class` / `chip_class` macros. C-1/C-2 fragments differ only in class strings. The old `.statusbox` rule had overridden `.row-actions` (inline-flex, 4px gap); the utilities reproduce that. |
+| 3.4 | `detail.html`; cards, banners, metrics, `inline-form` | `card_class`, full-string `banner_class`. The reports caveat banner and settings read-only cards moved with the shared cards/banners. |
+| 3.5 | `index.html`; metric/health grids, distribution, bars | Bar heights stay inline. The striped zero bar is the one commented custom rule (the element must not also carry a `bg-*` utility). |
+| 3.6 | `runs`, `profiles`, `blacklist`, `settings` | `field_class`, `check_class`, `hint_class` macros; the switch is utilities with `aria-checked:` and `before:` variants. |
+| 3.7 | `reports/*` | `.card-link` hover, focus ring and stretched link are `hover:`, `has-[a:focus-visible]:` and `after:` utilities. |
+| T032 | Closing checks | Reduced motion moved into `@layer base` (still `!important`); forced-colours block is unlayered (3.1). Checked in a real browser: with `prefers-reduced-motion` the button and pill transition duration is `0s`; with forced colours the pill, chip and score badge borders resolve to `CanvasText`, over the new `border-*` utilities. The focus ring rule is unchanged. |
+
+### Deviations and decisions
+
+- **Rules were deleted as their classes left the markup** (not in Phase 3), because a surviving
+  component rule would mask a wrong utility and the pixel gate could not tell. What remains is
+  Phase 3's list: element defaults (html, body, headings, p, a, code, main, table, th/td, form
+  controls, label, `:focus-visible`), `@keyframes spin`, the two one-offs (`.bars i.zero`,
+  `.tab-fade::after`) and the unlayered forced-colours block.
+- **Shared components were converted globally in the step that changed their macro**, so some
+  templates were touched earlier than their listed step (pills in 3.2, buttons and chips in 3.3,
+  cards and banners in 3.4).
+- **Hook classes kept** (FR-019): `pill`, `chip`, `banner`, `score-badge`, `icon`, `btn-primary`
+  (forced-colours selectors), `skip-link` and `table-wrap` (a11y markup test), `last-run` (visual
+  mask), `selrow` (script), `bars`/`zero` (one-off rule). Those with no rule are on the
+  `HOOK_ONLY` allowlist in `tests/test_css_build.py`.
+- **Changed test assertion** (styling only): `test_web_config.py` found the experience hint by its
+  exact class attribute; it now finds it by `id="experience-hint"`.
+- **Pixel-exactness traps found by the gate**: `font:` shorthand resets `font-variant-numeric`
+  (pill inside a `tabular-nums` parent needs `normal-nums`); a later `.statusbox` rule had
+  overridden `.row-actions`; `.num` carried an unrelated `margin-left:auto` rule on the legend;
+  a descendant rule (`.metric .metric-label`) never applied in settings.
+- **Not covered by pixels**: success/error banners and the htmx busy state are not rendered by the
+  visual seed; the `max-sm` (below 640 px) rules differ from the old `max-width: 640px` only at
+  exactly 640 px.
