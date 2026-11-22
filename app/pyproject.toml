@@ -55,7 +55,19 @@ job-discovery = "app.__main__:app"
 dev = [
     "ruff>=0.5",
     "pytest>=8.2",
+    # CSS build (ADR-0022). Fetches the standalone Tailwind binary; the pin lives in
+    # [tool.app.tailwind] below. Excluded from the image by `uv sync --no-dev`.
+    "pytailwindcss>=0.2",
 ]
+# Opt-in visual gate (006 FR-026): `uv sync --group visual`. Never installed in CI.
+visual = [
+    "pytest-playwright>=0.5",
+    "pytest-playwright-visual-snapshot>=0.5",
+]
+
+# Single source of the Tailwind pin (006 R1): newest v4.x tag >= 2 weeks old on 2026-11-22.
+[tool.app.tailwind]
+version = "v4.3.5"
 
 [build-system]
 requires = ["hatchling"]
@@ -87,6 +99,10 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+playwright_visual_snapshot_threshold = "0.05"
+playwright_visual_snapshots_path = "tests/__snapshots__"
+playwright_visual_snapshot_failures_path = "tests/__snapshot_failures__"
 markers = [
     "live: makes real requests to the job boards; skipped unless --live is given",
+    "visual: browser snapshot gate (006 FR-026); skipped unless --visual is given",
 ]

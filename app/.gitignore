@@ -14,3 +14,4 @@ __pycache__/
 
 # Scratch output
 *.csv
+tests/__snapshot_failures__/
