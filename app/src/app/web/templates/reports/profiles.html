@@ -16,13 +16,13 @@
    so nothing depends on colour alone (FR-007). #}
 {% set colors = {'new': 'var(--outline)', 'shortlist': 'var(--primary-container)', 'applied': 'var(--success)', 'rejected': 'var(--error)'} %}
 
-<div class="pie-grid">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
   {% for row in rows %}
-  <div class="{{ card_class() }} pie-card">
-    <h3>{{ row.profile.name }}{% if not row.profile.enabled %} <span class="pill {{ pill_class('') }}">disabled</span>{% endif %}</h3>
+  <div class="{{ card_class() }} text-center">
+    <h3 class="mt-0 mb-3">{{ row.profile.name }}{% if not row.profile.enabled %} <span class="pill {{ pill_class('') }}">disabled</span>{% endif %}</h3>
     {% if row.total %}
       {% set ns = namespace(acc=0) %}
-      <div class="pie" aria-hidden="true" style="background: conic-gradient(
+      <div class="size-30 rounded-full mx-auto mb-3" aria-hidden="true" style="background: conic-gradient(
         {% for status, count in row.by_status.items() if count %}
         {% set pct = count / row.total * 100 %}
         {{ colors[status] }} {{ ns.acc }}% {{ ns.acc + pct }}%{{ ',' if not loop.last }}
@@ -30,12 +30,12 @@
         {% endfor %}
       );"></div>
     {% else %}
-      <div class="pie pie-empty" aria-hidden="true"></div>
+      <div class="size-30 rounded-full mx-auto mb-3 bg-outline-variant" aria-hidden="true"></div>
     {% endif %}
-    <ul class="legend">
+    <ul class="list-none mt-0 mb-2 p-0 text-left text-(length:--fs-body-sm)">
       {% for status, count in row.by_status.items() %}
-      <li>
-        <span class="dot" aria-hidden="true" style="background:{{ colors[status] }}"></span>{{ status }}
+      <li class="flex items-center gap-2 py-0.5">
+        <span class="size-2.5 rounded-full flex-none" aria-hidden="true" style="background:{{ colors[status] }}"></span>{{ status }}
         <span class="ml-auto text-right tabular-nums text-on-surface-variant">{{ count }} ({{ (count / row.total * 100) | round | int if row.total else 0 }}%)</span>
       </li>
       {% endfor %}

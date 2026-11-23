@@ -12,13 +12,13 @@
   </p>
 </div>
 
-<ul class="report-list">
+<ul class="grid gap-3 m-0 p-0 list-none">
   {% for href, title, blurb in reports %}
-  {# One link per card: the title link is stretched over the whole card (.card-link). #}
-  <li class="card card-link">
-    <h2><a href="{{ href }}">{{ title }}</a></h2>
-    <p class="text-on-surface-variant">{{ blurb }}</p>
-    {{ icon('arrow_forward', cls='go') }}
+  {# One link per card: the title link is stretched over the whole card (card-link). #}
+  <li class="relative bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1 p-4 pr-12 md:p-5 md:pr-12 hover:border-outline hover:shadow-2 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-focus-ring has-[a:focus-visible]:outline-offset-2 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]">
+    <h2 class="mt-0 mb-1"><a class="after:content-[''] after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none" href="{{ href }}">{{ title }}</a></h2>
+    <p class="m-0 text-on-surface-variant">{{ blurb }}</p>
+    {{ icon('arrow_forward', cls='absolute right-4 top-1/2 -translate-y-1/2') }}
   </li>
   {% else %}
   <li>{{ empty_state("No reports available.") }}</li>
