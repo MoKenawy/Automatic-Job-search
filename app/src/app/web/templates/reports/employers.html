@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import empty_state, table_wrap, status_pill %}
+{% from "_macros.html" import empty_state, pill_class, table_wrap, status_pill %}
 {% set active = 'reports' %}
 {% block title %}Employer activity — Reports — Job discovery{% endblock %}
 {% block content %}
@@ -38,7 +38,7 @@
         <td>
           {{ row.employer.name }}
           {% if row.employer.suppressed %}
-            <span class="pill rejected">blacklisted</span>
+            <span class="pill {{ pill_class('rejected') }}">blacklisted</span>
           {% endif %}
         </td>
         <td class="num">{{ row.postings }}</td>

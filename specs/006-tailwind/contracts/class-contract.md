@@ -28,8 +28,23 @@ class comes first.
 | Run status | running, success, failed | `_neutral` |
 | Banner kind | the kinds used by `base.html`/`_macros.html` today | `_neutral` |
 
-Exact strings are written in task 3.1 by translating today's `.pill.*` / `.banner.*` rules
-in `app.css` and verified by `--visual`. No class name is built by concatenation.
+Implemented in `_macros.html` as `pill_class(status)` and `banner_class(kind)` (step 3.1). The
+base `.pill` / `.banner` component rules still supply the neutral look; the mapped utilities
+override colours only:
+
+| Value | Classes |
+|---|---|
+| posting `new` | `bg-secondary-container text-on-secondary-container border-transparent` |
+| posting `shortlist`, run `running` | `bg-surface-container-lowest text-primary border-primary` |
+| posting `applied`, run `success` | `bg-success-container text-on-success-container border-transparent` |
+| posting `rejected`, run `failed` | `bg-error-container text-on-error-container border-transparent` |
+| banner `success` | `bg-success-container text-on-success-container border-success` |
+| banner `error` | `bg-error-container text-on-error-container border-error` |
+| unknown / banner `info` | empty (neutral) |
+
+Every call site goes through these two macros; `test_css_build.py` fails if a template builds a
+pill/banner class name by interpolation or if a mapped class is missing from the built CSS.
+Forced-colours rules are unlayered (FR-020, R5) so they still beat these utilities.
 
 ## 3. Hook-only allowlist (classes allowed in markup but absent from the stylesheet)
 

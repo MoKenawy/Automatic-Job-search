@@ -57,3 +57,17 @@ Pin: Tailwind `v4.3.5` (published 2026-11-06, 16 days before Phase 0), in
 - **Kept on purpose:** `.muted` and `.small`. `.small` as `text-label` would also set line-height and letter-spacing (not equivalent), and `.big-score .muted` is a selector that depends on the class. Both move with their templates in Phase 2/3.
 - **Regrouping:** `input.css` already follows the spec's component order (buttons, chips/pills, cards, tables, forms, shell, feedback, page-specific), so no reorder was done; moving rules inside the layer risks source-order cascade changes for no gain.
 - No safelist entry was needed.
+
+## Phase 2 step 3.1 gate (sub-branch `006-3.1`), 2026-11-22
+
+| Check | Result |
+|---|---|
+| `pytest` | 737 passed, 46 skipped |
+| `pytest --visual` | 44 of 44 match |
+| ruff, drift (rebuild) | clean; `app.css` 28,749 bytes |
+
+- `_macros.html`: `pill_class` / `banner_class` hold complete utility strings per status family with a neutral fallback; `status_pill` and `banner` use them. Call sites moved onto them: `base.html` (last-run pill), `index.html` (distribution pills, zero-run pill), `detail.html` (blacklisted/filtered pills, error banner), `reports/employers.html`.
+- Removed the now-unused `.pill.new/.shortlist/.running/.applied/.success/.rejected/.failed` and `.banner.success/.error` rules (grep clean).
+- **Forced colours moved out of `@layer components` into an unlayered block** (R5/FR-020): the new `border-transparent` utility would otherwise beat its `border: 1px solid CanvasText`. Pulled forward from T032.
+- **Coverage gap:** the visual seed renders every pill status but not the success/error banners (they appear only after a flash/error), so those two are covered by the class tests and by a one-to-one token translation, not by pixels.
+- New tests: status maps name only defined classes; unknown status is neutral; no pill/banner class is concatenated.

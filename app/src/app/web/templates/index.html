@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, empty_state, icon, metric, status_pill, table_wrap %}
+{% from "_macros.html" import banner, empty_state, icon, metric, pill_class, status_pill, table_wrap %}
 {% set active = 'index' %}
 {% block title %}Overview — Job discovery{% endblock %}
 {% block content %}
@@ -38,7 +38,7 @@
     <div class="distribution">
       {% for status, count in totals.by_status.items() %}
       <div class="dist-row">
-        <a class="pill {{ status }}" href="/postings?status={{ status }}">{{ status }}</a>
+        <a class="pill {{ pill_class(status) }}" href="/postings?status={{ status }}">{{ status }}</a>
         <span class="dist-count">{{ count }}</span>
         {% set pct = ((count / total * 100) | round | int) if total else 0 %}
         <span class="dist-bar" aria-hidden="true"><i style="width: {{ pct }}%"></i></span>
@@ -68,7 +68,7 @@
         {% set peak = (series | map(attribute=1) | max) or 1 %}
         <div class="source">
           <h3>{{ site }}</h3>
-          <p class="metric-value-sm">{{ series[-1][1] if series else 0 }}{% if series and series[-1][1] == 0 %} <span class="pill failed">zero in latest run</span>{% endif %}</p>
+          <p class="metric-value-sm">{{ series[-1][1] if series else 0 }}{% if series and series[-1][1] == 0 %} <span class="pill {{ pill_class('failed') }}">zero in latest run</span>{% endif %}</p>
           <div class="bars" aria-hidden="true">
             {% for _, count in series %}
             <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
