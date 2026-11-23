@@ -6,12 +6,12 @@
 
 <div class="mb-6">
   <h1>Overview</h1>
-  <p class="page-sub">Where the pipeline stands, and what to look at next.</p>
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">Where the pipeline stands, and what to look at next.</p>
 </div>
 
 {# Employers and Scored have no filtered destination, so they are not interactive
    (spec classification table). Each number is the sole text of its element (C-8). #}
-<div class="metric-grid">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
   {{ metric("Postings", totals.postings, "/postings") }}
   {{ metric("Employers", totals.employers) }}
   {{ metric("Scored", totals.scored) }}
@@ -23,55 +23,55 @@
 {{ banner('info', 'Scoring not yet run: ' ~ totals.postings ~ ' postings collected and deduplicated, none scored. Stage 3 requires a CV at data/cv.txt to build the prompt.') }}
 {% endif %}
 
-<div class="overview-grid">
+<div class="grid grid-cols-1 gap-4 mt-8 lg:grid-cols-[5fr_7fr]">
 
   {# Triage distribution, with its own header and footer link (UX doc §4). #}
-  <section class="{{ card_class() }} overview-card">
+  <section class="{{ card_class() }} flex flex-col min-w-0">
     {% set total = totals.by_status.values() | sum %}
-    <div class="card-head">
+    <div class="flex items-start justify-between gap-3 mb-4">
       <div>
-        <h2>Triage</h2>
-        <p class="page-sub">Review status distribution.</p>
+        <h2 class="m-0 text-headline-sm">Triage</h2>
+        <p class="mt-1 mb-0 text-on-surface-variant text-body-sm">Review status distribution.</p>
       </div>
       <span class="pill {{ pill_class('') }}">{{ total }} in total</span>
     </div>
-    <div class="distribution">
+    <div class="grid gap-2">
       {% for status, count in totals.by_status.items() %}
-      <div class="dist-row">
+      <div class="grid grid-cols-[7rem_3rem_1fr_3rem] gap-3 items-center">
         <a class="pill {{ pill_class(status) }}" href="/postings?status={{ status }}">{{ status }}</a>
-        <span class="dist-count">{{ count }}</span>
+        <span class="tabular-nums text-right">{{ count }}</span>
         {% set pct = ((count / total * 100) | round | int) if total else 0 %}
-        <span class="dist-bar" aria-hidden="true"><i style="width: {{ pct }}%"></i></span>
-        <span class="dist-pct">{{ pct }}%</span>
+        <span class="block h-2 rounded-full bg-surface-container-high overflow-hidden" aria-hidden="true"><i class="block h-full bg-primary-container" style="width: {{ pct }}%"></i></span>
+        <span class="tabular-nums text-right text-on-surface-variant">{{ pct }}%</span>
       </div>
       {% else %}
       {{ empty_state("No postings yet. Run a search profile from Schedules to collect some.", "/profiles", "Open Schedules") }}
       {% endfor %}
     </div>
-    <div class="card-foot">
-      <a href="/postings">Explore all in Postings {{ icon('arrow_forward') }}</a>
+    <div class="flex flex-wrap items-center justify-end gap-2 mt-auto pt-4 text-(length:--fs-body-sm)">
+      <a class="inline-flex items-center gap-1 font-medium" href="/postings">Explore all in Postings {{ icon('arrow_forward') }}</a>
     </div>
   </section>
 
   {# Source health. A source trending toward zero while runs keep succeeding is
      the signal to investigate (§7.4). #}
-  <section class="{{ card_class() }} overview-card">
-    <div class="card-head">
+  <section class="{{ card_class() }} flex flex-col min-w-0">
+    <div class="flex items-start justify-between gap-3 mb-4">
       <div>
-        <h2>Source health</h2>
-        <p class="page-sub">Per-source counts across recent runs.</p>
+        <h2 class="m-0 text-headline-sm">Source health</h2>
+        <p class="mt-1 mb-0 text-on-surface-variant text-body-sm">Per-source counts across recent runs.</p>
       </div>
     </div>
-    <div class="health-grid">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
       {% for site in health.sites %}
         {% set series = health.series[site] %}
         {% set peak = (series | map(attribute=1) | max) or 1 %}
-        <div class="source">
-          <h3>{{ site }}</h3>
-          <p class="metric-value-sm">{{ series[-1][1] if series else 0 }}{% if series and series[-1][1] == 0 %} <span class="pill {{ pill_class('failed') }}">zero in latest run</span>{% endif %}</p>
-          <div class="bars" aria-hidden="true">
+        <div class="p-3 rounded-lg bg-surface-container-low min-w-0">
+          <h3 class="mb-1">{{ site }}</h3>
+          <p class="mt-0 mb-2 font-semibold tabular-nums text-(length:--fs-lg) leading-(--lh-lg)">{{ series[-1][1] if series else 0 }}{% if series and series[-1][1] == 0 %} <span class="pill {{ pill_class('failed') }}">zero in latest run</span>{% endif %}</p>
+          <div class="bars flex items-end gap-[3px] h-[2.125rem]" aria-hidden="true">
             {% for _, count in series %}
-            <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+            <i class="flex-1 min-w-[3px] block rounded-t-[1px] {{ 'zero' if count == 0 else 'bg-primary' }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
             {% endfor %}
           </div>
           <ul class="sr-only">
@@ -79,11 +79,11 @@
           </ul>
         </div>
       {% else %}
-      <div class="source">{{ empty_state("No runs recorded yet.") }}</div>
+      <div class="p-3 rounded-lg bg-surface-container-low min-w-0">{{ empty_state("No runs recorded yet.") }}</div>
       {% endfor %}
     </div>
-    <div class="card-foot">
-      <a href="/runs">Run history and logs {{ icon('arrow_forward') }}</a>
+    <div class="flex flex-wrap items-center justify-end gap-2 mt-auto pt-4 text-(length:--fs-body-sm)">
+      <a class="inline-flex items-center gap-1 font-medium" href="/runs">Run history and logs {{ icon('arrow_forward') }}</a>
     </div>
   </section>
 
