@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import status_pill, empty_state, table_wrap %}
+{% from "_macros.html" import card_class, empty_state, status_pill, table_wrap %}
 {% set active = 'runs' %}
 {% block title %}Runs — Job discovery{% endblock %}
 {% block content %}
@@ -18,7 +18,7 @@
     {% set series = health.series[site] %}
     {% set peak = (series | map(attribute=1) | max) or 1 %}
     {% set latest = series[-1][1] if series else 0 %}
-    <div class="card">
+    <div class="{{ card_class() }}">
       <h3>{{ site }}</h3>
       <p class="metric-value-sm">{{ latest }}</p>
       {# Yield delta against the previous run: only with two or more runs, computed
@@ -37,7 +37,7 @@
       </ul>
     </div>
   {% else %}
-  <div class="card">{{ empty_state("No runs recorded yet.") }}</div>
+  <div class="{{ card_class() }}">{{ empty_state("No runs recorded yet.") }}</div>
   {% endfor %}
 </div>
 

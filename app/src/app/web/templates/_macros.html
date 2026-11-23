@@ -27,6 +27,11 @@
 inline-flex items-center justify-center gap-1 {{ "min-w-9" if wide else "min-w-6" }} {{ layout[size] }} leading-none font-medium border rounded no-underline cursor-pointer wrap-anywhere transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] {{ colours[variant] }} disabled:opacity-55 disabled:cursor-not-allowed aria-disabled:opacity-55 aria-disabled:cursor-not-allowed aria-busy:opacity-70 aria-busy:cursor-progress in-[.htmx-request]:opacity-70 in-[.htmx-request]:cursor-progress aria-busy:after:content-[''] aria-busy:after:size-3.5 aria-busy:after:rounded-full aria-busy:after:border-2 aria-busy:after:border-current aria-busy:after:border-r-transparent aria-busy:after:animate-[spin_0.8s_linear_infinite]
 {%- endmacro %}
 
+{# Card surface: one border and elevation level, never nested (DESIGN.md level 1). #}
+{%- macro card_class() -%}
+bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1 p-4 md:p-5
+{%- endmacro %}
+
 {# Filter / segmented-control chip; the selected one carries aria-current (no script needed). #}
 {%- macro chip_class() -%}
 chip inline-flex items-center gap-1 min-h-7 px-3 border border-outline-variant rounded bg-surface-container-low text-on-surface-variant text-label font-medium no-underline capitalize wrap-anywhere transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] hover:bg-surface-container-high aria-[current]:bg-inverse-surface aria-[current]:border-inverse-surface aria-[current]:text-inverse-on-surface aria-[current]:hover:bg-inverse-surface
@@ -58,7 +63,7 @@ chip inline-flex items-center gap-1 min-h-7 px-3 border border-outline-variant r
   "success": "bg-success-container text-on-success-container border-success",
   "error": "bg-error-container text-on-error-container border-error",
 } -%}
-{{ kinds.get(kind) or "" }}
+flex items-start gap-2 mb-4 px-4 py-3 border rounded-lg {{ kinds.get(kind) or "bg-secondary-container text-on-secondary-container border-outline-variant" }}
 {%- endmacro %}
 
 {# Status pill: text plus icon, never colour alone (FR-007). Unknown statuses stay neutral. #}
@@ -88,9 +93,9 @@ chip inline-flex items-center gap-1 min-h-7 px-3 border border-outline-variant r
 
 {# The number is the sole text content of its element (contract C-8: `>3<`). #}
 {% macro metric(label, value, href=None) -%}
-{% if href %}<a class="card metric" href="{{ href }}">{% else %}<div class="card metric">{% endif %}
-  <span class="metric-label">{{ label }}</span>
-  <span class="metric-value">{{ value }}</span>
+{% if href %}<a class="{{ card_class() }} block text-inherit no-underline hover:border-outline hover:shadow-2 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]" href="{{ href }}">{% else %}<div class="{{ card_class() }} block text-inherit no-underline transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]">{% endif %}
+  <span class="block uppercase text-on-surface-variant text-label font-medium tracking-label-sm">{{ label }}</span>
+  <span class="block font-semibold tabular-nums text-on-surface text-(length:--fs-lg) leading-(--lh-lg) tracking-(--ls-lg) md:text-(length:--fs-xl) md:leading-(--lh-xl) md:tracking-(--ls-xl)">{{ value }}</span>
 {% if href %}</a>{% else %}</div>{% endif %}
 {%- endmacro %}
 
