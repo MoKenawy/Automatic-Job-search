@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% from "_macros.html" import empty_state %}
+{% from "_macros.html" import chip_class, empty_state, pill_class %}
 {% set active = 'reports' %}
 {% block title %}Profile triage — Reports — Job discovery{% endblock %}
 {% block content %}
 
-<div class="page-head"><h1>Triage status per search profile</h1></div>
+<div class="mb-6"><h1>Triage status per search profile</h1></div>
 {% include "reports/_caveat.html" %}
 
-<ul class="chips">
-  <li><a class="chip" href="/reports/profiles"{% if not show_disabled %} aria-current="true"{% endif %}>Enabled only</a></li>
-  <li><a class="chip" href="/reports/profiles?show_disabled=true"{% if show_disabled %} aria-current="true"{% endif %}>Include disabled</a></li>
+<ul class="flex flex-wrap gap-2 mb-4 p-0 list-none">
+  <li><a class="{{ chip_class() }}" href="/reports/profiles"{% if not show_disabled %} aria-current="true"{% endif %}>Enabled only</a></li>
+  <li><a class="{{ chip_class() }}" href="/reports/profiles?show_disabled=true"{% if show_disabled %} aria-current="true"{% endif %}>Include disabled</a></li>
 </ul>
 
 {# Segment colours are tokens; every segment is also named with its count in the legend,
@@ -19,7 +19,7 @@
 <div class="pie-grid">
   {% for row in rows %}
   <div class="card pie-card">
-    <h3>{{ row.profile.name }}{% if not row.profile.enabled %} <span class="pill">disabled</span>{% endif %}</h3>
+    <h3>{{ row.profile.name }}{% if not row.profile.enabled %} <span class="pill {{ pill_class('') }}">disabled</span>{% endif %}</h3>
     {% if row.total %}
       {% set ns = namespace(acc=0) %}
       <div class="pie" aria-hidden="true" style="background: conic-gradient(
@@ -36,11 +36,11 @@
       {% for status, count in row.by_status.items() %}
       <li>
         <span class="dot" aria-hidden="true" style="background:{{ colors[status] }}"></span>{{ status }}
-        <span class="num muted">{{ count }} ({{ (count / row.total * 100) | round | int if row.total else 0 }}%)</span>
+        <span class="ml-auto text-right tabular-nums text-on-surface-variant">{{ count }} ({{ (count / row.total * 100) | round | int if row.total else 0 }}%)</span>
       </li>
       {% endfor %}
     </ul>
-    <div class="muted">{{ row.total }} posting{{ '' if row.total == 1 else 's' }}</div>
+    <div class="text-on-surface-variant">{{ row.total }} posting{{ '' if row.total == 1 else 's' }}</div>
   </div>
   {% else %}
   {{ empty_state("No search profiles" ~ ('' if show_disabled else ' enabled') ~ " yet.") }}

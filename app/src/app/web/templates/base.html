@@ -1,4 +1,4 @@
-{% from "_macros.html" import icon, pill_class %}
+{% from "_macros.html" import icon, pill_class, ui %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,30 +11,30 @@
   <script src="/static/vendor/htmx-2.0.3.min.js?v={{ asset_version }}" integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link absolute left-2 -top-16 z-20 px-4 py-2 rounded bg-primary-container text-on-primary-container font-medium focus:top-2" href="#main">Skip to content</a>
   {% set run = shell.last_run %}
-  <header class="shell">
-    <div class="shell-inner">
-      <a class="wordmark" href="/" aria-label="Job discovery, overview">Job <span>discovery</span></a>
-      <nav aria-label="Primary">
-        <ul>
+  <header class="sticky top-0 z-10 bg-surface-container-lowest border-b border-outline-variant">
+    <div class="max-w-320 mx-auto min-h-14 px-4 flex flex-wrap items-center gap-x-6 gap-y-0 md:px-6 md:flex-nowrap">
+      <a class="py-3 font-semibold text-(length:--fs-md) tracking-(--ls-md) text-on-surface no-underline" href="/" aria-label="Job discovery, overview">Job <span class="text-primary">discovery</span></a>
+      <nav class="tab-fade relative order-3 min-w-0 flex-[1_0_100%] md:order-0 md:flex-auto md:self-stretch" aria-label="Primary">
+        <ul class="flex gap-1 m-0 p-0 list-none overflow-x-auto snap-x snap-proximity [scrollbar-width:none] md:h-full">
           {% for key, href, label in [
             ('index', '/', 'Overview'), ('postings', '/postings', 'Postings'),
             ('reports', '/reports', 'Reports'), ('blacklist', '/blacklist', 'Blacklist'),
             ('profiles', '/profiles', 'Schedules'), ('settings', '/settings', 'Settings'),
             ('runs', '/runs', 'Runs')] %}
-          <li><a href="{{ href }}"{% if active == key %} aria-current="page"{% endif %}>{{ label }}</a></li>
+          <li class="flex-none snap-start"><a class="flex items-center min-h-10 px-3 border-b-[3px] border-transparent text-on-surface-variant font-medium no-underline hover:text-on-surface hover:bg-surface-container-low aria-[current=page]:text-primary aria-[current=page]:border-primary-container md:min-h-14 {{ ui.transition }}" href="{{ href }}"{% if active == key %} aria-current="page"{% endif %}>{{ label }}</a></li>
           {% endfor %}
         </ul>
       </nav>
       {# Last-run status on every page (FR-013): text and icon, never colour alone. #}
       {% if run %}
-      <a class="last-run pill {{ pill_class(run.status) }}" href="/runs">
+      <a class="last-run ml-auto pill {{ pill_class(run.status, true) }}" href="/runs">
         {{ icon({'running': 'progress_activity', 'success': 'check_circle', 'failed': 'error'}.get(run.status, 'schedule')) }}
         <span>Last run {{ run.started_at.strftime('%d %b %H:%M') }} · {{ run.status }}</span>
       </a>
       {% else %}
-      <a class="last-run pill" href="/runs">{{ icon('schedule') }}<span>No runs yet</span></a>
+      <a class="last-run ml-auto pill {{ pill_class('', true) }}" href="/runs">{{ icon('schedule') }}<span>No runs yet</span></a>
       {% endif %}
     </div>
   </header>

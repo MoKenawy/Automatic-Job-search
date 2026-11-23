@@ -4,6 +4,7 @@ Stdlib only and binary-free (clarification Q1): it reads the committed, minified
 so the default suite needs neither the Tailwind binary nor a browser.
 """
 
+import html
 import re
 from html.parser import HTMLParser
 from pathlib import Path
@@ -25,8 +26,10 @@ BUILT_CSS = (WEB / "static" / "css" / "app.css").read_text(encoding="utf-8")
 # Classes a template may emit that are not defined in the stylesheet: behaviour hooks only
 # (contracts/class-contract.md section 3). Anything else rendered must exist in app.css.
 # `selrow` is selected by the bulk-select script; `info` is the default banner kind, which
-# takes the base `.banner` style. Neither has a rule on 49de3dd either.
-HOOK_ONLY: set[str] = {"selrow", "info"}
+# takes the base `.banner` style. Neither has a rule on 49de3dd either. `skip-link` and
+# `last-run` are behaviour hooks (the a11y markup test, the visual mask) kept after their
+# component rules became utilities (spec 006 FR-019); `table-wrap` is read by the a11y markup test.
+HOOK_ONLY: set[str] = {"selrow", "info", "skip-link", "last-run", "table-wrap"}
 
 PAGES = [
     "/", "/postings", "/postings/{id}", "/reports", "/reports/sources",
@@ -131,17 +134,19 @@ def test_status_maps_only_name_defined_classes():
     macros = _macros()
     defined = _defined_classes(BUILT_CSS)
     for status in (*POSTING_STATUSES, *RUN_STATUSES):
-        classes = macros.pill_class(status).split()
+        classes = html.unescape(macros.pill_class(status)).split()
         assert classes, f"pill status {status!r} has no mapped classes"
         assert set(classes) <= defined, (status, sorted(set(classes) - defined))
     for kind in ("success", "error"):
-        assert set(macros.banner_class(kind).split()) <= defined
+        assert set(html.unescape(macros.banner_class(kind)).split()) <= defined
 
 
 @pytest.mark.parametrize("unknown", ["", "banana", "NEW", None])
 def test_unknown_status_gets_the_neutral_style(unknown):
     macros = _macros()
-    assert macros.pill_class(unknown).strip() == ""
+    neutral = html.unescape(macros.pill_class("")).split()
+    assert html.unescape(macros.pill_class(unknown)).split() == neutral
+    assert "bg-surface-container-low" in neutral
     assert macros.banner_class(unknown).strip() == ""
     assert macros.banner_class("info").strip() == ""
 

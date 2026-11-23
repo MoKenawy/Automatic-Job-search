@@ -4,7 +4,7 @@
 {% block title %}Overview — Job discovery{% endblock %}
 {% block content %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Overview</h1>
   <p class="page-sub">Where the pipeline stands, and what to look at next.</p>
 </div>
@@ -33,7 +33,7 @@
         <h2>Triage</h2>
         <p class="page-sub">Review status distribution.</p>
       </div>
-      <span class="pill">{{ total }} in total</span>
+      <span class="pill {{ pill_class('') }}">{{ total }} in total</span>
     </div>
     <div class="distribution">
       {% for status, count in totals.by_status.items() %}

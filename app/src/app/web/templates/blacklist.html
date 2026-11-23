@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, table_wrap, metric %}
+{% from "_macros.html" import banner, btn_class, empty_state, icon, metric, pill_class, table_wrap %}
 {% set active = 'blacklist' %}
 {% block title %}Blacklist — Job discovery{% endblock %}
 {% block content %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Blacklist</h1>
-  <p class="page-sub">
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
     Postings from a blacklisted employer are hidden from every view here, but
     retained. Removing a blacklist restores its postings to visibility with
     their prior triage status intact.
@@ -32,12 +32,12 @@
       {% for employer, count in employers %}
       <tr>
         <td>{{ employer.name }}</td>
-        <td><span class="pill">{{ count }} postings hidden</span></td>
+        <td><span class="pill {{ pill_class('') }}">{{ count }} postings hidden</span></td>
         <td>
           {# Plain form post (FR-016, contract C-6): no hx-post, so the redirect lands on a whole page. #}
           <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline-form">
             <input type="hidden" name="return_to" value="/blacklist">
-            <button class="btn btn-ghost" type="submit">{{ icon('undo') }}Remove</button>
+            <button class="{{ btn_class('ghost') }}" type="submit">{{ icon('undo') }}Remove</button>
           </form>
         </td>
       </tr>
