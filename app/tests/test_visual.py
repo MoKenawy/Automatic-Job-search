@@ -41,9 +41,11 @@ class _FrozenDatetime(datetime):
 
 @pytest.fixture(scope="module")
 def base_url():
-    # Freeze the shell clock so relative ages ("2d ago") are stable (R7).
+    # Freeze the shell clock so relative ages ("2d ago") are stable (R7), and the reports clock
+    # so the employer report's "days quiet" does not grow by one every day (006-4).
     mp = pytest.MonkeyPatch()
     mp.setattr("app.web.deps.datetime", _FrozenDatetime)
+    mp.setattr("app.services.reports.datetime", _FrozenDatetime)
     engine = create_engine(
         "sqlite://",
         future=True,

@@ -83,9 +83,9 @@ convert the listed templates; compare screenshots; for fragments compare markup 
 
 ## Phase 6: User Story 4 — authored CSS shrinks (P4) (branch `006-4`)
 
-- [ ] T033 [US4] Create `006-4`; for every component rule, grep templates/macros/script/tests; delete rules with no use (FR-015); leave only tokens, theme mapping, font faces, base layer and commented one-offs (striped zero bar, pie, tab-strip fade) (FR-022)
-- [ ] T034 [P] [US4] Mark ADR-0022 accepted; update `Docs/README.md`, `Docs/development-guide.md` "Styles" section and `Docs/tech-stack.md` to the final structure; update local `CLAUDE.md`
-- [ ] T035 [US4] Final gate: pytest, ruff, `--visual` 44/44, drift check, budget ≤ 150 KB; write final figures and the list of any changed assertions with reasons to `specs/006-tailwind/verification.md`; confirm SC-005–SC-009 (no unmapped classes, no literal colours, contrast, no other origins, rule count)
+- [X] T033 [US4] Create `006-4`; for every component rule, grep templates/macros/script/tests; delete rules with no use (FR-015); leave only tokens, theme mapping, font faces, base layer and commented one-offs (striped zero bar, pie, tab-strip fade) (FR-022)
+- [X] T034 [P] [US4] Mark ADR-0022 accepted; update `Docs/README.md`, `Docs/development-guide.md` "Styles" section and `Docs/tech-stack.md` to the final structure; update local `CLAUDE.md`
+- [X] T035 [US4] Final gate: pytest, ruff, `--visual` 44/44, drift check, budget ≤ 150 KB; write final figures and the list of any changed assertions with reasons to `specs/006-tailwind/verification.md`; confirm SC-005–SC-009 (no unmapped classes, no literal colours, contrast, no other origins, rule count)
 
 ---
 

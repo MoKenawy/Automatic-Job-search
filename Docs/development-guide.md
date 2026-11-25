@@ -209,8 +209,20 @@ uv run python scripts/build_css.py --watch    # rebuild while authoring
 - CI rebuilds and runs `git diff --exit-code` on `app.css`: commit the rebuilt file with the
   change that needs it. After a merge conflict in it, rebuild.
 - Layout of `input.css`: theme mapping, font faces, design tokens on `:root` (light, then
-  dark), `@layer base` (restores for Tailwind's Preflight), `@layer components` (the
-  semantic component rules).
+  dark), `@layer base` (restores for Tailwind's Preflight, reduced motion), `@layer components`
+  (element defaults only: body, headings, links, tables, form controls), two commented
+  one-offs (striped zero bar, tab-strip fade) and an unlayered forced-colours block.
+- Components are not CSS classes. They are Jinja macros in `templates/_macros.html`
+  (`btn_class`, `card_class`, `chip_class`, `pill_class`, `banner_class`, `status_pill`,
+  `metric`, `table_wrap`, …) that return complete literal utility strings. Never build a
+  class name by concatenation: the scanner would not see it. A cluster repeated in three or
+  more places becomes a macro.
+- Colours come only from tokens (`bg-surface-container-low`, `text-on-surface-variant`, …);
+  a colour literal in a template fails `tests/test_web_assets.py`. A new colour is a new token
+  on `:root`, in the dark block and in `@theme inline`.
+- A few classes are hooks with no rule (`pill`, `chip`, `banner`, `score-badge`, `icon`,
+  `btn-primary`, `skip-link`, `table-wrap`, `last-run`, `selrow`): keep them in the markup,
+  they are used by the forced-colours block, tests, the visual mask or the page script.
 - Do not use a bare Tailwind utility name (`inline`, `block`, `hidden`, `table`, `filter`)
   as a bespoke class: the generated utility beats component rules.
 - Tests: `tests/test_css_build.py` (every rendered class is defined; tokens and `@source`

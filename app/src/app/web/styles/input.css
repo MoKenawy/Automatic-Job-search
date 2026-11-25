@@ -2,8 +2,10 @@
    `uv run python scripts/build_css.py`. The output, static/css/app.css, is generated and
    committed (FR-008); never edit it by hand. CI fails when it is stale (FR-009).
    Source of truth for tokens: DESIGN.md (YAML tokens win over its prose; spec C1-C11).
-   Phase 0 (FR-012): the ADR-0021 rules sit unchanged in @layer components; @layer base
-   restores the element defaults that Tailwind's Preflight resets (research R4). */
+   Final structure (spec 006 FR-022): theme mapping, tokens, font faces, @layer base (Preflight
+   restores, reduced motion), element defaults in @layer components, two commented one-offs
+   (striped zero bar, tab-strip fade) and an unlayered forced-colours block. Everything else is
+   utilities in the templates and the macros in templates/_macros.html. */
 
 @import "tailwindcss" source(none);
 @source "../templates";
@@ -81,7 +83,7 @@
 /* Radii and elevation share names with Tailwind's own namespaces, so an `inline` mapping
    would be self-referential. They are defined here instead and emitted on :root by
    `static`; components still read them with var(). The dark shadow overrides below
-   outrank this layered declaration (R3, verify in Phase 0). */
+   outrank this layered declaration (R3, confirmed in Phase 0). */
 @theme static {
   --radius-*: initial;
   --radius: 0.25rem;
@@ -216,9 +218,8 @@
   svg { display: inline; vertical-align: baseline; }
   /* Preflight strips link decoration; today's links keep the UA underline (R4). */
   a { text-decoration: underline; }
-  /* Preflight zeroes every margin; the browser's checkbox and radio margins are kept (R4). */
+  /* Preflight zeroes every margin; the browser's checkbox margin is kept (R4). */
   input[type="checkbox"] { margin: 3px 3px 3px 4px; }
-  input[type="radio"] { margin: 3px 3px 0 5px; }
   /* Reduced motion (FR-020, R5). `!important` wins over every normal declaration from any layer, so
      no transition/animation utility (button spinner, hover transitions) can bring motion back. */
   @media (prefers-reduced-motion: reduce) {
@@ -271,8 +272,7 @@ main {
    `wrap-anywhere` themselves.) */
 th, td, label, dd, dt { overflow-wrap: anywhere; }
 
-/* =========================== 3. COMPONENTS ============================= */
-
+/* ======================= 3. ELEMENT DEFAULTS =========================== */
 
 /* State changes ease rather than snap (DESIGN.md "calm focus"). The
    prefers-reduced-motion block above cancels every one of these. */
@@ -298,7 +298,7 @@ input[type="text"], input[type="search"], input[type="number"], input:not([type]
 textarea { min-height: 5rem; padding: var(--space-sm) var(--space-md); }
 input::placeholder, textarea::placeholder { color: var(--on-surface-variant); opacity: 1; }
 input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--primary); }
-input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; accent-color: var(--primary-container); vertical-align: middle; }
+input[type="checkbox"] { width: 1.25rem; height: 1.25rem; accent-color: var(--primary-container); vertical-align: middle; }
 label { color: var(--on-surface); font-weight: 500; }
 /* Bars: aria-hidden visual plus a visually hidden text list (FR-008). Everything else about the
    bars is utilities in the templates; the striped zero bar is the one-off with no utility
@@ -315,8 +315,6 @@ label { color: var(--on-surface); font-weight: 500; }
   background: linear-gradient(to right, transparent, var(--surface-container-lowest));
 }
 @media (min-width: 768px) { .tab-fade::after { display: none; } }
-
-
 }
 
 /* Forced colours (spec 006 FR-020, research R5). UNLAYERED on purpose: an unlayered rule outranks
