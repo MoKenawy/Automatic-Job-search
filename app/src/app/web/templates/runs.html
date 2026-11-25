@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import card_class, empty_state, page_header, status_pill, table_wrap %}
+{% from "_macros.html" import badge_class, card_class, empty_state, icon, initial_tile, page_header, section_header, status_pill, table_wrap %}
 {% set active = 'runs' %}
 {% block title %}Runs — Job discovery{% endblock %}
 {% block content %}
@@ -10,42 +10,59 @@
 {% endset %}
 {{ page_header('Runs', subtitle) }}
 
-<h2>Per-source trend</h2>
-<div class="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
+<section class="{{ card_class() }}" aria-labelledby="trend-heading">
+  <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-4">
+    <h2 id="trend-heading" class="m-0 flex items-center gap-2 text-headline-md">{{ icon('trending_up', cls='size-5 text-primary') }}Per-source trend</h2>
+    <span class="{{ badge_class() }}">Last {{ health.runs | length }} run{{ '' if health.runs | length == 1 else 's' }}</span>
+  </div>
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] gap-4">
   {% for site in health.sites %}
     {% set series = health.series[site] %}
     {% set peak = (series | map(attribute=1) | max) or 1 %}
     {% set latest = series[-1][1] if series else 0 %}
-    <div class="{{ card_class() }}">
-      <h3 class="mb-1">{{ site }}</h3>
-      <p class="mt-0 mb-2 font-semibold tabular-nums text-(length:--fs-lg) leading-(--lh-lg)">{{ latest }}</p>
-      {# Yield delta against the previous run: only with two or more runs, computed
-         from the series the page already has (spec classification table). #}
-      {% if series | length >= 2 %}
-        {% set delta = latest - series[-2][1] %}
-        <p class="mt-0 mb-2 text-(length:--fs-label) font-medium {{ 'text-error' if delta < 0 else 'text-on-surface-variant' }}">{{ '+' if delta > 0 }}{{ delta }} vs previous run</p>
-      {% endif %}
-      <div class="bars flex items-end gap-[3px] h-[2.125rem]" aria-hidden="true">
+    <div class="p-4 rounded-lg bg-surface-container-low">
+      <div class="flex items-center justify-between gap-3 mb-3">
+        <span class="flex items-center gap-2 min-w-0">{{ initial_tile(site) }}<h3 class="m-0 text-headline-sm">{{ site }}</h3></span>
+        <span class="{{ badge_class() }}">Run #{{ health.runs[-1].id }}: {{ latest }} postings</span>
+      </div>
+      {# Bars carry value above and run number below; the sr-only list below is the accessible
+         version. The newest run is the last column, highlighted and outlined. #}
+      <div class="bars flex items-end gap-1" aria-hidden="true">
         {% for _, count in series %}
-        <i class="flex-1 min-w-[3px] block rounded-t-[1px] {{ 'zero' if count == 0 else 'bg-primary' }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+        <div class="flex flex-1 min-w-0 flex-col items-center gap-1 p-0.5 rounded {{ 'outline-1 outline-primary' if loop.last }}">
+          <span class="text-[0.6875rem] leading-none tabular-nums {{ 'text-primary font-semibold' if loop.last else 'text-on-surface-variant' }}">{{ count }}</span>
+          <span class="flex items-end w-full h-14 rounded-sm bg-surface-container-high">
+            <i class="block w-full rounded-sm {{ 'zero' if count == 0 else ('bg-primary' if loop.last else 'bg-primary/50') }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+          </span>
+          <span class="text-[0.6875rem] leading-none tabular-nums {{ 'text-primary font-semibold' if loop.last else 'text-on-surface-variant' }}">#{{ health.runs[loop.index0].id }}{{ ' now' if loop.last }}</span>
+        </div>
         {% endfor %}
       </div>
       <ul class="sr-only">
         {% for when, count in series %}<li>{{ when.strftime('%d %b %H:%M') }}: {{ count }}</li>{% endfor %}
       </ul>
+      {# Yield delta against the previous run: only with two or more runs, computed
+         from the series the page already has (spec classification table). #}
+      {% if series | length >= 2 %}
+        {% set delta = latest - series[-2][1] %}
+        <p class="mt-3 mb-0 px-3 py-2 rounded bg-surface-container-lowest text-label font-medium {{ 'text-error' if delta < 0 else 'text-on-surface-variant' }}">{{ '+' if delta > 0 }}{{ delta }} vs previous run</p>
+      {% endif %}
     </div>
   {% else %}
-  <div class="{{ card_class() }}">{{ empty_state("No runs recorded yet.") }}</div>
+  <div>{{ empty_state("No runs recorded yet.") }}</div>
   {% endfor %}
-</div>
+  </div>
+</section>
 
-<h2>History</h2>
+<div class="mt-8">
+{% call section_header("History", "Recent runs and what each stage kept.") %}{% endcall %}
+</div>
 {% call table_wrap("Run history") %}
   <table>
     <thead>
       <tr>
-        <th scope="col" class="text-right tabular-nums">#</th>
-        <th scope="col">Started</th>
+        <th scope="col" class="text-right tabular-nums whitespace-nowrap">#</th>
+        <th scope="col" class="whitespace-nowrap">Started</th>
         <th scope="col">Profile</th>
         <th scope="col">Status</th>
         <th scope="col" class="text-right tabular-nums">Collected</th>
@@ -59,9 +76,9 @@
     </thead>
     <tbody>
       {% for r in runs %}
-      <tr>
-        <td class="text-right tabular-nums">{{ r.id }}</td>
-        <td>{{ r.started_at.strftime('%d %b %H:%M') }}</td>
+      <tr{% if loop.first %} class="bg-secondary-container/30"{% endif %}>
+        <td class="text-right tabular-nums whitespace-nowrap{{ ' border-l-4 border-primary font-semibold text-primary' if loop.first }}">{{ r.id }}</td>
+        <td class="whitespace-nowrap">{{ r.started_at.strftime('%d %b %H:%M') }}</td>
         <td class="text-on-surface-variant">
           {% if r.profile_id %}#{{ r.profile_id }} {{ r.profile_name or '(deleted)' }}{% else %}—{% endif %}
         </td>
@@ -75,23 +92,24 @@
            written or neither, so one test covers the pair. #}
         {% set filtered = r.filter_passed_count or r.filter_rejected_count %}
         <td class="text-right tabular-nums">{{ r.filter_passed_count if filtered else '—' }}</td>
-        <td class="text-right tabular-nums">{{ r.filter_rejected_count if filtered else '—' }}</td>
+        <td class="text-right tabular-nums{{ ' text-error' if r.filter_rejected_count }}">{{ r.filter_rejected_count if filtered else '—' }}</td>
         <td class="text-right tabular-nums">{{ r.scored_count }}</td>
         <td class="text-right tabular-nums">{{ r.published_count }}</td>
-        <td class="text-on-surface-variant">
+        <td class="font-mono text-label text-on-surface-variant whitespace-nowrap">
           {% for site, n in (r.counts_by_site or {}).items() %}
-            {{ site }}={{ n }}{% if not loop.last %}, {% endif %}
+            {{ site }}={{ n }}{% if not loop.last %} · {% endif %}
           {% endfor %}
         </td>
       </tr>
       {% if r.error %}
-      <tr class="[&_td]:bg-error-container [&_td]:text-on-error-container [&_td]:text-(length:--fs-label)"><td></td><td colspan="10"><strong>Error:</strong> {{ r.error }}</td></tr>
+      <tr class="[&_td]:bg-error-container [&_td]:text-on-error-container [&_td]:text-(length:--fs-label)"><td></td><td colspan="10"><span class="flex items-center gap-2">{{ icon('error', cls='size-4') }}<span><strong>Error:</strong> {{ r.error }}</span></span></td></tr>
       {% endif %}
       {% else %}
       <tr><td colspan="11">{{ empty_state("No runs recorded yet.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  {% if runs %}<p class="m-0 px-4 py-3 border-t border-outline-variant text-body-sm text-on-surface-variant">Showing {{ runs | length }} recent run{{ '' if runs | length == 1 else 's' }}</p>{% endif %}
 {% endcall %}
 
 {% endblock %}
