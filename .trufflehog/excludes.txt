@@ -22,6 +22,16 @@
 #                    this only matters for filesystem scans of a working tree.
 #   Docs/AI-LOGS     Raw model transcripts. Gitignored; same reasoning.
 #   scan output      A previous report contains the findings verbatim.
+#   Stitch export    The Google Stitch design mockups for feature 004 (the
+#                    extracted folder and its .zip). Generated prototype HTML,
+#                    not configuration: the settings mockup hard-codes sample
+#                    values (a placeholder proxy URL with user and pass in it, and
+#                    a postgres DSN to a `job_discovery` database) that trip the custom DSN
+#                    detector and the built-in URI detector. The built-in URI
+#                    detector cannot be allowlisted by value in config.yaml, and
+#                    a PR scan covers the commit that added the export, so
+#                    editing the file cannot clear it. Only the export is
+#                    excluded. The rest of Docs/Job Discovery UX&UI stays in scope.
 #
 # Note the asymmetry with includes.txt: app/migrations is NOT excluded here.
 ^app/uv\.lock$
@@ -32,5 +42,6 @@
 (^|/)\.mypy_cache/
 ^app/data/
 ^Docs/AI-LOGS/
+^Docs/Job Discovery UX&UI/stitch_remix_of_job_discovery_wireframe_login(/|\.zip$)
 (^|/)trufflehog-[^/]*\.json$
 \.(png|jpg|jpeg|gif|ico|pdf|woff2?|ttf)$
