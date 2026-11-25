@@ -1,4 +1,4 @@
-{% from "_macros.html" import icon, pill_class, ui %}
+{% from "_macros.html" import ui %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,7 +14,7 @@
   <a class="skip-link absolute left-2 -top-16 z-20 px-4 py-2 rounded bg-primary-container text-on-primary-container font-medium focus:top-2" href="#main">Skip to content</a>
   {% set run = shell.last_run %}
   <header class="sticky top-0 z-10 bg-surface-container-lowest border-b border-outline-variant">
-    <div class="max-w-320 mx-auto min-h-14 px-4 flex flex-wrap items-center gap-x-6 gap-y-0 md:px-6 md:flex-nowrap">
+    <div class="max-w-360 mx-auto min-h-14 px-4 flex flex-wrap items-center gap-x-6 gap-y-0 md:px-6 md:flex-nowrap">
       <a class="py-3 font-semibold text-(length:--fs-md) tracking-(--ls-md) text-on-surface no-underline" href="/" aria-label="Job discovery, overview">Job <span class="text-primary">discovery</span></a>
       <nav class="tab-fade relative order-3 min-w-0 flex-[1_0_100%] md:order-0 md:flex-auto md:self-stretch" aria-label="Primary">
         <ul class="flex gap-1 m-0 p-0 list-none overflow-x-auto snap-x snap-proximity [scrollbar-width:none] md:h-full">
@@ -27,18 +27,23 @@
           {% endfor %}
         </ul>
       </nav>
-      {# Last-run status on every page (FR-013): text and icon, never colour alone. #}
-      {% if run %}
-      <a class="last-run ml-auto pill {{ pill_class(run.status, true) }}" href="/runs">
-        {{ icon({'running': 'progress_activity', 'success': 'check_circle', 'failed': 'error'}.get(run.status, 'schedule')) }}
-        <span>Last run {{ run.started_at.strftime('%d %b %H:%M') }} · {{ run.status }}</span>
+      {# Last-run status on every page (FR-013): the status is in the text; the dot only echoes
+         it (never colour alone). Neutral pill per the 007 target. #}
+      {% set dots = {"running": "bg-primary", "success": "bg-success", "failed": "bg-error"} %}
+      <a class="last-run ml-auto inline-flex items-center gap-2 min-h-7 px-3 border border-outline-variant rounded bg-surface-container-low text-on-surface-variant text-label font-medium whitespace-nowrap no-underline hover:bg-surface-container-high hover:text-on-surface {{ ui.transition }}" href="/runs">
+        <span class="size-2 flex-none rounded-full {{ dots.get(run.status, 'bg-outline') if run else 'bg-outline' }}" aria-hidden="true"></span>
+        {% if run %}<span>Last run: {{ run.started_at.strftime('%d %b %Y, %H:%M') }} — {{ run.status|capitalize }}</span>{% else %}<span>No runs yet</span>{% endif %}
       </a>
-      {% else %}
-      <a class="last-run ml-auto pill {{ pill_class('', true) }}" href="/runs">{{ icon('schedule') }}<span>No runs yet</span></a>
-      {% endif %}
     </div>
   </header>
   <main id="main" tabindex="-1">{% block content %}{% endblock %}</main>
+  {# Footer (spec 007 FR-003): real values only — version and the timezone times are shown in. #}
+  <footer class="border-t border-outline-variant bg-surface-container-lowest">
+    <div class="max-w-360 mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-body-sm text-on-surface-variant md:px-6 lg:px-8">
+      <span>Job discovery v{{ app_version }} • Local pipeline</span>
+      {% if shell.timezone %}<span>Times in {{ shell.timezone }}</span>{% endif %}
+    </div>
+  </footer>
   <div id="announcer" class="sr-only" aria-live="polite"></div>
   {#
     Small shell script, delegated from `document` so it survives the bulk <body> swap

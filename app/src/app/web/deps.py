@@ -7,6 +7,7 @@ these without app.py importing the routers importing app.py back
 
 import hashlib
 from datetime import datetime
+from importlib import metadata
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -33,8 +34,19 @@ def _asset_version() -> str:
 
 ASSET_VERSION = _asset_version()
 
+
+def _app_version() -> str:
+    """The installed package version, for the footer (spec 007 FR-003)."""
+    try:
+        return metadata.version("job-discovery")
+    except metadata.PackageNotFoundError:
+        return "dev"
+
+
+APP_VERSION = _app_version()
+
 # What the shell shows when a page was rendered without the dependency (e.g. /healthz).
-EMPTY_SHELL = {"last_run": None, "now": None}
+EMPTY_SHELL = {"last_run": None, "now": None, "timezone": None}
 
 
 def _shell_processor(request: Request) -> dict:
@@ -47,6 +59,7 @@ TEMPLATES = Jinja2Templates(
     context_processors=[_shell_processor],
 )
 TEMPLATES.env.globals["asset_version"] = ASSET_VERSION
+TEMPLATES.env.globals["app_version"] = APP_VERSION
 TEMPLATES.env.filters["relative_age"] = relative_age
 
 
@@ -66,4 +79,5 @@ def shell_context(request: Request, db=Depends(get_db)) -> None:
     request.state.shell = {
         "last_run": queries.latest_run(db),
         "now": datetime.now(ZoneInfo(settings.timezone)),
+        "timezone": settings.timezone,
     }
