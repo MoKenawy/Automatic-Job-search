@@ -1,6 +1,6 @@
 # ADR-0022: Styling with Tailwind v4 through the standalone CLI
 
-* Status: proposed (22 November 2026); to be accepted when Phase 3 of feature 006 lands
+* Status: accepted (25 November 2026), when Phase 3 of feature 006 landed; proposed 22 November 2026
 * Deciders: Mohammed
 * Date: 22 November 2026
 * Supersedes: [ADR-0021](0021-ui-styling-hand-written-tokens.md)

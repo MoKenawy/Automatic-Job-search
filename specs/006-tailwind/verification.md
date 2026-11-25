@@ -110,3 +110,66 @@ Every step passed its own gate: `pytest` 737 passed / 46 skipped, ruff clean, `p
 - **Not covered by pixels**: success/error banners and the htmx busy state are not rendered by the
   visual seed; the `max-sm` (below 640 px) rules differ from the old `max-width: 640px` only at
   exactly 640 px.
+
+## Phase 3 final gate (sub-branch `006-4`), 2026-11-25
+
+| Check | Result |
+|---|---|
+| `uv run pytest` (no browser, no Tailwind binary) | 737 passed, 46 skipped |
+| `uv run ruff check` / `ruff format --check` on `src tests scripts` | clean |
+| `uv run pytest --visual` | 44 of 44 match, twice in a row (after the re-baseline below) |
+| Drift check (`build_css.py` twice) | reproducible |
+| ADR-0022 | accepted |
+
+### Size (SC-004, budget 150 KB)
+
+| Asset | Bytes |
+|---|---|
+| `app.css` (Phase 0: 28,800; after 3.7: 30,975) | 30,918 |
+| `inter-latin-wght-normal.woff2` | 48,256 |
+| `icons.svg` | 7,796 |
+| `htmx-2.0.3.min.js` | 50,387 |
+| **First load** | **137,357 (about 134 KB)** |
+
+`app.css` ends larger than on `49de3dd` because the utilities that replaced the component rules
+are emitted once each; it stays within the budget.
+
+### T033: rules removed (FR-015)
+
+Every remaining rule was grepped against templates, macros, the page script and tests. Only the
+radio-button selectors had no use (there is no radio input anywhere): the `input[type="radio"]`
+margin restore in `@layer base` and its part of the checkbox size rule. Everything else that is
+left is on FR-022's list.
+
+### Success criteria
+
+- **SC-005** (no unmapped classes): `tests/test_css_build.py`, green.
+- **SC-006** (no colour literals, palette only): `tests/test_web_assets.py` plus `--color-*: initial`, green.
+- **SC-007** (contrast, both palettes): `tests/test_design_tokens.py`, green.
+- **SC-008** (no other origins): `tests/test_web_assets.py`, green.
+- **SC-009** (only documented one-offs remain): what is left in `input.css` is the theme mapping,
+  tokens, font faces, `@layer base` (three Preflight restores and reduced motion), element defaults
+  in `@layer components` (html, body, headings, p, a, code, `:focus-visible`, main, th/td, table,
+  form controls, label, `@keyframes spin`), the two commented one-offs (`.bars i.zero`,
+  `.tab-fade::after`) and the unlayered forced-colours block. No bespoke component class rule
+  remains. The pie named in FR-022 never needed a rule: it is inline `var(--token)` styles (3.7).
+
+### Re-baselined snapshots (recorded decision, FR-003)
+
+The first full `--visual` run of this gate matched 32 of 44. The same 12 failed with the 006-4
+changes stashed, so none came from this phase. The maintainer approved re-baselining exactly these
+12 on 2026-11-25:
+
+- **`reports-employers` (4)**: the "days quiet" column read the real clock
+  (`app.services.reports.datetime.now`), because the test froze only the shell clock. The baseline
+  therefore held numbers from the day it was captured. `tests/test_visual.py` now freezes that
+  clock to `ANCHOR` too; the new baseline is deterministic.
+- **`settings` (4), `profiles` (4)**: only `<code>` text differs. `code` renders in the system
+  monospace font (`ui-monospace, "Cascadia Mono", Consolas`), which changed on the maintainer's
+  machine between 22 and 25 November. A system font is outside the stylesheet's control; the
+  baselines depend on it until a mono font is self-hosted.
+
+### Changed test code
+
+- `tests/test_visual.py`: freezes `app.services.reports.datetime` as well as the shell clock. No
+  assertion changed.
