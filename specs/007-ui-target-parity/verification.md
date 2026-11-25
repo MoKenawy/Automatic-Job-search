@@ -120,3 +120,11 @@ takes the full width and the pill and button wrap below.
 `postings` × 4. Reviewed `postings-1280-light`, `postings-1280-dark`, `postings-375-light`. The
 visual seed has one page only, so the multi-page pager is covered by `test_web_triage.py`
 ("Page 1 of 2", "Page 2 of 2"), not by pixels.
+
+## Step 007-4: Reports index
+
+- `reports/index.html`: `card_hover` rows with `icon_tile`, real stat badge (postings/employers, boards, active profiles), decorative CSS thumbnail (`aria-hidden`), "View report" link; pipeline summary panel (distinct rate, average run time, scoring model) from `recent_runs(30)` and settings. Route adds context from `queries.totals`, `known_sites`, `profile_store.list_enabled`, `recent_runs`. New sprite icon: `monitoring`.
+- Dropped: time-range control, latency/telemetry mock values (D3).
+- Re-baselined: `reports` x 4 (index page redesign). Detail report pages unchanged in pixels.
+- Gate: pytest, ruff, CSS build, `--visual` all green after re-baseline.
+- Environment note: Playwright chromium had to be reinstalled locally (`uv run playwright install chromium`).

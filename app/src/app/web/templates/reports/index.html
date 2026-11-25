@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import empty_state, icon, page_header %}
+{% from "_macros.html" import badge_class, card_hover_class, empty_state, icon, icon_tile, page_header, section_header %}
 {% set active = 'reports' %}
 {% block title %}Reports — Job discovery{% endblock %}
 {% block content %}
@@ -10,17 +10,56 @@
 {% endset %}
 {{ page_header('Reports', subtitle) }}
 
-<ul class="grid gap-3 m-0 p-0 list-none">
+{% set tiles = {"/reports/employers": "domain", "/reports/sources": "hub", "/reports/profiles": "filter_alt"} %}
+<ul class="grid gap-4 m-0 p-0 list-none">
   {% for href, title, blurb in reports %}
   {# One link per card: the title link is stretched over the whole card (card-link). #}
-  <li class="relative bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1 p-4 pr-12 md:p-5 md:pr-12 hover:border-outline hover:shadow-2 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-focus-ring has-[a:focus-visible]:outline-offset-2 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]">
-    <h2 class="mt-0 mb-1"><a class="after:content-[''] after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none" href="{{ href }}">{{ title }}</a></h2>
-    <p class="m-0 text-on-surface-variant">{{ blurb }}</p>
-    {{ icon('arrow_forward', cls='absolute right-4 top-1/2 -translate-y-1/2') }}
+  <li class="{{ card_hover_class() }} relative flex flex-wrap items-center gap-x-4 gap-y-3 has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-focus-ring has-[a:focus-visible]:outline-offset-2">
+    {{ icon_tile(tiles.get(href, "description")) }}
+    <div class="min-w-60 flex-1">
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 class="m-0 text-headline-md"><a class="no-underline hover:underline after:content-[''] after:absolute after:inset-0 after:rounded-[inherit] focus-visible:outline-none" href="{{ href }}">{{ title }}</a></h2>
+        {% if stats.get(href) %}<span class="{{ badge_class() }}">{{ stats[href] }}</span>{% endif %}
+      </div>
+      <p class="mt-1 mb-0 text-on-surface-variant">{{ blurb }}</p>
+    </div>
+    {# Decorative thumbnail, token colours only. The badge and title carry the meaning. #}
+    <div class="hidden md:flex items-end justify-center gap-1 w-24 h-14 rounded-md bg-surface-container-low p-2" aria-hidden="true">
+      {% if href == "/reports/employers" %}
+      <i class="block w-2 h-3 rounded-sm bg-primary-container"></i><i class="block w-2 h-6 rounded-sm bg-primary-container"></i><i class="block w-2 h-full rounded-sm bg-primary"></i><i class="block w-2 h-5 rounded-sm bg-primary-container"></i><i class="block w-2 h-2 rounded-sm bg-primary-container"></i>
+      {% elif href == "/reports/sources" %}
+      <i class="block size-8 rounded-full bg-primary-container/70"></i><i class="block size-8 -ml-4 rounded-full bg-primary/70"></i>
+      {% else %}
+      <span class="flex w-full items-center gap-1 self-center"><i class="block h-2 flex-[3] rounded-sm bg-primary"></i><i class="block h-2 flex-[2] rounded-sm bg-primary-container"></i><i class="block h-2 flex-1 rounded-sm bg-outline-variant"></i></span>
+      {% endif %}
+    </div>
+    <span class="inline-flex items-center gap-1 font-medium text-primary">View report {{ icon('arrow_forward', cls='size-4') }}</span>
   </li>
   {% else %}
   <li>{{ empty_state("No reports available.") }}</li>
   {% endfor %}
 </ul>
+
+{# Pipeline summary: figures from recent runs and settings only. Nothing here is estimated. #}
+<section class="mt-8 p-5 rounded-lg border border-outline-variant bg-surface-container-low" aria-label="Pipeline summary">
+  {% call section_header("Pipeline summary", "From the last " ~ summary.runs ~ " run" ~ ("" if summary.runs == 1 else "s") ~ ".", "monitoring") %}{% endcall %}
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest">
+      <span class="block uppercase text-on-surface-variant text-label font-medium tracking-label-sm">Distinct rate</span>
+      <span class="block font-semibold tabular-nums text-on-surface text-headline-lg">{% if summary.distinct_rate is not none %}{{ summary.distinct_rate }}%{% else %}—{% endif %}</span>
+      <span class="text-body-sm text-on-surface-variant">Postings kept after deduplication</span>
+    </div>
+    <div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest">
+      <span class="block uppercase text-on-surface-variant text-label font-medium tracking-label-sm">Average run time</span>
+      <span class="block font-semibold tabular-nums text-on-surface text-headline-lg">{% if summary.avg_seconds is not none %}{{ summary.avg_seconds // 60 }}m {{ summary.avg_seconds % 60 }}s{% else %}—{% endif %}</span>
+      <span class="text-body-sm text-on-surface-variant">Finished runs only</span>
+    </div>
+    <div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest">
+      <span class="block uppercase text-on-surface-variant text-label font-medium tracking-label-sm">Scoring model</span>
+      <span class="block font-semibold text-on-surface text-headline-md break-all">{{ summary.scoring_model }}</span>
+      <span class="text-body-sm text-on-surface-variant">Set in Settings</span>
+    </div>
+  </div>
+</section>
 
 {% endblock %}
