@@ -87,6 +87,16 @@ def _render_list(
             "verdict": verdict or "",
             "statuses": STATUSES,
             "totals": queries.totals(db),
+            # Tab counts under the same search/location/source/published axes as
+            # the list, so a tab's number matches what it opens (spec 007).
+            "counts": queries.status_counts(
+                db,
+                search=q,
+                published_only=published,
+                country=country_filter,
+                remote=remote_filter,
+                source=source,
+            ),
             "facets": queries.facets(db),
             "flash": flash,
         },
