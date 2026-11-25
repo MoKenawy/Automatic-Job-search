@@ -155,3 +155,8 @@ visual seed has one page only, so the multi-page pager is covered by `test_web_t
 - History: section header and subtitle; `whitespace-nowrap` on # and Started; rejected count in error colour when above 0; newest row tinted with a primary left accent; monospace by-source text separated with "·"; error row gets an `error` icon; footer "Showing N recent runs".
 - Not built: JSON export, filter button, trigger button, throttle status (D3/D4).
 - Re-baselined: `runs` x 4. Gate: pytest, ruff, CSS build, `--visual` green.
+
+## Step 007-9: closing gate
+
+- `pytest -q`: 817 passed, 46 skipped. `ruff check` and `ruff format --check`: clean. `build_css.py`: no drift; `app.css` is 37 KB (budget 150 KB). `pytest --visual`: 44/44 against the re-baselined snapshots.
+- Not done: a live side-by-side browser pass against every target in both schemes. Each re-baselined snapshot was reviewed at 1280 light only for Reports, Blacklist, Schedules, Settings and Runs; dark and 375 px snapshots were regenerated but not individually inspected, and the htmx/POST behaviours were covered by the existing tests, not by manual clicking.
