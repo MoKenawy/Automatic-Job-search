@@ -284,7 +284,7 @@ def test_every_experience_word_the_hint_lists_is_understood(client, factory):
     from app.filters.levels import parse_requested
 
     html = client.get("/profiles").text
-    hint = re.search(r'<p class="hint" id="experience-hint">(.*?)</p>', html, re.S).group(1)
+    hint = re.search(r'<p [^>]*id="experience-hint">(.*?)</p>', html, re.S).group(1)
     words = re.findall(r"<code>(.*?)</code>", hint)
 
     assert len(words) == 9

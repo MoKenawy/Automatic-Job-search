@@ -1,13 +1,13 @@
 {% extends "base.html" %}
-{% from "_macros.html" import empty_state, table_wrap, status_pill %}
+{% from "_macros.html" import chip_class, empty_state, pill_class, status_pill, table_wrap %}
 {% set active = 'reports' %}
 {% block title %}Employer activity — Reports — Job discovery{% endblock %}
 {% block content %}
 
-<div class="page-head"><h1>Employer hiring activity</h1></div>
+<div class="mb-6"><h1>Employer hiring activity</h1></div>
 {% include "reports/_caveat.html" %}
 
-<p class="page-sub">
+<p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
   <strong>Roles</strong> counts distinct real-world roles, not board listings &mdash;
   the fingerprint already merges a role surfaced by both boards.
   <strong>Titles</strong> is how many distinct titles those roles span: twelve roles
@@ -15,9 +15,9 @@
   different signal from twelve different openings.
 </p>
 
-<ul class="chips">
-  <li><a class="chip" href="/reports/employers"{% if not show_suppressed %} aria-current="true"{% endif %}>Active only</a></li>
-  <li><a class="chip" href="/reports/employers?show_suppressed=true"{% if show_suppressed %} aria-current="true"{% endif %}>Include blacklisted</a></li>
+<ul class="flex flex-wrap gap-2 mb-4 p-0 list-none">
+  <li><a class="{{ chip_class() }}" href="/reports/employers"{% if not show_suppressed %} aria-current="true"{% endif %}>Active only</a></li>
+  <li><a class="{{ chip_class() }}" href="/reports/employers?show_suppressed=true"{% if show_suppressed %} aria-current="true"{% endif %}>Include blacklisted</a></li>
 </ul>
 
 {% call table_wrap("Employer hiring activity") %}
@@ -25,9 +25,9 @@
     <thead>
       <tr>
         <th scope="col">Employer</th>
-        <th scope="col" class="num">Roles</th>
-        <th scope="col" class="num">Titles</th>
-        <th scope="col" class="num">Days quiet</th>
+        <th scope="col" class="text-right tabular-nums">Roles</th>
+        <th scope="col" class="text-right tabular-nums">Titles</th>
+        <th scope="col" class="text-right tabular-nums">Days quiet</th>
         <th scope="col">First seen</th>
         <th scope="col">Triage</th>
       </tr>
@@ -38,16 +38,16 @@
         <td>
           {{ row.employer.name }}
           {% if row.employer.suppressed %}
-            <span class="pill rejected">blacklisted</span>
+            <span class="pill {{ pill_class('rejected') }}">blacklisted</span>
           {% endif %}
         </td>
-        <td class="num">{{ row.postings }}</td>
-        <td class="num">{{ row.titles }}</td>
-        <td class="num">{{ row.days_quiet }}</td>
-        <td class="muted">{{ row.first_seen.strftime('%d %b %Y') if row.first_seen }}</td>
+        <td class="text-right tabular-nums">{{ row.postings }}</td>
+        <td class="text-right tabular-nums">{{ row.titles }}</td>
+        <td class="text-right tabular-nums">{{ row.days_quiet }}</td>
+        <td class="text-on-surface-variant">{{ row.first_seen.strftime('%d %b %Y') if row.first_seen }}</td>
         <td>
           {% for status, count in row.by_status.items() %}
-            {{ status_pill(status) }}<span class="num">{{ count }}</span>
+            {{ status_pill(status) }}<span class="text-right tabular-nums">{{ count }}</span>
           {% endfor %}
         </td>
       </tr>

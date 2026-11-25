@@ -1,37 +1,37 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, status_pill %}
+{% from "_macros.html" import banner, banner_class, btn_class, card_class, empty_state, icon, pill_class, status_pill %}
 {% set active = 'postings' %}
 {% block title %}{{ p.title }} — Job discovery{% endblock %}
 {% block content %}
 
-<p class="back-link"><a href="/postings">{{ icon('arrow_forward', cls='flip') }}Postings</a></p>
+<p class="mb-3"><a href="/postings">{{ icon('arrow_forward', cls='[transform:scaleX(-1)]') }}Postings</a></p>
 
-<div class="page-head">
+<div class="mb-6">
   <h1>{{ p.title }}</h1>
-  <p class="page-sub">{{ employer.name }}{% if p.country_code %} · {{ p.country_code }}{% endif %}{% if p.is_remote %} · Remote{% endif %}</p>
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">{{ employer.name }}{% if p.country_code %} · {{ p.country_code }}{% endif %}{% if p.is_remote %} · Remote{% endif %}</p>
 </div>
 
-<div class="detail-actions">
+<div class="flex flex-wrap items-center gap-3 mb-4">
   {% include "_status_control.html" %}
 
   {# US3 FR-012 — blacklist this employer directly from a posting (contract C-7). #}
   {% if not employer.suppressed %}
-    <form method="post" action="/employers/{{ employer.id }}/blacklist"
+    <form class="m-0 inline" method="post" action="/employers/{{ employer.id }}/blacklist"
           onsubmit="return confirm('Blacklist {{ employer.name }}? All their postings will be rejected.');">
       <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
-      <button class="btn" type="submit">{{ icon('block') }}Blacklist {{ employer.name }}</button>
+      <button class="{{ btn_class() }}" type="submit">{{ icon('block') }}Blacklist {{ employer.name }}</button>
     </form>
   {% endif %}
 </div>
 
 {% if employer.suppressed %}
-<div class="banner error" role="alert">
+<div class="banner {{ banner_class('error') }}" role="alert">
   {{ icon('block') }}
   <div>
-    <span class="pill rejected">employer blacklisted</span>
-    <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline-form">
+    <span class="pill {{ pill_class('rejected') }}">employer blacklisted</span>
+    <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline m-0">
       <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
-      <button class="btn" type="submit">{{ icon('undo') }}Remove from blacklist</button>
+      <button class="{{ btn_class() }}" type="submit">{{ icon('undo') }}Remove from blacklist</button>
     </form>
   </div>
 </div>
@@ -43,10 +43,10 @@
    missing from the queue and no page that says why. Shaped on the blacklist
    banner above, which exists for exactly the same reason (ADR-0015). #}
 {% if verdict.rejected or current.rejected %}
-<div class="banner" role="status">
+<div class="banner {{ banner_class('info') }}" role="status">
   {{ icon('warning') }}
   <div>
-  <span class="pill rejected">filtered out</span>
+  <span class="pill {{ pill_class('rejected') }}">filtered out</span>
   {% if verdict.rejected %}
     Turned away on
     {% if verdict.grounds == 'both' %}title and experience
@@ -67,7 +67,7 @@
   {% endif %}
   {% if verdict.title_passed is not none or verdict.experience_passed is not none %}
     {% if (verdict.title_passed, verdict.experience_passed) != (current.title_passed, current.experience_passed) %}
-      <br><span class="muted">The criteria, or the profiles that found this
+      <br><span class="text-on-surface-variant">The criteria, or the profiles that found this
       posting, have changed since the filter was last applied — re-apply with
       <code>filter --all</code> to update this verdict.</span>
     {% endif %}
@@ -76,12 +76,12 @@
 </div>
 {% endif %}
 
-<div class="detail-grid">
+<div class="grid grid-cols-1 gap-6 items-start md:grid-cols-[2fr_1fr]">
   <section aria-labelledby="h-desc">
-    <h2 id="h-desc">Description</h2>
-    <div class="card">
+    <h2 class="mt-0" id="h-desc">Description</h2>
+    <div class="{{ card_class() }} min-w-0">
       {% if p.description %}
-        <div class="desc">{{ p.description }}</div>
+        <div class="whitespace-pre-wrap text-(length:--fs-body) leading-[1.6] max-h-115 overflow-y-auto pr-2">{{ p.description }}</div>
       {% else %}
         {{ empty_state("No description captured.") }}
       {% endif %}
@@ -90,21 +90,21 @@
 
   <div>
     <section aria-labelledby="h-assess">
-      <h2 id="h-assess">Assessment</h2>
-      <div class="card">
+      <h2 class="mt-0" id="h-assess">Assessment</h2>
+      <div class="{{ card_class() }} min-w-0">
         {% if p.score is not none %}
-          <div class="score big-score">{{ p.score }}<span class="muted">/100</span></div>
+          <div class="font-semibold tabular-nums text-(length:--fs-xl-mobile) leading-(--lh-xl-mobile)">{{ p.score }}<span class="text-(length:--fs-sm) font-normal text-on-surface-variant">/100</span></div>
           {% if p.rationale %}<p>{{ p.rationale }}</p>{% endif %}
           {% if p.matched_skills %}
-            <h3>Matched</h3>
-            <p>{% for s in p.matched_skills %}<span class="pill">{{ s }}</span> {% endfor %}</p>
+            <h3 class="mt-4 mb-1">Matched</h3>
+            <p>{% for s in p.matched_skills %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</p>
           {% endif %}
           {% if p.gaps %}
-            <h3>Gaps</h3>
-            <p>{% for s in p.gaps %}<span class="pill">{{ s }}</span> {% endfor %}</p>
+            <h3 class="mt-4 mb-1">Gaps</h3>
+            <p>{% for s in p.gaps %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</p>
           {% endif %}
           {% if p.scored_by_model %}
-            <p class="muted small">
+            <p class="text-on-surface-variant text-(length:--fs-label)">
               {{ p.scored_by_model }}{% if p.scored_at %}, {{ p.scored_at.strftime('%d %b %H:%M') }}{% endif %}
             </p>
           {% endif %}
@@ -114,22 +114,22 @@
       </div>
     </section>
 
-    <section aria-labelledby="h-src">
-      <h2 id="h-src">Sources</h2>
-      <div class="card">
-        <dl class="meta">
+    <section class="mt-6" aria-labelledby="h-src">
+      <h2 class="mt-0" id="h-src">Sources</h2>
+      <div class="{{ card_class() }} min-w-0">
+        <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-(length:--fs-body-sm) [&_dt]:text-on-surface-variant [&_dd]:m-0 [&_dd]:[word-break:break-word]">
           {% for site, info in p.sources.items() %}
           <dt>{{ site }}</dt>
-          <dd><a href="{{ info.url }}" target="_blank" rel="noopener">open {{ icon('open_in_new') }}<span class="visually-hidden">{{ site }} posting in a new tab</span></a></dd>
+          <dd><a href="{{ info.url }}" target="_blank" rel="noopener">open {{ icon('open_in_new') }}<span class="sr-only">{{ site }} posting in a new tab</span></a></dd>
           {% endfor %}
         </dl>
       </div>
     </section>
 
-    <section aria-labelledby="h-rec">
-      <h2 id="h-rec">Record</h2>
-      <div class="card">
-        <dl class="meta">
+    <section class="mt-6" aria-labelledby="h-rec">
+      <h2 class="mt-0" id="h-rec">Record</h2>
+      <div class="{{ card_class() }} min-w-0">
+        <dl class="m-0 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-(length:--fs-body-sm) [&_dt]:text-on-surface-variant [&_dd]:m-0 [&_dd]:[word-break:break-word]">
           <dt>Location</dt><dd>{{ p.location_raw or '—' }}</dd>
           <dt>Job type</dt><dd>{{ p.job_type or '—' }}</dd>
           <dt>Posted</dt><dd>{{ p.date_posted.strftime('%d %b %Y') if p.date_posted else '—' }}</dd>
@@ -143,7 +143,7 @@
           <dt>Seniority</dt><dd>{{ p.job_level or '—' }}</dd>
           <dt>Title filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
           <dt>Experience filter</dt><dd>{{ 'passed' if p.experience_filter_passed else ('rejected' if p.experience_filter_passed is not none else '—') }}</dd>
-          <dt>Fingerprint</dt><dd class="muted small">{{ p.fingerprint[:24] }}…</dd>
+          <dt>Fingerprint</dt><dd class="text-on-surface-variant text-(length:--fs-label)">{{ p.fingerprint[:24] }}…</dd>
         </dl>
       </div>
     </section>

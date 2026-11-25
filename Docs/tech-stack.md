@@ -23,7 +23,9 @@ The stack follows the design record's optimisation target: **signal quality and
 low operational overhead**, zero recurring cost, and secondary value as a
 portfolio piece (§2, criterion 5). Concretely:
 
-- One language end to end. JobSpy is Python, so the whole pipeline is Python.
+- One language end to end. JobSpy is Python, so the whole pipeline is Python. The one
+  exception is a maintainer-side CSS build (Tailwind standalone CLI, no Node, output
+  committed) so the runtime stays build-free; see [ADR-0022](ADRs/0022-styling-with-tailwind-standalone-cli.md).
 - Managed migrations and a legible schema — the schema is a portfolio artefact.
 - Every stage independently re-runnable and idempotent, per design §7.1.
 - Nothing that incurs a per-call fee or ships data off the machine.

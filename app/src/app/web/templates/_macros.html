@@ -2,7 +2,83 @@
 
 {# Icon from the vendored sprite. Hidden from assistive tech unless it has a label (FR-008). #}
 {% macro icon(name, label=None, cls="") -%}
-<svg class="icon {{ cls }}" {% if label %}role="img" aria-label="{{ label }}"{% else %}aria-hidden="true" focusable="false"{% endif %}><use href="/static/icons.svg#{{ name }}"></use></svg>
+<svg class="icon size-4.5 flex-none fill-current align-[-0.2em] {{ cls }}" {% if label %}role="img" aria-label="{{ label }}"{% else %}aria-hidden="true" focusable="false"{% endif %}><use href="/static/icons.svg#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# Status class maps (spec 006 FR-018, R9). One dict per status family; every value is a COMPLETE
+   literal utility string, so the Tailwind scanner sees it. Never build a class name by
+   concatenation. `pill` / `banner` stay in the markup as behaviour hooks (FR-019); an unknown
+   status gets the neutral style, which is the base `.pill` rule. #}
+{# Shared utility clusters (spec 006 FR-017). Complete literal strings, so the scanner sees them. #}
+{# Button. Pieces never set the same property twice, so joining them is safe; `btn-primary` stays as
+   a hook for the forced-colours rule. Busy state: aria-busy on the trigger or an ancestor
+   .htmx-request (FR-020). #}
+{%- macro btn_class(variant="default", size="md", wide=False) -%}
+{%- set layout = {
+  "md": "min-h-9 px-4 text-(length:--fs-body)",
+  "sm": "min-h-7 px-3 text-(length:--fs-label)",
+} -%}
+{%- set colours = {
+  "default": "border-outline bg-surface-container-lowest text-on-surface hover:bg-surface-container-high",
+  "primary": "btn-primary border-primary-container bg-primary-container text-on-primary-container hover:bg-[color-mix(in_srgb,var(--primary-container)_85%,black)]",
+  "ghost": "border-transparent bg-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface",
+  "current": "border-primary bg-secondary-container text-on-secondary-container cursor-default",
+} -%}
+inline-flex items-center justify-center gap-1 {{ "min-w-9" if wide else "min-w-6" }} {{ layout[size] }} leading-none font-medium border rounded no-underline cursor-pointer wrap-anywhere transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] {{ colours[variant] }} disabled:opacity-55 disabled:cursor-not-allowed aria-disabled:opacity-55 aria-disabled:cursor-not-allowed aria-busy:opacity-70 aria-busy:cursor-progress in-[.htmx-request]:opacity-70 in-[.htmx-request]:cursor-progress aria-busy:after:content-[''] aria-busy:after:size-3.5 aria-busy:after:rounded-full aria-busy:after:border-2 aria-busy:after:border-current aria-busy:after:border-r-transparent aria-busy:after:animate-[spin_0.8s_linear_infinite]
+{%- endmacro %}
+
+{# Card surface: one border and elevation level, never nested (DESIGN.md level 1). #}
+{%- macro card_class() -%}
+bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1 p-4 md:p-5
+{%- endmacro %}
+
+{# Form field wrapper (label + control), and the inline variant used for "hour : minute". Controls
+   inside it carry their own w-full. #}
+{%- macro field_class(row=False) -%}
+{{ "flex flex-row items-center gap-2 m-0 min-w-0 border-0 p-0" if row else "flex flex-col gap-1 mb-4 min-w-0 border-0 p-0" }}
+{%- endmacro %}
+
+{%- macro check_class() -%}
+inline-flex items-center gap-2 min-h-6 font-normal
+{%- endmacro %}
+
+{# Helper text under a control; `grid` places it in the second column of the rules form. #}
+{%- macro hint_class(grid=False) -%}
+{{ "col-start-2 -mt-2 mb-1 text-label text-on-surface-variant max-sm:col-start-1 max-sm:mt-0 max-sm:mb-2" if grid else "m-0 text-label text-on-surface-variant" }}
+{%- endmacro %}
+
+{# Filter / segmented-control chip; the selected one carries aria-current (no script needed). #}
+{%- macro chip_class() -%}
+chip inline-flex items-center gap-1 min-h-7 px-3 border border-outline-variant rounded bg-surface-container-low text-on-surface-variant text-label font-medium no-underline capitalize wrap-anywhere transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] hover:bg-surface-container-high aria-[current]:bg-inverse-surface aria-[current]:border-inverse-surface aria-[current]:text-inverse-on-surface aria-[current]:hover:bg-inverse-surface
+{%- endmacro %}
+{% set ui = {
+  "transition": "transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]",
+} %}
+
+{# The pill is the same cluster everywhere, so it lives here and not in each template. The colour
+   set is part of the complete string (two bg-* utilities on one element would conflict). #}
+{%- macro pill_class(status, tall=False) -%}
+{%- set base = ("inline-flex items-center gap-1 min-h-7 px-2 border rounded-full text-label font-medium whitespace-nowrap wrap-anywhere normal-nums no-underline [&_.icon]:size-3.5 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]") if tall else "inline-flex items-center gap-1 min-h-5 px-2 border rounded-full text-label font-medium whitespace-nowrap wrap-anywhere normal-nums no-underline [&_.icon]:size-3.5 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]" -%}
+{%- set posting = {
+  "new": "bg-secondary-container text-on-secondary-container border-transparent",
+  "shortlist": "bg-surface-container-lowest text-primary border-primary",
+  "applied": "bg-success-container text-on-success-container border-transparent",
+  "rejected": "bg-error-container text-on-error-container border-transparent",
+} -%}
+{%- set run = {
+  "running": "bg-surface-container-lowest text-primary border-primary",
+  "success": "bg-success-container text-on-success-container border-transparent",
+  "failed": "bg-error-container text-on-error-container border-transparent",
+} -%}
+{{ base }} {{ posting.get(status) or run.get(status) or "bg-surface-container-low text-on-surface-variant border-outline-variant" }}
+{%- endmacro %}
+
+{%- macro banner_class(kind) -%}
+{%- set kinds = {
+  "success": "bg-success-container text-on-success-container border-success",
+  "error": "bg-error-container text-on-error-container border-error",
+} -%}
+flex items-start gap-2 mb-4 px-4 py-3 border rounded-lg {{ kinds.get(kind) or "bg-secondary-container text-on-secondary-container border-outline-variant" }}
 {%- endmacro %}
 
 {# Status pill: text plus icon, never colour alone (FR-007). Unknown statuses stay neutral. #}
@@ -10,7 +86,7 @@
 {% set icons = {"new": "fiber_new", "shortlist": "check_circle", "applied": "send", "rejected": "cancel",
                 "running": "progress_activity", "success": "check_circle", "failed": "error"} %}
 {% set known = status in icons %}
-{% if href %}<a class="pill {{ status if known }}" href="{{ href }}">{% else %}<span class="pill {{ status if known }}">{% endif %}
+{% if href %}<a class="pill {{ pill_class(status) }}" href="{{ href }}">{% else %}<span class="pill {{ pill_class(status) }}">{% endif %}
 {%- if known %}{{ icon(icons[status]) }}{% endif %}{{ status }}
 {%- if href %}</a>{% else %}</span>{% endif %}
 {%- endmacro %}
@@ -18,29 +94,29 @@
 {# Inline status banner (FR-018). Announced via role; focusable ones can receive focus after a body swap. #}
 {% macro banner(kind, message, focusable=False) -%}
 {% set icons = {"info": "info", "success": "check_circle", "error": "error"} %}
-<div class="banner {{ kind }}" role="{{ 'alert' if kind == 'error' else 'status' }}"{% if focusable %} tabindex="-1"{% endif %}>
+<div class="banner {{ banner_class(kind) }}" role="{{ 'alert' if kind == 'error' else 'status' }}"{% if focusable %} tabindex="-1"{% endif %}>
   {{ icon(icons.get(kind, "info")) }}<div>{{ message }}</div>
 </div>
 {%- endmacro %}
 
 {% macro empty_state(message, action_href=None, action_label=None) -%}
-<div class="empty-state">
-  <p>{{ message }}</p>
-  {% if action_href %}<a class="btn" href="{{ action_href }}">{{ action_label }}</a>{% endif %}
+<div class="empty-state px-4 py-12 text-center text-on-surface-variant">
+  <p class="mb-3">{{ message }}</p>
+  {% if action_href %}<a class="{{ btn_class() }}" href="{{ action_href }}">{{ action_label }}</a>{% endif %}
 </div>
 {%- endmacro %}
 
 {# The number is the sole text content of its element (contract C-8: `>3<`). #}
 {% macro metric(label, value, href=None) -%}
-{% if href %}<a class="card metric" href="{{ href }}">{% else %}<div class="card metric">{% endif %}
-  <span class="metric-label">{{ label }}</span>
-  <span class="metric-value">{{ value }}</span>
+{% if href %}<a class="{{ card_class() }} block text-inherit no-underline hover:border-outline hover:shadow-2 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]" href="{{ href }}">{% else %}<div class="{{ card_class() }} block text-inherit no-underline transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease]">{% endif %}
+  <span class="block uppercase text-on-surface-variant text-label font-medium tracking-label-sm">{{ label }}</span>
+  <span class="block font-semibold tabular-nums text-on-surface text-(length:--fs-lg) leading-(--lh-lg) tracking-(--ls-lg) md:text-(length:--fs-xl) md:leading-(--lh-xl) md:tracking-(--ls-xl)">{{ value }}</span>
 {% if href %}</a>{% else %}</div>{% endif %}
 {%- endmacro %}
 
 {# Scrollable table region: keyboard reachable and named (WCAG 2.1.1). Use with {% call %}. #}
 {% macro table_wrap(label) -%}
-<div class="table-wrap panel" tabindex="0" role="region" aria-label="{{ label }}">
+<div class="table-wrap max-w-full overflow-x-auto overflow-y-hidden bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1" tabindex="0" role="region" aria-label="{{ label }}">
   {{ caller() }}
 </div>
 {%- endmacro %}

@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, banner, empty_state, table_wrap %}
+{% from "_macros.html" import banner, btn_class, card_class, check_class, empty_state, field_class, hint_class, icon, pill_class, table_wrap %}
 {% set active = 'profiles' %}
 {% block title %}Schedules — Job discovery{% endblock %}
 {% block content %}
 
 {% if error %}{{ banner('error', error, focusable=True) }}{% endif %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Search schedules</h1>
-  <p class="page-sub">
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
     Each profile is a saved job survey with its own role, sites, and run time. Enabled
     profiles run automatically at their scheduled time; any can be run now (ADR-0005).
     <a href="/settings">{{ icon('settings') }}Run settings</a>
   </p>
 </div>
-<p class="page-sub">
+<p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
   Each profile can also carry its own filter rules. They apply <strong>in addition to</strong>
   the title patterns on the <a href="/settings">settings</a> page, never instead of them, and
   exclude always beats include. A posting found by more than one profile is kept if any one
@@ -24,7 +24,7 @@
 </p>
 
 {% call table_wrap("Search profiles") %}
-  <table class="profile-list">
+  <table class="[&_td]:align-top">
     <thead>
       <tr>
         <th scope="col">Profile</th><th scope="col">Location</th>
@@ -35,35 +35,35 @@
     <tbody>
       {% for p in profiles %}
       <tr>
-        <td><strong>{{ p.name }}</strong><br><span class="muted">{{ p.term }}</span></td>
-        <td class="muted">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill">remote</span>{% endif %}</td>
-        <td>{% for s in p.sites %}<span class="pill">{{ s }}</span> {% endfor %}</td>
-        <td class="muted">{{ p.experience or '—' }}</td>
+        <td><strong>{{ p.name }}</strong><br><span class="text-on-surface-variant">{{ p.term }}</span></td>
+        <td class="text-on-surface-variant">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill {{ pill_class('') }}">remote</span>{% endif %}</td>
+        <td>{% for s in p.sites %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</td>
+        <td class="text-on-surface-variant">{{ p.experience or '—' }}</td>
         <td>{{ '%02d:%02d' | format(p.schedule_hour, p.schedule_minute) }}</td>
         <td>
           {# Contract C-7: stays a submit button in the same form; the switch look and
              role are layered on, and the state is also text (US6 AS-1). #}
-          <form method="post" action="/profiles/{{ p.id }}/enabled" class="inline-form">
+          <form method="post" action="/profiles/{{ p.id }}/enabled" class="inline m-0">
             <input type="hidden" name="enabled" value="{{ 'false' if p.enabled else 'true' }}">
-            <button class="switch" type="submit" role="switch" aria-checked="{{ 'true' if p.enabled else 'false' }}">{{ 'Enabled' if p.enabled else 'Disabled' }}</button>
+            <button class="inline-flex items-center gap-2 min-h-7 pl-1 pr-3 border border-outline rounded-full bg-surface-container-lowest text-on-surface text-(length:--fs-label) leading-none font-medium cursor-pointer transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] before:content-[''] before:size-4 before:rounded-full before:bg-outline before:border-2 before:border-outline aria-checked:bg-success-container aria-checked:text-on-success-container aria-checked:border-success aria-checked:before:bg-success aria-checked:before:border-success" type="submit" role="switch" aria-checked="{{ 'true' if p.enabled else 'false' }}">{{ 'Enabled' if p.enabled else 'Disabled' }}</button>
           </form>
         </td>
         <td>
-          <div class="row-actions">
-            <form method="post" action="/profiles/{{ p.id }}/run" class="inline-form">
-              <button class="btn btn-sm" type="submit" title="Run this profile now">{{ icon('play_arrow') }}Run now</button>
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <form method="post" action="/profiles/{{ p.id }}/run" class="inline m-0">
+              <button class="{{ btn_class(size='sm') }}" type="submit" title="Run this profile now">{{ icon('play_arrow') }}Run now</button>
             </form>
-            <form method="post" action="/profiles/{{ p.id }}/delete" class="inline-form"
+            <form method="post" action="/profiles/{{ p.id }}/delete" class="inline m-0"
                   onsubmit="return confirm('Delete profile {{ p.name }}?');">
-              <button class="btn btn-sm" type="submit">{{ icon('delete') }}Delete</button>
+              <button class="{{ btn_class(size='sm') }}" type="submit">{{ icon('delete') }}Delete</button>
             </form>
           </div>
         </td>
       </tr>
-      <tr class="rules-row">
+      <tr class="[&_td]:pt-0 [&_td]:border-t-0">
         <td colspan="7">
           <details>
-            <summary>
+            <summary class="cursor-pointer text-on-surface-variant text-(length:--fs-label) py-1">
               Filter rules —
               {% if p.experience or p.title_include_pattern or p.title_exclude_pattern %}
                 {% if p.experience %}experience <code>{{ p.experience }}</code>{% endif %}
@@ -72,12 +72,12 @@
               {% else %}none set (hides nothing)
               {% endif %}
             </summary>
-            <form method="post" action="/profiles/{{ p.id }}/filters" class="formgrid rules-form">
+            <form method="post" action="/profiles/{{ p.id }}/filters" class="grid grid-cols-[13.75rem_1fr] gap-x-4 gap-y-3 items-center my-3 max-sm:grid-cols-1 max-sm:gap-x-0 max-sm:gap-y-1">
               <label for="exp-{{ p.id }}">Experience</label>
-              <input id="exp-{{ p.id }}" name="experience" value="{{ p.experience or '' }}"
+              <input class="w-full" id="exp-{{ p.id }}" name="experience" value="{{ p.experience or '' }}"
                      aria-describedby="exp-{{ p.id }}-hint"
                      placeholder="e.g. entry level, junior, senior — blank means no seniority filtering">
-              <p class="hint" id="exp-{{ p.id }}-hint">
+              <p class="{{ hint_class(true) }}" id="exp-{{ p.id }}-hint">
                 Hides postings above this level <em>after</em> they are collected; it never narrows the search.
                 Understood: <code>intern</code> · <code>entry level</code> / <code>junior</code> / <code>graduate</code>
                 · <code>associate</code> · <code>mid</code> / <code>senior</code> · <code>director</code> · <code>executive</code>.
@@ -85,13 +85,13 @@
                 label, Indeed postings on title words only.
               </p>
               <label for="inc-{{ p.id }}">Title must match</label>
-              <input id="inc-{{ p.id }}" name="title_include_pattern" value="{{ p.title_include_pattern or '' }}"
+              <input class="w-full" id="inc-{{ p.id }}" name="title_include_pattern" value="{{ p.title_include_pattern or '' }}"
                      placeholder="regular expression, optional — blank means any title">
               <label for="exc-{{ p.id }}">Title must not match</label>
-              <input id="exc-{{ p.id }}" name="title_exclude_pattern" value="{{ p.title_exclude_pattern or '' }}"
+              <input class="w-full" id="exc-{{ p.id }}" name="title_exclude_pattern" value="{{ p.title_exclude_pattern or '' }}"
                      placeholder="regular expression, optional — wins over the include pattern">
               <span></span>
-              <span><button class="btn" type="submit">Save filter rules</button></span>
+              <span><button class="{{ btn_class() }}" type="submit">Save filter rules</button></span>
             </form>
           </details>
         </td>
@@ -104,18 +104,18 @@
 {% endcall %}
 
 <h2>Add a profile</h2>
-<form method="post" action="/profiles" class="card">
-  <div class="form-grid-2">
-    <div class="form-col">
-      <div class="field">
+<form method="post" action="/profiles" class="{{ card_class() }}">
+  <div class="grid grid-cols-1 gap-x-8 md:grid-cols-2">
+    <div>
+      <div class="{{ field_class() }}">
         <label for="name">Name</label>
-        <input id="name" name="name" required placeholder="e.g. Senior data engineer, remote">
+        <input class="w-full" id="name" name="name" required placeholder="e.g. Senior data engineer, remote">
       </div>
 
-      <div class="field">
+      <div class="{{ field_class() }}">
         <label for="term">Role / search term</label>
-        <input id="term" name="term" required placeholder="data engineer" aria-describedby="term-hint">
-        <p class="hint" id="term-hint">
+        <input class="w-full" id="term" name="term" required placeholder="data engineer" aria-describedby="term-hint">
+        <p class="{{ hint_class() }}" id="term-hint">
           Sent to each board as a plain keyword search. Name the role only (<em>data engineer</em>) and put
           seniority in <strong>Experience</strong>, not here: a word like <em>junior</em> in the term makes
           the board drop plainly titled roles before they are collected, and they can't be recovered later.
@@ -124,32 +124,32 @@
         </p>
       </div>
 
-      <div class="field">
+      <div class="{{ field_class() }}">
         <label for="location">Location</label>
-        <input id="location" name="location" placeholder="Cairo, Egypt (blank for remote)">
+        <input class="w-full" id="location" name="location" placeholder="Cairo, Egypt (blank for remote)">
       </div>
 
-      <div class="field">
+      <div class="{{ field_class() }}">
         <label for="country">Country</label>
-        <input id="country" name="country" value="egypt">
+        <input class="w-full" id="country" name="country" value="egypt">
       </div>
     </div>
 
-    <div class="form-col">
-      <fieldset class="field">
-        <legend>Sites</legend>
-        <div class="checks">
+    <div>
+      <fieldset class="{{ field_class() }}">
+        <legend class="p-0 mb-1 font-medium">Sites</legend>
+        <div class="flex flex-wrap gap-x-4 gap-y-2">
           {% for s in sites %}
-          <label class="check"><input type="checkbox" name="sites" value="{{ s }}" checked> {{ s }}</label>
+          <label class="{{ check_class() }}"><input type="checkbox" name="sites" value="{{ s }}" checked> {{ s }}</label>
           {% endfor %}
         </div>
       </fieldset>
 
-      <div class="field">
+      <div class="{{ field_class() }}">
         <label for="experience">Experience</label>
-        <input id="experience" name="experience" placeholder="e.g. entry level (optional)"
+        <input class="w-full" id="experience" name="experience" placeholder="e.g. entry level (optional)"
                aria-describedby="experience-hint">
-        <p class="hint" id="experience-hint">
+        <p class="{{ hint_class() }}" id="experience-hint">
           Hides postings above this level <em>after</em> they are collected; it never narrows the search.
           Understood: <code>intern</code> · <code>entry level</code> / <code>junior</code> / <code>graduate</code>
           · <code>associate</code> · <code>mid</code> / <code>senior</code> · <code>director</code> · <code>executive</code>.
@@ -158,33 +158,33 @@
         </p>
       </div>
 
-      <div class="field">
+      <div class="{{ field_class() }}">
         <label for="title_include_pattern">Title must match</label>
-        <input id="title_include_pattern" name="title_include_pattern"
+        <input class="w-full" id="title_include_pattern" name="title_include_pattern"
                placeholder="regular expression (optional)">
       </div>
 
-      <div class="field">
+      <div class="{{ field_class() }}">
         <label for="title_exclude_pattern">Title must not match</label>
-        <input id="title_exclude_pattern" name="title_exclude_pattern"
+        <input class="w-full" id="title_exclude_pattern" name="title_exclude_pattern"
                placeholder="regular expression (optional)">
       </div>
     </div>
   </div>
 
-  <div class="form-footer">
-    <label class="check" for="is_remote"><input id="is_remote" name="is_remote" type="checkbox"> Remote only</label>
-    <div class="field inline">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mt-3 pt-4 border-t border-outline-variant">
+    <label class="{{ check_class() }}" for="is_remote"><input id="is_remote" name="is_remote" type="checkbox"> Remote only</label>
+    <div class="{{ field_class(true) }}">
       <label for="schedule_hour">Runs at (hour : minute)</label>
       <span>
-        <input id="schedule_hour" name="schedule_hour" type="number" min="0" max="23" value="6" class="narrow">
+        <input class="w-full" id="schedule_hour" name="schedule_hour" type="number" min="0" max="23" value="6">
         :
-        <input name="schedule_minute" type="number" min="0" max="59" value="0" class="narrow" aria-label="Minute">
+        <input class="w-full" name="schedule_minute" type="number" min="0" max="59" value="0" aria-label="Minute">
       </span>
     </div>
-    <span class="spacer"></span>
-    <button class="btn" type="reset">Cancel</button>
-    <button class="btn btn-primary" type="submit">Save schedule</button>
+    <span class="flex-1"></span>
+    <button class="{{ btn_class() }}" type="reset">Cancel</button>
+    <button class="{{ btn_class('primary') }}" type="submit">Save schedule</button>
   </div>
 </form>
 

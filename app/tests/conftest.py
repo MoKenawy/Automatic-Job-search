@@ -21,6 +21,16 @@ def pytest_addoption(parser):
         default=False,
         help="run tests marked `live`, which make real requests to the job boards",
     )
+    _add_visual_option(parser)
+
+
+def _add_visual_option(parser):
+    parser.addoption(
+        "--visual",
+        action="store_true",
+        default=False,
+        help="run tests marked `visual` (Playwright snapshots; needs `uv sync --group visual`)",
+    )
 
 
 def pytest_collection_modifyitems(config, items):
@@ -30,9 +40,14 @@ def pytest_collection_modifyitems(config, items):
     contract tests (tests/test_jobspy_contract.py) are the one deliberate
     exception and must be asked for.
     """
-    if config.getoption("--live"):
-        return
-    skip = pytest.mark.skip(reason="makes real requests to the job boards; run with --live")
-    for item in items:
-        if "live" in item.keywords:
-            item.add_marker(skip)
+    if not config.getoption("--live"):
+        skip = pytest.mark.skip(reason="makes real requests to the job boards; run with --live")
+        for item in items:
+            if "live" in item.keywords:
+                item.add_marker(skip)
+    # 006 FR-026: the visual gate is opt-in, like `live`, so default runs and CI stay browser-free.
+    if not config.getoption("--visual"):
+        skip = pytest.mark.skip(reason="browser snapshot gate; run with --visual")
+        for item in items:
+            if "visual" in item.keywords:
+                item.add_marker(skip)

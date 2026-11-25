@@ -1,7 +1,8 @@
 """WCAG contrast over the design-token pairs (spec 004 SC-002, FR-008a; constitution VI).
 
-Parses the light `:root` block and the dark `prefers-color-scheme` block of app.css, so a
-palette edit that breaks a pair fails here.
+Parses the light `:root` block and the dark `prefers-color-scheme` block of the AUTHORED
+stylesheet, styles/input.css (006 FR-010: the served app.css is minified), so a palette edit
+that breaks a pair fails here.
 """
 
 import re
@@ -10,7 +11,7 @@ from pathlib import Path
 import pytest
 
 CSS = (
-    Path(__file__).resolve().parents[1] / "src" / "app" / "web" / "static" / "css" / "app.css"
+    Path(__file__).resolve().parents[1] / "src" / "app" / "web" / "styles" / "input.css"
 ).read_text(encoding="utf-8")
 
 _PROP = re.compile(r"--([a-z0-9-]+):\s*(#[0-9a-fA-F]{6})\s*;")

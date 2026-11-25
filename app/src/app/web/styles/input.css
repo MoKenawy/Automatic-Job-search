@@ -1,0 +1,331 @@
+/* Job discovery styles: AUTHORED SOURCE (ADR-0022, spec 006). Edit this file, then run
+   `uv run python scripts/build_css.py`. The output, static/css/app.css, is generated and
+   committed (FR-008); never edit it by hand. CI fails when it is stale (FR-009).
+   Source of truth for tokens: DESIGN.md (YAML tokens win over its prose; spec C1-C11).
+   Phase 0 (FR-012): the ADR-0021 rules sit unchanged in @layer components; @layer base
+   restores the element defaults that Tailwind's Preflight resets (research R4). */
+
+@import "tailwindcss" source(none);
+@source "../templates";
+
+/* Theme mapping (FR-010, FR-011, research R3). `inline` makes each utility carry the
+   var(--token) reference itself, so the dark overrides below flow through. Only project
+   roles exist as utilities: the default palette and type scale are discarded. */
+@theme inline {
+  --color-*: initial;
+  --color-surface: var(--surface);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-inverse-primary: var(--inverse-primary);
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+  --color-success: var(--success);
+  --color-success-container: var(--success-container);
+  --color-on-success-container: var(--on-success-container);
+  --color-focus-ring: var(--focus-ring);
+
+  --text-*: initial;
+  --text-headline-xl: var(--fs-xl);
+  --text-headline-xl--line-height: var(--lh-xl);
+  --text-headline-xl--letter-spacing: var(--ls-xl);
+  --text-headline-xl-mobile: var(--fs-xl-mobile);
+  --text-headline-xl-mobile--line-height: var(--lh-xl-mobile);
+  --text-headline-lg: var(--fs-lg);
+  --text-headline-lg--line-height: var(--lh-lg);
+  --text-headline-lg--letter-spacing: var(--ls-lg);
+  --text-headline-md: var(--fs-md);
+  --text-headline-md--line-height: var(--lh-md);
+  --text-headline-md--letter-spacing: var(--ls-md);
+  --text-headline-sm: var(--fs-sm);
+  --text-headline-sm--line-height: var(--lh-sm);
+  --text-headline-sm--letter-spacing: var(--ls-sm);
+  --text-body-lg: var(--fs-body-lg);
+  --text-body-lg--line-height: var(--lh-body-lg);
+  --text-body: var(--fs-body);
+  --text-body--line-height: var(--lh-body);
+  --text-body-sm: var(--fs-body-sm);
+  --text-body-sm--line-height: var(--lh-body-sm);
+  --text-label: var(--fs-label);
+  --text-label--line-height: var(--lh-label);
+  --text-label-sm: var(--fs-label-sm);
+  --text-label-sm--line-height: var(--lh-label-sm);
+
+  /* Letter-spacing is separate for the label roles: the components pair it with the size on
+     some elements only (th, .metric-label), so text-label must not add it (006 phase 2). */
+  --tracking-*: initial;
+  --tracking-label: var(--ls-label);
+  --tracking-label-sm: var(--ls-label-sm);
+
+  --font-sans: var(--font);
+  --spacing: 0.25rem;
+}
+
+/* Radii and elevation share names with Tailwind's own namespaces, so an `inline` mapping
+   would be self-referential. They are defined here instead and emitted on :root by
+   `static`; components still read them with var(). The dark shadow overrides below
+   outrank this layered declaration (R3, verify in Phase 0). */
+@theme static {
+  --radius-*: initial;
+  --radius: 0.25rem;
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+  --shadow-*: initial;
+  --shadow-1: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-2: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-3: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+}
+
+/* ============================== 1. TOKENS ============================== */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/static/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/static/fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* Light palette: DESIGN.md YAML roles. */
+  --surface: #faf8ff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f3f3fe;
+  --surface-container: #ededf9;
+  --surface-container-high: #e7e7f3;
+  --surface-container-highest: #e1e2ed;
+  --on-surface: #191b23;
+  --on-surface-variant: #434655;
+  --inverse-surface: #2e3039;
+  --inverse-on-surface: #f0f0fb;
+  --outline: #737686;
+  --outline-variant: #c3c6d7;
+  --primary: #004ac6;
+  --on-primary: #ffffff;
+  --primary-container: #2563eb;
+  --on-primary-container: #ffffff;
+  --inverse-primary: #b4c5ff;
+  --secondary: #565e74;
+  --secondary-container: #dae2fd;
+  --on-secondary-container: #3f465c;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+  /* DESIGN.md has no success role; brand green, text variant darkened (R6 C10). */
+  --success: #1e8e3e;
+  --success-container: #e6f4ea;
+  --on-success-container: #0d5323;
+  --focus-ring: var(--primary);
+
+  /* Type scale (DESIGN.md typography). */
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", "Noto Sans", "Noto Sans Arabic",
+    "Segoe UI Historic", Tahoma, Arial, sans-serif;
+  --fs-xl: 2.25rem; --lh-xl: 2.75rem; --ls-xl: -0.025em;
+  --fs-xl-mobile: 1.75rem; --lh-xl-mobile: 2.25rem;
+  --fs-lg: 1.5rem; --lh-lg: 2rem; --ls-lg: -0.02em;
+  --fs-md: 1.25rem; --lh-md: 1.75rem; --ls-md: -0.015em;
+  --fs-sm: 1rem; --lh-sm: 1.5rem; --ls-sm: -0.01em;
+  --fs-body-lg: 1rem; --lh-body-lg: 1.625rem;
+  --fs-body: 0.875rem; --lh-body: 1.375rem;
+  --fs-body-sm: 0.8125rem; --lh-body-sm: 1.125rem;
+  --fs-label: 0.75rem; --lh-label: 1rem; --ls-label: 0.02em;
+  --fs-label-sm: 0.6875rem; --lh-label-sm: 0.875rem; --ls-label-sm: 0.04em;
+
+  /* Spacing and radii. */
+  --space-2xs: 0.125rem; --space-xs: 0.25rem; --space-sm: 0.5rem; --space-md: 0.75rem;
+  --space-lg: 1rem; --space-xl: 1.5rem; --space-2xl: 2rem; --space-3xl: 3rem;
+  --control-h: 2.25rem;
+  --shell-h: 3.5rem;
+
+}
+
+/* Dark palette: derived from the same key colour (R7). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #121318;
+    --surface-container-lowest: #0c0e13;
+    --surface-container-low: #1a1b21;
+    --surface-container: #1e1f25;
+    --surface-container-high: #282a2f;
+    --surface-container-highest: #33353a;
+    --on-surface: #e2e2e9;
+    --on-surface-variant: #c3c6d7;
+    --inverse-surface: #e2e2e9;
+    --inverse-on-surface: #2e3039;
+    --outline: #8d90a0;
+    --outline-variant: #434655;
+    --primary: #b4c5ff;
+    --on-primary: #002a78;
+    --primary-container: #2563eb;
+    --on-primary-container: #ffffff;
+    --secondary: #bec6e0;
+    --secondary-container: #3f465c;
+    --on-secondary-container: #dae2fd;
+    --error: #ffb4ab;
+    --on-error: #690005;
+    --error-container: #93000a;
+    --on-error-container: #ffdad6;
+    --success: #7dd99a;
+    --success-container: #0d3b1e;
+    --on-success-container: #b7f0c8;
+    --shadow-1: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --shadow-3: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Preflight restores (research R4). Filled in from the first --visual run. */
+@layer base {
+  /* Preflight sets `svg { display: block }`; the inline sprite icons sit in text (R4). */
+  svg { display: inline; vertical-align: baseline; }
+  /* Preflight strips link decoration; today's links keep the UA underline (R4). */
+  a { text-decoration: underline; }
+  /* Preflight zeroes every margin; the browser's checkbox and radio margins are kept (R4). */
+  input[type="checkbox"] { margin: 3px 3px 3px 4px; }
+  input[type="radio"] { margin: 3px 3px 0 5px; }
+  /* Reduced motion (FR-020, R5). `!important` wins over every normal declaration from any layer, so
+     no transition/animation utility (button spinner, hover transitions) can bring motion back. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important; transition: none !important; scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+/* ========================= 2. BASE AND LAYOUT ========================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* WCAG 2.4.11: below 768 px the shell is two rows (bar + tab strip). */
+  scroll-padding-top: calc(var(--shell-h) + 2.5rem + var(--space-lg));
+}
+@media (min-width: 768px) { html { scroll-padding-top: calc(var(--shell-h) + var(--space-lg)); } }
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--on-surface);
+  font: 400 var(--fs-body)/var(--lh-body) var(--font);
+  overflow-wrap: break-word;
+}
+h1, h2, h3 { margin: 0; color: var(--on-surface); font-weight: 600; }
+h1 { font-size: var(--fs-lg); line-height: var(--lh-lg); letter-spacing: var(--ls-lg); }
+h2 { font-size: var(--fs-md); line-height: var(--lh-md); letter-spacing: var(--ls-md); margin: var(--space-2xl) 0 var(--space-md); }
+h3 { font-size: var(--fs-sm); line-height: var(--lh-sm); letter-spacing: var(--ls-sm); }
+/* DESIGN.md headline-xl-mobile is the reduction of a larger desktop headline, not the
+   other way round: the page title grows with the viewport (C14). */
+@media (min-width: 768px) {
+  h1 { font-size: var(--fs-xl-mobile); line-height: var(--lh-xl-mobile); }
+}
+p { margin: 0 0 var(--space-md); }
+a { color: var(--primary); text-underline-offset: 0.15em; }
+a:hover { text-decoration-thickness: 2px; }
+code { font: 500 var(--fs-label)/var(--lh-label) ui-monospace, "Cascadia Mono", Consolas, monospace; }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+main {
+  max-width: 80rem; margin: 0 auto; outline: none;
+  padding: var(--space-xl) var(--space-lg) var(--space-3xl);
+}
+@media (min-width: 768px) { main { padding-inline: var(--space-xl); } }
+@media (min-width: 1024px) { main { padding-inline: var(--space-2xl); } }
+
+/* WCAG 1.4.12: nothing may depend on fixed-height text boxes. (Buttons, chips and pills carry
+   `wrap-anywhere` themselves.) */
+th, td, label, dd, dt { overflow-wrap: anywhere; }
+
+/* =========================== 3. COMPONENTS ============================= */
+
+
+/* State changes ease rather than snap (DESIGN.md "calm focus"). The
+   prefers-reduced-motion block above cancels every one of these. */
+tbody tr {
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
+th, td { text-align: left; vertical-align: middle; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--outline-variant); }
+th { background: var(--surface-container-low); color: var(--on-surface-variant); font: 600 var(--fs-label-sm)/var(--lh-label-sm) var(--font); text-transform: uppercase; letter-spacing: var(--ls-label-sm); white-space: nowrap; }
+tbody tr:hover { background: var(--surface-container-low); }
+tbody tr:last-child td { border-bottom: 0; }
+
+/* Form controls: boundaries use --outline for 1.4.11 (R6 C11). */
+input[type="text"], input[type="search"], input[type="number"], input:not([type]), select, textarea {
+  min-height: var(--control-h); padding: 0 var(--space-md); border: 1px solid var(--outline);
+  border-radius: var(--radius); background: var(--surface-container-lowest); color: var(--on-surface);
+  font: 400 var(--fs-body)/var(--lh-body) var(--font);
+}
+textarea { min-height: 5rem; padding: var(--space-sm) var(--space-md); }
+input::placeholder, textarea::placeholder { color: var(--on-surface-variant); opacity: 1; }
+input:focus-visible, select:focus-visible, textarea:focus-visible { border-color: var(--primary); }
+input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; accent-color: var(--primary-container); vertical-align: middle; }
+label { color: var(--on-surface); font-weight: 500; }
+/* Bars: aria-hidden visual plus a visually hidden text list (FR-008). Everything else about the
+   bars is utilities in the templates; the striped zero bar is the one-off with no utility
+   (spec 006 FR-022). The element must not also carry bg-* (a utility would beat this). */
+.bars i.zero {
+  min-height: 3px; background: repeating-linear-gradient(45deg, var(--error) 0 2px, transparent 2px 4px);
+  border: 1px solid var(--error);
+}
+
+/* Tab-strip scroll fade: the one shell rule with no exact utility (a gradient on a pseudo-element).
+   Spec 006 FR-022 one-off; everything else in the shell is utilities in base.html. */
+.tab-fade::after {
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 1.5rem; pointer-events: none;
+  background: linear-gradient(to right, transparent, var(--surface-container-lowest));
+}
+@media (min-width: 768px) { .tab-fade::after { display: none; } }
+
+
+}
+
+/* Forced colours (spec 006 FR-020, research R5). UNLAYERED on purpose: an unlayered rule outranks
+   every layered one, so it keeps winning over utilities such as `border-transparent` that now
+   style pills and banners. Do not move it back into a layer. */
+@media (forced-colors: active) {
+  :focus-visible { outline-color: Highlight; }
+  .pill, .chip, .banner, .bars i, .score-badge { border: 1px solid CanvasText; }
+  nav a[aria-current] { border-bottom: 3px solid Highlight; }
+  .icon { forced-color-adjust: auto; fill: currentColor; }
+  .btn-primary { border: 1px solid ButtonText; }
+}

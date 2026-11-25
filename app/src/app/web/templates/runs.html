@@ -1,43 +1,43 @@
 {% extends "base.html" %}
-{% from "_macros.html" import status_pill, empty_state, table_wrap %}
+{% from "_macros.html" import card_class, empty_state, status_pill, table_wrap %}
 {% set active = 'runs' %}
 {% block title %}Runs — Job discovery{% endblock %}
 {% block content %}
 
-<div class="page-head">
+<div class="mb-6">
   <h1>Runs</h1>
-  <p class="page-sub">
+  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
     The weekly review surface (§7.4). The failure to watch for is not an error but
     a run that succeeds while returning steadily less.
   </p>
 </div>
 
 <h2>Per-source trend</h2>
-<div class="health-grid">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
   {% for site in health.sites %}
     {% set series = health.series[site] %}
     {% set peak = (series | map(attribute=1) | max) or 1 %}
     {% set latest = series[-1][1] if series else 0 %}
-    <div class="card">
-      <h3>{{ site }}</h3>
-      <p class="metric-value-sm">{{ latest }}</p>
+    <div class="{{ card_class() }}">
+      <h3 class="mb-1">{{ site }}</h3>
+      <p class="mt-0 mb-2 font-semibold tabular-nums text-(length:--fs-lg) leading-(--lh-lg)">{{ latest }}</p>
       {# Yield delta against the previous run: only with two or more runs, computed
          from the series the page already has (spec classification table). #}
       {% if series | length >= 2 %}
         {% set delta = latest - series[-2][1] %}
-        <p class="delta {{ 'down' if delta < 0 }}">{{ '+' if delta > 0 }}{{ delta }} vs previous run</p>
+        <p class="mt-0 mb-2 text-(length:--fs-label) font-medium {{ 'text-error' if delta < 0 else 'text-on-surface-variant' }}">{{ '+' if delta > 0 }}{{ delta }} vs previous run</p>
       {% endif %}
-      <div class="bars" aria-hidden="true">
+      <div class="bars flex items-end gap-[3px] h-[2.125rem]" aria-hidden="true">
         {% for _, count in series %}
-        <i class="{{ 'zero' if count == 0 }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+        <i class="flex-1 min-w-[3px] block rounded-t-[1px] {{ 'zero' if count == 0 else 'bg-primary' }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
         {% endfor %}
       </div>
-      <ul class="visually-hidden">
+      <ul class="sr-only">
         {% for when, count in series %}<li>{{ when.strftime('%d %b %H:%M') }}: {{ count }}</li>{% endfor %}
       </ul>
     </div>
   {% else %}
-  <div class="card">{{ empty_state("No runs recorded yet.") }}</div>
+  <div class="{{ card_class() }}">{{ empty_state("No runs recorded yet.") }}</div>
   {% endfor %}
 </div>
 
@@ -46,48 +46,48 @@
   <table>
     <thead>
       <tr>
-        <th scope="col" class="num">#</th>
+        <th scope="col" class="text-right tabular-nums">#</th>
         <th scope="col">Started</th>
         <th scope="col">Profile</th>
         <th scope="col">Status</th>
-        <th scope="col" class="num">Collected</th>
-        <th scope="col" class="num">Distinct</th>
-        <th scope="col" class="num">Passed</th>
-        <th scope="col" class="num">Rejected</th>
-        <th scope="col" class="num">Scored</th>
-        <th scope="col" class="num">Published</th>
+        <th scope="col" class="text-right tabular-nums">Collected</th>
+        <th scope="col" class="text-right tabular-nums">Distinct</th>
+        <th scope="col" class="text-right tabular-nums">Passed</th>
+        <th scope="col" class="text-right tabular-nums">Rejected</th>
+        <th scope="col" class="text-right tabular-nums">Scored</th>
+        <th scope="col" class="text-right tabular-nums">Published</th>
         <th scope="col">By source</th>
       </tr>
     </thead>
     <tbody>
       {% for r in runs %}
       <tr>
-        <td class="num">{{ r.id }}</td>
+        <td class="text-right tabular-nums">{{ r.id }}</td>
         <td>{{ r.started_at.strftime('%d %b %H:%M') }}</td>
-        <td class="muted">
+        <td class="text-on-surface-variant">
           {% if r.profile_id %}#{{ r.profile_id }} {{ r.profile_name or '(deleted)' }}{% else %}—{% endif %}
         </td>
         <td>{{ status_pill(r.status) }}</td>
-        <td class="num">{{ r.collected_count }}</td>
-        <td class="num">{{ r.deduplicated_count }}</td>
+        <td class="text-right tabular-nums">{{ r.collected_count }}</td>
+        <td class="text-right tabular-nums">{{ r.deduplicated_count }}</td>
         {# A run the filter never touched shows —, not 0. Zero is a claim that
            the filter admitted nothing, and rendering a structurally absent
            figure as zero manufactures a false alarm on a working pipeline
            (reports-implementation-plan.md §R5). The two columns are either both
            written or neither, so one test covers the pair. #}
         {% set filtered = r.filter_passed_count or r.filter_rejected_count %}
-        <td class="num">{{ r.filter_passed_count if filtered else '—' }}</td>
-        <td class="num">{{ r.filter_rejected_count if filtered else '—' }}</td>
-        <td class="num">{{ r.scored_count }}</td>
-        <td class="num">{{ r.published_count }}</td>
-        <td class="muted">
+        <td class="text-right tabular-nums">{{ r.filter_passed_count if filtered else '—' }}</td>
+        <td class="text-right tabular-nums">{{ r.filter_rejected_count if filtered else '—' }}</td>
+        <td class="text-right tabular-nums">{{ r.scored_count }}</td>
+        <td class="text-right tabular-nums">{{ r.published_count }}</td>
+        <td class="text-on-surface-variant">
           {% for site, n in (r.counts_by_site or {}).items() %}
             {{ site }}={{ n }}{% if not loop.last %}, {% endif %}
           {% endfor %}
         </td>
       </tr>
       {% if r.error %}
-      <tr class="run-error"><td></td><td colspan="10"><strong>Error:</strong> {{ r.error }}</td></tr>
+      <tr class="[&_td]:bg-error-container [&_td]:text-on-error-container [&_td]:text-(length:--fs-label)"><td></td><td colspan="10"><strong>Error:</strong> {{ r.error }}</td></tr>
       {% endif %}
       {% else %}
       <tr><td colspan="11">{{ empty_state("No runs recorded yet.") }}</td></tr>

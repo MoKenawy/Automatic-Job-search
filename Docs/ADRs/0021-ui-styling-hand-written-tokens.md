@@ -1,6 +1,6 @@
 # ADR-0021: Styling the triage interface — hand-written design tokens, self-hosted assets
 
-* Status: accepted (19 November 2026)
+* Status: superseded by [ADR-0022](0022-styling-with-tailwind-standalone-cli.md) (22 November 2026); was accepted 19 November 2026
 * Deciders: Mohammed
 * Date: 19 November 2026
 

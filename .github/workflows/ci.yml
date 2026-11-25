@@ -67,10 +67,10 @@ jobs:
         run: uv sync --frozen
 
       - name: Lint
-        run: uv run ruff check src tests
+        run: uv run ruff check src tests scripts
 
       - name: Check formatting
-        run: uv run ruff format --check src tests
+        run: uv run ruff format --check src tests scripts
 
       # Type checking is deliberately SCOPED, not repository-wide.
       #
@@ -107,6 +107,23 @@ jobs:
 
       - name: Test
         run: uv run pytest -q
+
+      # Spec 006 FR-009: the committed stylesheet must equal a fresh build of its authored
+      # source. Runs AFTER the tests on purpose, so a failed binary download (the one network
+      # step here) never hides test results. The binary is cached per pin; the pin lives only
+      # in app/pyproject.toml ([tool.app.tailwind]).
+      - name: Cache the Tailwind binary
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/tailwindcss
+          key: tailwind-${{ runner.os }}-${{ hashFiles('app/pyproject.toml') }}
+
+      - name: Check the committed stylesheet is current
+        env:
+          TAILWINDCSS_BIN_DIR: ${{ github.workspace }}/.cache/tailwindcss
+        run: |
+          uv run python scripts/build_css.py
+          git diff --exit-code -- src/app/web/static/css/app.css
 
   # --- Migration round trip -------------------------------------------------
   # Mirrors the manual check the development guide requires of every schema
