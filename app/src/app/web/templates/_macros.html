@@ -177,7 +177,7 @@ inline-flex items-center gap-1 min-h-6 px-2 rounded bg-surface-container-high te
   "applied": "bg-success-container text-on-success-container",
   "rejected": "bg-error-container text-on-error-container",
 } -%}
-<span class="inline-flex items-center min-h-5 px-1.5 rounded text-label-sm font-semibold whitespace-nowrap {{ 'uppercase tracking-label-sm' if upper else 'capitalize' }} {{ kinds.get(kind) or 'bg-surface-container-high text-on-surface-variant' }}">{{ text }}</span>
+<span class="inline-flex items-center min-h-5 px-1.5 rounded text-label-sm font-semibold whitespace-nowrap {{ 'uppercase tracking-label-sm' if upper else 'normal-case' }} {{ kinds.get(kind) or 'bg-surface-container-high text-on-surface-variant' }}">{{ text }}</span>
 {%- endmacro %}
 
 {# KPI card (spec 007): label, optional badge or icon tile, large value, optional footnote. The
