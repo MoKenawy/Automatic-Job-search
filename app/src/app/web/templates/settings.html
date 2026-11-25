@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, btn_class, card_class, check_class, field_class, hint_class, icon %}
+{% from "_macros.html" import banner, btn_class, card_class, check_class, field_class, hint_class, icon, page_header %}
 {% set active = 'settings' %}
 {% block title %}Settings — Job discovery{% endblock %}
 {% block content %}
@@ -7,13 +7,11 @@
 {% if saved %}{{ banner('success', 'Settings saved — applies on the next run.', focusable=True) }}{% endif %}
 {% if error %}{{ banner('error', error, focusable=True) }}{% endif %}
 
-<div class="mb-6">
-  <h1>Settings</h1>
-  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
+{% set subtitle %}
     Operational configuration. Changes take effect on the next run — no restart
     (ADR-0005). Seeded from <code>.env</code>; values here override it.
-  </p>
-</div>
+{% endset %}
+{{ page_header('Settings', subtitle) }}
 
 {% macro field(key, label, type='text', hint='') %}
   <div class="{{ field_class() }}">

@@ -114,6 +114,85 @@ flex items-start gap-2 mb-4 px-4 py-3 border rounded-lg {{ kinds.get(kind) or "b
 {% if href %}</a>{% else %}</div>{% endif %}
 {%- endmacro %}
 
+{# ---------------- Spec 007 building blocks (target parity). Literal strings only. ---------------- #}
+
+{# Clickable card: level 1 at rest, level 2 with a darker hairline on hover (DESIGN.md elevation). #}
+{%- macro card_hover_class() -%}
+bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1 p-4 md:p-5 transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] hover:border-outline hover:shadow-2
+{%- endmacro %}
+
+{# Small neutral label badge (counts, "N in total", stat badges). #}
+{%- macro badge_class() -%}
+inline-flex items-center gap-1 min-h-6 px-2 rounded bg-surface-container-high text-on-surface-variant text-label font-medium whitespace-nowrap tabular-nums [&_.icon]:size-3.5
+{%- endmacro %}
+
+{# Page header (spec 007 FR-001/FR-004): today's title and subtitle, target typography. The
+   subtitle may be a `{% set %}` block (it is Markup then). A {% call %} body renders as the
+   right-aligned actions. #}
+{% macro page_header(title, subtitle=None) -%}
+<div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 mb-6">
+  <div class="min-w-0 max-w-200">
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<p class="mt-1 mb-0 text-on-surface-variant text-body-lg">{{ subtitle }}</p>{% endif %}
+  </div>
+  {% if caller is defined %}<div class="flex flex-wrap items-center gap-2">{{ caller() }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# Section heading inside a page: optional icon, title, optional subtitle; a {% call %} body sits
+   at the right (badges, legends). `level` keeps the heading outline valid per page. #}
+{% macro section_header(title, subtitle=None, icon_name=None, level=2) -%}
+<div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-4">
+  <div class="min-w-0">
+    <h{{ level }} class="m-0 flex items-center gap-2 text-headline-md">{% if icon_name %}{{ icon(icon_name, cls='size-5 text-primary') }}{% endif %}{{ title }}</h{{ level }}>
+    {% if subtitle %}<p class="mt-0.5 mb-0 text-on-surface-variant text-body">{{ subtitle }}</p>{% endif %}
+  </div>
+  {% if caller is defined %}<div class="flex flex-wrap items-center gap-2">{{ caller() }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{# 36 px tile holding an icon (DESIGN.md: company logo slot, rounded-md). Decorative. #}
+{% macro icon_tile(name) -%}
+<span class="inline-flex flex-none items-center justify-center size-9 rounded-md bg-secondary-container text-primary [&_.icon]:size-5" aria-hidden="true">{{ icon(name) }}</span>
+{%- endmacro %}
+
+{# 36 px tile with the first letter of a name (company "logo" until real logos exist). The name
+   is always shown next to it, so the tile is hidden from assistive tech. #}
+{% macro initial_tile(name) -%}
+<span class="inline-flex flex-none items-center justify-center size-9 rounded-md bg-surface-container-high text-on-surface font-semibold text-body-lg uppercase" aria-hidden="true">{{ (name or "?")|trim|first }}</span>
+{%- endmacro %}
+
+{# Count inside a filter chip; inverts with the selected chip. #}
+{% macro count_badge(n) -%}
+<span class="inline-flex items-center justify-center min-w-5 px-1.5 rounded-full bg-surface-container-highest text-on-surface-variant text-label-sm font-semibold tabular-nums in-[[aria-current]]:bg-inverse-on-surface in-[[aria-current]]:text-inverse-surface">{{ n }}</span>
+{%- endmacro %}
+
+{# Compact tag: board names and status words. Colours by kind, complete literal strings; an
+   unknown kind is neutral. Text always carries the meaning (FR-008). #}
+{% macro tag(text, kind=None, upper=False) -%}
+{%- set kinds = {
+  "linkedin": "bg-secondary-container text-on-secondary-container",
+  "indeed": "bg-tertiary-container text-on-tertiary-container",
+  "shortlist": "bg-secondary-container text-primary",
+  "applied": "bg-success-container text-on-success-container",
+  "rejected": "bg-error-container text-on-error-container",
+} -%}
+<span class="inline-flex items-center min-h-5 px-1.5 rounded text-label-sm font-semibold whitespace-nowrap {{ 'uppercase tracking-label-sm' if upper else 'capitalize' }} {{ kinds.get(kind) or 'bg-surface-container-high text-on-surface-variant' }}">{{ text }}</span>
+{%- endmacro %}
+
+{# KPI card (spec 007): label, optional badge or icon tile, large value, optional footnote. The
+   value stays the sole text content of its element (contract C-8). #}
+{% macro stat_card(label, value, icon_name=None, footnote=None, footnote_icon=None, badge=None, href=None) -%}
+{% if href %}<a class="{{ card_hover_class() }} flex flex-col gap-1 text-inherit no-underline" href="{{ href }}">{% else %}<div class="{{ card_class() }} flex flex-col gap-1">{% endif %}
+  <span class="flex items-start justify-between gap-2">
+    <span class="uppercase text-on-surface-variant text-label font-medium tracking-label-sm">{{ label }}</span>
+    {% if badge %}<span class="{{ badge_class() }}">{{ badge }}</span>{% elif icon_name %}{{ icon_tile(icon_name) }}{% endif %}
+  </span>
+  <span class="block font-semibold tabular-nums text-on-surface text-headline-xl-mobile tracking-(--ls-xl) md:text-headline-xl">{{ value }}</span>
+  {% if footnote %}<span class="flex items-center gap-1 text-body-sm text-on-surface-variant">{% if footnote_icon %}{{ icon(footnote_icon, cls='size-4') }}{% endif %}{{ footnote }}</span>{% endif %}
+{% if href %}</a>{% else %}</div>{% endif %}
+{%- endmacro %}
+
 {# Scrollable table region: keyboard reachable and named (WCAG 2.1.1). Use with {% call %}. #}
 {% macro table_wrap(label) -%}
 <div class="table-wrap max-w-full overflow-x-auto overflow-y-hidden bg-surface-container-lowest border border-outline-variant rounded-lg shadow-1" tabindex="0" role="region" aria-label="{{ label }}">

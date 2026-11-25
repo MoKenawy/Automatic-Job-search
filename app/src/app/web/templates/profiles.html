@@ -1,19 +1,17 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, btn_class, card_class, check_class, empty_state, field_class, hint_class, icon, pill_class, table_wrap %}
+{% from "_macros.html" import banner, btn_class, card_class, check_class, empty_state, field_class, hint_class, icon, page_header, pill_class, table_wrap %}
 {% set active = 'profiles' %}
 {% block title %}Schedules — Job discovery{% endblock %}
 {% block content %}
 
 {% if error %}{{ banner('error', error, focusable=True) }}{% endif %}
 
-<div class="mb-6">
-  <h1>Search schedules</h1>
-  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
+{% set subtitle %}
     Each profile is a saved job survey with its own role, sites, and run time. Enabled
     profiles run automatically at their scheduled time; any can be run now (ADR-0005).
     <a href="/settings">{{ icon('settings') }}Run settings</a>
-  </p>
-</div>
+{% endset %}
+{{ page_header('Search schedules', subtitle) }}
 <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
   Each profile can also carry its own filter rules. They apply <strong>in addition to</strong>
   the title patterns on the <a href="/settings">settings</a> page, never instead of them, and
