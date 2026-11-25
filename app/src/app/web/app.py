@@ -17,7 +17,9 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.config import settings as app_settings
 from app.services import queries
+from app.services import settings as settings_service
 from app.web.deps import TEMPLATES, get_db, shell_context
 from app.web.routes import employers, postings, profiles, reports, settings
 
@@ -34,12 +36,24 @@ app.include_router(settings.router, dependencies=[Depends(shell_context)])
 app.include_router(reports.router, dependencies=[Depends(shell_context)])
 
 
+RECENT_ON_OVERVIEW = 5
+
+
 @app.get("/", response_class=HTMLResponse, dependencies=[Depends(shell_context)])
 def index(request: Request, db: Session = Depends(get_db)):
+    # Everything here comes from existing read paths (spec 007 D4): no new queries.
     return TEMPLATES.TemplateResponse(
         request=request,
         name="index.html",
-        context={"totals": queries.totals(db), "health": queries.source_health(db)},
+        context={
+            "totals": queries.totals(db),
+            "health": queries.source_health(db),
+            "sites": queries.known_sites(db),
+            "recent": queries.list_postings(db, per_page=RECENT_ON_OVERVIEW),
+            "threshold": settings_service.get(db, "publish_threshold"),
+            "scoring_model": settings_service.get(db, "scoring_model"),
+            "cv_path": app_settings.cv_path,
+        },
     )
 
 
