@@ -1,76 +1,117 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, card_class, empty_state, icon, metric, page_header, pill_class, status_pill, table_wrap %}
+{% from "_macros.html" import badge_class, btn_class, card_class, empty_state, icon, icon_tile, initial_tile, page_header, section_header, stat_card, status_pill, tag %}
 {% set active = 'index' %}
 {% block title %}Overview — Job discovery{% endblock %}
 {% block content %}
 
 {{ page_header('Overview', 'Where the pipeline stands, and what to look at next.') }}
 
-{# Employers and Scored have no filtered destination, so they are not interactive
-   (spec classification table). Each number is the sole text of its element (C-8). #}
-<div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
-  {{ metric("Postings", totals.postings, "/postings") }}
-  {{ metric("Employers", totals.employers) }}
-  {{ metric("Scored", totals.scored) }}
-  {{ metric("Published", totals.published, "/postings?published=true") }}
+{# KPI row (spec 007 step 2). Footnotes carry real values only (D3). Employers and Scored have no
+   filtered destination, so they are not links. Each number is the sole text of its element (C-8). #}
+{% set collected = health.runs | sum(attribute='collected_count') %}
+{% set distinct = health.runs | sum(attribute='deduplicated_count') %}
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {{ stat_card("Postings", totals.postings, href="/postings",
+       footnote=(((distinct / collected * 100) | round | int) ~ "% distinct in recent runs") if collected else None,
+       footnote_icon="filter_alt") }}
+  {{ stat_card("Employers", totals.employers,
+       footnote="Across " ~ sites | length ~ " job source" ~ ("" if sites | length == 1 else "s"),
+       footnote_icon="hub") }}
+  {{ stat_card("Scored", totals.scored,
+       footnote=("Waiting for a CV" if totals.scored == 0 else None), footnote_icon="description") }}
+  {{ stat_card("Published", totals.published, href="/postings?published=true",
+       footnote="Threshold: score ≥ " ~ threshold, footnote_icon="tune") }}
 </div>
 
 {% if totals.scored == 0 and totals.postings > 0 %}
-<h2>Scoring not yet run</h2>
-{{ banner('info', 'Scoring not yet run: ' ~ totals.postings ~ ' postings collected and deduplicated, none scored. Stage 3 requires a CV at data/cv.txt to build the prompt.') }}
+{# Scoring panel: what is missing and where it goes. No upload control (D4). #}
+<section class="flex items-start gap-4 mt-6 p-5 rounded-lg border border-outline-variant bg-secondary-container/40 shadow-1" aria-labelledby="scoring-heading">
+  <span class="inline-flex flex-none items-center justify-center size-10 rounded-lg bg-primary-container text-on-primary-container [&_.icon]:size-5" aria-hidden="true">{{ icon('memory') }}</span>
+  <div class="min-w-0">
+    <h2 id="scoring-heading" class="m-0 text-headline-sm">Scoring not yet run</h2>
+    <p class="mt-1 mb-0 text-on-surface-variant">
+      {{ totals.postings }} postings collected and deduplicated, none scored. Stage 3 requires a CV at
+      <code class="px-1 py-0.5 rounded bg-surface-container-lowest text-primary">{{ cv_path }}</code>
+      to build the prompt for <code class="px-1 py-0.5 rounded bg-surface-container-lowest">{{ scoring_model }}</code>.
+    </p>
+  </div>
+</section>
 {% endif %}
 
-<div class="grid grid-cols-1 gap-4 mt-8 lg:grid-cols-[5fr_7fr]">
+<div class="grid grid-cols-1 gap-4 mt-6 lg:grid-cols-[5fr_7fr]">
 
-  {# Triage distribution, with its own header and footer link (UX doc §4). #}
-  <section class="{{ card_class() }} flex flex-col min-w-0">
-    {% set total = totals.by_status.values() | sum %}
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <h2 class="m-0 text-headline-sm">Triage</h2>
-        <p class="mt-1 mb-0 text-on-surface-variant text-body-sm">Review status distribution.</p>
+  {# Triage distribution: one stacked bar, then a legend with counts (UX doc §4). The status is
+     in the text of each row; colour only echoes it. #}
+  {% set total = totals.by_status.values() | sum %}
+  {% set seg = {"new": "bg-secondary", "shortlist": "bg-primary-container", "applied": "bg-success", "rejected": "bg-error"} %}
+  <section class="{{ card_class() }} flex flex-col min-w-0" aria-labelledby="triage-heading">
+    <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-4">
+      <div class="min-w-0">
+        <h2 id="triage-heading" class="m-0 text-headline-sm">Triage</h2>
+        <p class="mt-0.5 mb-0 text-on-surface-variant text-body-sm">Review status distribution.</p>
       </div>
-      <span class="pill {{ pill_class('') }}">{{ total }} in total</span>
+      <span class="{{ badge_class() }}">{{ total }} in total</span>
     </div>
-    <div class="grid gap-2">
+    {% if total %}
+    <div class="flex h-2.5 mb-5 rounded-full overflow-hidden bg-surface-container-high" aria-hidden="true">
+      {% for status, count in totals.by_status.items() %}{% if count %}<i class="block h-full {{ seg.get(status, 'bg-outline') }}" style="width: {{ (count / total * 100) | round(2) }}%"></i>{% endif %}{% endfor %}
+    </div>
+    <ul class="grid gap-3 m-0 p-0 list-none">
       {% for status, count in totals.by_status.items() %}
-      <div class="grid grid-cols-[7rem_3rem_1fr_3rem] gap-3 items-center">
-        <a class="pill {{ pill_class(status) }}" href="/postings?status={{ status }}">{{ status }}</a>
-        <span class="tabular-nums text-right">{{ count }}</span>
-        {% set pct = ((count / total * 100) | round | int) if total else 0 %}
-        <span class="block h-2 rounded-full bg-surface-container-high overflow-hidden" aria-hidden="true"><i class="block h-full bg-primary-container" style="width: {{ pct }}%"></i></span>
-        <span class="tabular-nums text-right text-on-surface-variant">{{ pct }}%</span>
-      </div>
-      {% else %}
-      {{ empty_state("No postings yet. Run a search profile from Schedules to collect some.", "/profiles", "Open Schedules") }}
+      {% set pct = (count / total * 100) | round(1) %}
+      <li class="grid grid-cols-[minmax(0,1fr)_minmax(3rem,7rem)_2.5rem_3.5rem] items-center gap-3">
+        <a class="inline-flex items-center gap-2 min-w-0 text-on-surface font-medium capitalize no-underline hover:underline" href="/postings?status={{ status }}">
+          <span class="size-2.5 flex-none rounded-full {{ seg.get(status, 'bg-outline') }}" aria-hidden="true"></span>{{ status }}
+        </a>
+        <span class="block h-1.5 rounded-full bg-surface-container-high overflow-hidden" aria-hidden="true"><i class="block h-full {{ seg.get(status, 'bg-outline') }}" style="width: {{ pct }}%"></i></span>
+        <span class="text-right font-semibold tabular-nums text-headline-sm">{{ count }}</span>
+        <span class="text-right tabular-nums text-on-surface-variant text-body-sm">{{ pct }}%</span>
+      </li>
       {% endfor %}
-    </div>
-    <div class="flex flex-wrap items-center justify-end gap-2 mt-auto pt-4 text-(length:--fs-body-sm)">
-      <a class="inline-flex items-center gap-1 font-medium" href="/postings">Explore all in Postings {{ icon('arrow_forward') }}</a>
+    </ul>
+    {% else %}
+    {{ empty_state("No postings yet. Run a search profile from Schedules to collect some.", "/profiles", "Open Schedules") }}
+    {% endif %}
+    <div class="flex flex-wrap items-center justify-end gap-2 mt-auto pt-5 text-body-sm">
+      <a class="inline-flex items-center gap-1 font-medium no-underline hover:underline" href="/postings">Explore all in Postings {{ icon('arrow_forward') }}</a>
     </div>
   </section>
 
-  {# Source health. A source trending toward zero while runs keep succeeding is
-     the signal to investigate (§7.4). #}
-  <section class="{{ card_class() }} flex flex-col min-w-0">
-    <div class="flex items-start justify-between gap-3 mb-4">
-      <div>
-        <h2 class="m-0 text-headline-sm">Source health</h2>
-        <p class="mt-1 mb-0 text-on-surface-variant text-body-sm">Per-source counts across recent runs.</p>
+  {# Source health. A source trending toward zero while runs keep succeeding is the signal to
+     investigate (§7.4). Bars run oldest to newest; the last one is the latest run. #}
+  {% set live = [] %}{% for site in health.sites %}{% if health.series[site] and health.series[site][-1][1] > 0 %}{% set _ = live.append(site) %}{% endif %}{% endfor %}
+  <section class="{{ card_class() }} flex flex-col min-w-0" aria-labelledby="health-heading">
+    <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-4">
+      <div class="min-w-0">
+        <h2 id="health-heading" class="m-0 text-headline-sm">Source health</h2>
+        <p class="mt-0.5 mb-0 text-on-surface-variant text-body-sm">Per-source counts across recent runs.</p>
       </div>
+      {% if health.sites %}<span class="{{ badge_class() }}"><span class="size-2 rounded-full {{ 'bg-success' if live | length == health.sites | length else 'bg-error' }}" aria-hidden="true"></span>{{ live | length }}/{{ health.sites | length }} returning postings</span>{% endif %}
     </div>
-    <div class="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
+    <div class="grid gap-3">
       {% for site in health.sites %}
         {% set series = health.series[site] %}
         {% set peak = (series | map(attribute=1) | max) or 1 %}
-        <div class="p-3 rounded-lg bg-surface-container-low min-w-0">
-          <h3 class="mb-1">{{ site }}</h3>
-          <p class="mt-0 mb-2 font-semibold tabular-nums text-(length:--fs-lg) leading-(--lh-lg)">{{ series[-1][1] if series else 0 }}{% if series and series[-1][1] == 0 %} <span class="pill {{ pill_class('failed') }}">zero in latest run</span>{% endif %}</p>
-          <div class="bars flex items-end gap-[3px] h-[2.125rem]" aria-hidden="true">
+        {% set latest = series[-1][1] if series else 0 %}
+        <div class="p-4 rounded-lg bg-surface-container-low min-w-0">
+          <div class="flex items-center gap-3 mb-3">
+            {{ icon_tile('work') }}
+            <div class="min-w-0 flex-1">
+              <h3 class="m-0 capitalize">{{ site }}</h3>
+              <p class="m-0 text-on-surface-variant text-body-sm">Last {{ series | length }} run{{ '' if series | length == 1 else 's' }}{% if latest == 0 %} · {{ tag('zero in latest run', 'rejected') }}{% endif %}</p>
+            </div>
+            <p class="m-0 font-semibold tabular-nums text-headline-lg">{{ latest }}</p>
+          </div>
+          <div class="bars flex items-end gap-1 h-14" aria-hidden="true">
             {% for _, count in series %}
-            <i class="flex-1 min-w-[3px] block rounded-t-[1px] {{ 'zero' if count == 0 else 'bg-primary' }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
+            <i class="flex-1 min-w-[3px] block rounded-t-sm {{ 'zero' if count == 0 else ('bg-primary-container' if loop.last else 'bg-primary-container/40') }}" style="height: {{ (count / peak * 100) | round | int if peak else 0 }}%"></i>
             {% endfor %}
           </div>
+          {% if health.runs %}
+          <div class="flex justify-between mt-1.5 text-label-sm text-on-surface-variant" aria-hidden="true">
+            <span>#{{ health.runs[0].id }}</span><span class="font-semibold text-primary">Now</span>
+          </div>
+          {% endif %}
           <ul class="sr-only">
             {% for when, count in series %}<li>{{ when.strftime('%d %b %H:%M') }}: {{ count }}</li>{% endfor %}
           </ul>
@@ -79,11 +120,47 @@
       <div class="p-3 rounded-lg bg-surface-container-low min-w-0">{{ empty_state("No runs recorded yet.") }}</div>
       {% endfor %}
     </div>
-    <div class="flex flex-wrap items-center justify-end gap-2 mt-auto pt-4 text-(length:--fs-body-sm)">
-      <a class="inline-flex items-center gap-1 font-medium" href="/runs">Run history and logs {{ icon('arrow_forward') }}</a>
+    <div class="flex flex-wrap items-center justify-end gap-2 mt-auto pt-5 text-body-sm">
+      <a class="inline-flex items-center gap-1 font-medium no-underline hover:underline" href="/runs">Run history and logs {{ icon('arrow_forward') }}</a>
     </div>
   </section>
 
 </div>
+
+{# Recent postings: the top of the triage queue, in the same order as the Postings page. #}
+{% if recent.rows %}
+<section class="{{ card_class() }} mt-6" aria-labelledby="recent-heading">
+  <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 mb-4">
+    <div class="min-w-0">
+      <h2 id="recent-heading" class="m-0 text-headline-sm">Top of the queue</h2>
+      <p class="mt-0.5 mb-0 text-on-surface-variant text-body-sm">The first postings on the Postings page, in the same order.</p>
+    </div>
+    <span class="{{ badge_class() }}">Showing {{ recent.rows | length }} of {{ recent.total }}</span>
+  </div>
+  <ul class="grid gap-2 m-0 p-0 list-none">
+    {% for p, employer in recent.rows %}
+    <li class="flex flex-wrap items-center gap-x-4 gap-y-2 p-3 rounded-lg bg-surface-container-low">
+      {{ initial_tile(employer.name) }}
+      <div class="min-w-0 flex-[1_1_14rem]">
+        <p class="m-0 flex flex-wrap items-center gap-2">
+          <span class="font-semibold text-on-surface text-body-lg">{{ p.title }}</span>
+          {% if p.is_remote %}{{ tag('Remote') }}{% endif %}
+        </p>
+        <p class="m-0 text-body-sm text-on-surface-variant">
+          {{ employer.name }}
+          {% if p.country_code %} · {{ p.country_code }}{% endif %}
+          {% if p.sources %} · via {{ p.sources.keys() | join(', ') }}{% endif %}
+          {% if p.date_posted %} · {% if shell.now %}{{ p.date_posted | relative_age(shell.now) }}{% else %}{{ p.date_posted.strftime('%d %b') }}{% endif %}{% endif %}
+        </p>
+      </div>
+      <div class="flex items-center gap-3 ml-auto">
+        {{ status_pill(p.status) }}
+        <a class="{{ btn_class(size='sm') }}" href="/postings/{{ p.id }}">Details<span class="sr-only"> for {{ p.title }}</span></a>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 {% endblock %}
