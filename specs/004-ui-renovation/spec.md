@@ -147,7 +147,9 @@ outcome matches today's behaviour:
    form, **Then** the change still happens through a normal page submission.
 8. **Given** the status chips, **When** they render, **Then** they show no counts. The
    postings page receives no per-status counts today, so none are invented (FR-011). Counts
-   in chips are flagged follow-up work.
+   in chips are flagged follow-up work. *Superseded by spec 007 (D7, 2026-11-25): the chips
+   now show counts from `queries.status_counts`, under the same search, location, source and
+   published filters as the list, so each count equals what its chip opens.*
 
 ---
 
@@ -463,6 +465,9 @@ caveat matches the current pages.
 - **FR-017**: Each status action, both in list rows and on the posting detail page, MUST show
   an icon together with a visible text label naming the target status, for example
   "Shortlist" or "Reject", at every viewport width. Icon-only status buttons are not used.
+  *Amended by spec 007 (D6, 2026-11-25) for list rows only: row actions are icon-only, each
+  named by `aria-label` and a matching tooltip ("Set status to Shortlist"), with the current
+  status still shown as text. The detail page keeps icon plus label.*
 
 **Blacklist page**
 

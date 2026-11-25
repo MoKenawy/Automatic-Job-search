@@ -4,11 +4,15 @@
    and carries variant=row so the endpoint returns this fragment. Posts normally
    without HTMX (endpoint redirects to /postings).
    Contract C-1 (specs/004-ui-renovation): id, hx-*, field names and the exact
-   `name="variant" value="row"` order stay. Each action is icon + visible label (FR-017). #}
+   `name="variant" value="row"` order stay.
+   Spec 007 amends 004 FR-017 for list rows only: the actions are icon-only, as in the target.
+   Each button is named by aria-label ("Set status to Shortlist") and shows the same text as a
+   tooltip; the current status stays visible as text in the pill. The detail page keeps icon and
+   label. #}
 {% set labels = {"new": "New", "shortlist": "Shortlist", "applied": "Applied", "rejected": "Reject"} %}
 {% set icons = {"new": "fiber_new", "shortlist": "check_circle", "applied": "send", "rejected": "cancel"} %}
-<span class="inline-flex flex-wrap items-center gap-1" id="status-{{ p.id }}">
-  {{ status_pill(p.status) }}
+<span class="inline-flex flex-nowrap items-center gap-1 whitespace-nowrap" id="status-{{ p.id }}">
+  <span class="mr-1">{{ status_pill(p.status) }}</span>
   {% for s in statuses %}{% if s != p.status %}
   <form class="m-0 inline" method="post" action="/postings/{{ p.id }}/status"
         hx-post="/postings/{{ p.id }}/status"
@@ -17,7 +21,7 @@
         hx-disabled-elt="find button">
     <input type="hidden" name="status" value="{{ s }}">
     <input type="hidden" name="variant" value="row">
-    <button class="{{ btn_class(size='sm') }}" type="submit" title="Set {{ s }}">{{ icon(icons.get(s, "check")) }}{{ labels.get(s, s) }}</button>
+    <button class="{{ btn_class('ghost', size='icon') }}" type="submit" title="Set status to {{ labels.get(s, s) }}" aria-label="Set status to {{ labels.get(s, s) }}">{{ icon(icons.get(s, "check")) }}</button>
   </form>
   {% endif %}{% endfor %}
 </span>
