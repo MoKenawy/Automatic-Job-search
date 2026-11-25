@@ -1,151 +1,77 @@
+{% from "_macros.html" import icon %}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Job discovery{% endblock %}</title>
-  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
-  <style>
-    :root {
-      --bg: #fbfbfa; --panel: #fff; --ink: #1f1f1d; --muted: #6b6b66;
-      --line: #e5e4e0; --accent: #2c5f4f; --warn: #9a5b2c; --bad: #96322e;
-      --radius: 6px;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #191918; --panel: #212120; --ink: #ecebe8; --muted: #9b9a94;
-        --line: #34332f; --accent: #7fbfa6; --warn: #d19a6a; --bad: #d98b83;
-      }
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; background: var(--bg); color: var(--ink);
-      font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    }
-    a { color: inherit; }
-    header {
-      border-bottom: 1px solid var(--line); background: var(--panel);
-      position: sticky; top: 0; z-index: 5;
-    }
-    nav {
-      max-width: 1100px; margin: 0 auto; padding: 12px 20px;
-      display: flex; gap: 20px; align-items: baseline; flex-wrap: wrap;
-    }
-    nav .brand { font-weight: 650; letter-spacing: -0.01em; }
-    nav a { text-decoration: none; color: var(--muted); font-size: 14px; }
-    nav a:hover, nav a.on { color: var(--ink); }
-    main { max-width: 1100px; margin: 0 auto; padding: 24px 20px 60px; }
-    h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
-    h2 { font-size: 15px; margin: 28px 0 10px; color: var(--muted); font-weight: 600; }
-    .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-    .card {
-      background: var(--panel); border: 1px solid var(--line);
-      border-radius: var(--radius); padding: 14px 16px;
-    }
-    .card .n { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-    .card .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
-    .panel {
-      background: var(--panel); border: 1px solid var(--line);
-      border-radius: var(--radius); overflow: hidden;
-    }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); }
-    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
-    tr:last-child td { border-bottom: 0; }
-    tbody tr:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    .muted { color: var(--muted); }
-    .pill {
-      display: inline-block; padding: 1px 8px; border-radius: 999px;
-      font-size: 12px; border: 1px solid var(--line); color: var(--muted);
-    }
-    .pill.new { border-color: var(--line); }
-    .pill.shortlist { color: var(--accent); border-color: currentColor; }
-    .pill.applied { color: var(--warn); border-color: currentColor; }
-    .pill.rejected { color: var(--bad); border-color: currentColor; opacity: .8; }
-    .score { font-variant-numeric: tabular-nums; font-weight: 600; }
-    .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
-    .filters a, .btn {
-      text-decoration: none; font-size: 13px; padding: 4px 10px;
-      border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--panel); color: var(--muted); cursor: pointer;
-    }
-    .filters a.on { color: var(--ink); border-color: var(--ink); }
-    input[type=search] {
-      padding: 5px 10px; font-size: 13px; border: 1px solid var(--line);
-      border-radius: var(--radius); background: var(--panel); color: var(--ink); min-width: 200px;
-    }
-    .empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 14px; }
-    .btn-xs { font-size: 11px; padding: 1px 6px; }
-    .statusbox { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-    .statusbox form { margin: 0; }
-    .bulkbar {
-      display: flex; gap: 10px; align-items: center; margin-bottom: 12px;
-      padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius);
-      background: var(--panel);
-    }
-    .bulkbar select {
-      padding: 4px 8px; font-size: 13px; border: 1px solid var(--line);
-      border-radius: var(--radius); background: var(--panel); color: var(--ink);
-    }
-    .flash {
-      margin-bottom: 14px; padding: 8px 12px; border-radius: var(--radius);
-      border: 1px solid var(--accent); color: var(--accent);
-      background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: 14px;
-    }
-    .flash.err { border-color: var(--bad); color: var(--bad);
-      background: color-mix(in srgb, var(--bad) 8%, transparent); }
-    .formgrid {
-      display: grid; grid-template-columns: 220px 1fr; gap: 12px 16px; align-items: center;
-    }
-    .formgrid label { color: var(--muted); font-size: 14px; }
-    .formgrid input[type=text], .formgrid input[type=number], .formgrid textarea, .formgrid input:not([type]) {
-      padding: 6px 10px; font-size: 14px; border: 1px solid var(--line);
-      border-radius: var(--radius); background: var(--panel); color: var(--ink); width: 100%;
-    }
-    .formgrid .hint { grid-column: 2; margin: -6px 0 4px; font-size: 12px; color: var(--muted); line-height: 1.45; }
-    @media (max-width: 640px) {
-      .formgrid { grid-template-columns: 1fr; gap: 4px 0; }
-      .formgrid .hint { grid-column: 1; margin: 0 0 8px; }
-    }
-    .bars { display: flex; gap: 3px; align-items: flex-end; height: 34px; }
-    .bars i {
-      flex: 1; min-width: 3px; background: var(--accent); opacity: .75;
-      border-radius: 1px 1px 0 0; display: block;
-    }
-    .bars i.zero { background: var(--bad); opacity: .55; min-height: 2px; }
-    .desc {
-      white-space: pre-wrap; font-size: 14px; line-height: 1.6;
-      max-height: 460px; overflow-y: auto; padding-right: 8px;
-    }
-    .split { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start; }
-    @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
-    dl.meta { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; }
-    dl.meta dt { color: var(--muted); }
-    dl.meta dd { margin: 0; word-break: break-word; }
-    .scroll-x { overflow-x: auto; }
-    .pager {
-      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-      margin-top: 14px; font-size: 13px;
-    }
-    .pager a { text-decoration: none; }
-    .pager a:hover { color: var(--ink); border-color: var(--ink); }
-  </style>
+  <link rel="preload" href="/static/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/css/app.css?v={{ asset_version }}">
+  {# Vendored, not a CDN (constitution II, ADR-0021, research R4). #}
+  <script src="/static/vendor/htmx-2.0.3.min.js?v={{ asset_version }}" integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq" defer></script>
 </head>
 <body>
-  <header>
-    <nav>
-      <span class="brand">Job discovery</span>
-      <a href="/" class="{{ 'on' if active == 'index' }}">Overview</a>
-      <a href="/postings" class="{{ 'on' if active == 'postings' }}">Postings</a>
-      <a href="/reports" class="{{ 'on' if active == 'reports' }}">Reports</a>
-      <a href="/blacklist" class="{{ 'on' if active == 'blacklist' }}">Blacklist</a>
-      <a href="/profiles" class="{{ 'on' if active == 'profiles' }}">Schedules</a>
-      <a href="/settings" class="{{ 'on' if active == 'settings' }}">Settings</a>
-      <a href="/runs" class="{{ 'on' if active == 'runs' }}">Runs</a>
-    </nav>
+  <a class="skip-link" href="#main">Skip to content</a>
+  {% set run = shell.last_run %}
+  <header class="shell">
+    <div class="shell-inner">
+      <a class="wordmark" href="/" aria-label="Job discovery, overview">Job <span>discovery</span></a>
+      <nav aria-label="Primary">
+        <ul>
+          {% for key, href, label in [
+            ('index', '/', 'Overview'), ('postings', '/postings', 'Postings'),
+            ('reports', '/reports', 'Reports'), ('blacklist', '/blacklist', 'Blacklist'),
+            ('profiles', '/profiles', 'Schedules'), ('settings', '/settings', 'Settings'),
+            ('runs', '/runs', 'Runs')] %}
+          <li><a href="{{ href }}"{% if active == key %} aria-current="page"{% endif %}>{{ label }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+      {# Last-run status on every page (FR-013): text and icon, never colour alone. #}
+      {% if run %}
+      <a class="last-run pill {{ run.status if run.status in ('running', 'success', 'failed') }}" href="/runs">
+        {{ icon({'running': 'progress_activity', 'success': 'check_circle', 'failed': 'error'}.get(run.status, 'schedule')) }}
+        <span>Last run {{ run.started_at.strftime('%d %b %H:%M') }} · {{ run.status }}</span>
+      </a>
+      {% else %}
+      <a class="last-run pill" href="/runs">{{ icon('schedule') }}<span>No runs yet</span></a>
+      {% endif %}
+    </div>
   </header>
-  <main>{% block content %}{% endblock %}</main>
+  <main id="main" tabindex="-1">{% block content %}{% endblock %}</main>
+  <div id="announcer" class="visually-hidden" aria-live="polite"></div>
+  {#
+    Small shell script, delegated from `document` so it survives the bulk <body> swap
+    (contract C-3). Layered over markup that already works (constitution III; research R9, R10).
+  #}
+  <script>
+  (function () {
+    var d = document;
+    function say(t) { var a = d.getElementById("announcer"); if (a) a.textContent = t; }
+    function buttons(e) { return e ? e.querySelectorAll("button") : []; }
+    var tab = d.querySelector('nav a[aria-current="page"]');
+    if (tab && tab.scrollIntoView) tab.scrollIntoView({ inline: "nearest", block: "nearest" });
+    function failed() { say("Couldn’t update — nothing changed. Try again."); }
+    d.addEventListener("htmx:responseError", failed);
+    d.addEventListener("htmx:sendError", failed);
+    d.addEventListener("htmx:beforeRequest", function (e) {
+      buttons(e.detail.elt).forEach(function (b) { b.setAttribute("aria-busy", "true"); });
+      say("Updating…");
+    });
+    d.addEventListener("htmx:afterRequest", function (e) {
+      buttons(e.detail.elt).forEach(function (b) { b.removeAttribute("aria-busy"); });
+    });
+    d.addEventListener("htmx:afterSwap", function (e) {
+      var t = e.detail.target;
+      if (t === d.body) {
+        var b = d.querySelector(".banner[tabindex]");
+        (b || d.getElementById("main")).focus();
+      } else if (t && t.id && t.id.indexOf("status-") === 0) {
+        var row = d.getElementById(t.id), pill = row && row.querySelector(".pill");
+        if (pill) say("Status updated to " + pill.textContent.trim());
+      }
+    });
+  })();
+  </script>
 </body>
 </html>

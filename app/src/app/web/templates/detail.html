@@ -1,30 +1,41 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icon, banner, empty_state, status_pill %}
 {% set active = 'postings' %}
 {% block title %}{{ p.title }} — Job discovery{% endblock %}
 {% block content %}
 
-<p class="sub"><a href="/postings">← Postings</a></p>
-<h1>{{ p.title }}</h1>
-<p class="sub">{{ employer.name }}{% if p.country_code %} · {{ p.country_code }}{% endif %}{% if p.is_remote %} · Remote{% endif %}</p>
+<p class="back-link"><a href="/postings">{{ icon('arrow_forward', cls='flip') }}Postings</a></p>
 
-{% include "_status_control.html" %}
+<div class="page-head">
+  <h1>{{ p.title }}</h1>
+  <p class="page-sub">{{ employer.name }}{% if p.country_code %} · {{ p.country_code }}{% endif %}{% if p.is_remote %} · Remote{% endif %}</p>
+</div>
 
-{# US3 FR-012 — blacklist this employer directly from a posting #}
-<p style="margin-top:10px">
-  {% if employer.suppressed %}
-    <span class="pill rejected">employer blacklisted</span>
-    <form method="post" action="/employers/{{ employer.id }}/unblacklist" style="display:inline">
-      <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
-      <button class="btn" type="submit">Remove from blacklist</button>
-    </form>
-  {% else %}
-    <form method="post" action="/employers/{{ employer.id }}/blacklist" style="display:inline"
+<div class="detail-actions">
+  {% include "_status_control.html" %}
+
+  {# US3 FR-012 — blacklist this employer directly from a posting (contract C-7). #}
+  {% if not employer.suppressed %}
+    <form method="post" action="/employers/{{ employer.id }}/blacklist"
           onsubmit="return confirm('Blacklist {{ employer.name }}? All their postings will be rejected.');">
       <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
-      <button class="btn" type="submit">Blacklist {{ employer.name }}</button>
+      <button class="btn" type="submit">{{ icon('block') }}Blacklist {{ employer.name }}</button>
     </form>
   {% endif %}
-</p>
+</div>
+
+{% if employer.suppressed %}
+<div class="banner error" role="alert">
+  {{ icon('block') }}
+  <div>
+    <span class="pill rejected">employer blacklisted</span>
+    <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline-form">
+      <input type="hidden" name="return_to" value="/postings/{{ p.id }}">
+      <button class="btn" type="submit">{{ icon('undo') }}Remove from blacklist</button>
+    </form>
+  </div>
+</div>
+{% endif %}
 
 {# ADR-0016 FR-013/FR-016 — this page deliberately opts out of the filter seam,
    so it is the one place a withheld posting can be read at all. The banner is
@@ -32,7 +43,9 @@
    missing from the queue and no page that says why. Shaped on the blacklist
    banner above, which exists for exactly the same reason (ADR-0015). #}
 {% if verdict.rejected or current.rejected %}
-<p style="margin-top:10px">
+<div class="banner" role="status">
+  {{ icon('warning') }}
+  <div>
   <span class="pill rejected">filtered out</span>
   {% if verdict.rejected %}
     Turned away on
@@ -59,74 +72,81 @@
       <code>filter --all</code> to update this verdict.</span>
     {% endif %}
   {% endif %}
-</p>
+  </div>
+</div>
 {% endif %}
 
-<div class="split" style="margin-top:22px">
-  <div>
-    <h2>Description</h2>
-    <div class="panel" style="padding:16px">
+<div class="detail-grid">
+  <section aria-labelledby="h-desc">
+    <h2 id="h-desc">Description</h2>
+    <div class="card">
       {% if p.description %}
         <div class="desc">{{ p.description }}</div>
       {% else %}
-        <div class="empty">No description captured.</div>
+        {{ empty_state("No description captured.") }}
       {% endif %}
     </div>
-  </div>
+  </section>
 
   <div>
-    <h2>Assessment</h2>
-    <div class="panel" style="padding:16px">
-      {% if p.score is not none %}
-        <div style="font-size:30px;font-weight:600" class="score">{{ p.score }}<span class="muted" style="font-size:15px">/100</span></div>
-        {% if p.rationale %}<p style="font-size:14px">{{ p.rationale }}</p>{% endif %}
-        {% if p.matched_skills %}
-          <h2 style="margin-top:16px">Matched</h2>
-          {% for s in p.matched_skills %}<span class="pill">{{ s }}</span> {% endfor %}
+    <section aria-labelledby="h-assess">
+      <h2 id="h-assess">Assessment</h2>
+      <div class="card">
+        {% if p.score is not none %}
+          <div class="score big-score">{{ p.score }}<span class="muted">/100</span></div>
+          {% if p.rationale %}<p>{{ p.rationale }}</p>{% endif %}
+          {% if p.matched_skills %}
+            <h3>Matched</h3>
+            <p>{% for s in p.matched_skills %}<span class="pill">{{ s }}</span> {% endfor %}</p>
+          {% endif %}
+          {% if p.gaps %}
+            <h3>Gaps</h3>
+            <p>{% for s in p.gaps %}<span class="pill">{{ s }}</span> {% endfor %}</p>
+          {% endif %}
+          {% if p.scored_by_model %}
+            <p class="muted small">
+              {{ p.scored_by_model }}{% if p.scored_at %}, {{ p.scored_at.strftime('%d %b %H:%M') }}{% endif %}
+            </p>
+          {% endif %}
+        {% else %}
+          {{ empty_state("Not scored yet.") }}
         {% endif %}
-        {% if p.gaps %}
-          <h2 style="margin-top:16px">Gaps</h2>
-          {% for s in p.gaps %}<span class="pill">{{ s }}</span> {% endfor %}
-        {% endif %}
-        {% if p.scored_by_model %}
-          <p class="muted" style="font-size:12px;margin-top:16px">
-            {{ p.scored_by_model }}{% if p.scored_at %}, {{ p.scored_at.strftime('%d %b %H:%M') }}{% endif %}
-          </p>
-        {% endif %}
-      {% else %}
-        <div class="empty">Not scored yet.</div>
-      {% endif %}
-    </div>
+      </div>
+    </section>
 
-    <h2>Sources</h2>
-    <div class="panel" style="padding:16px">
-      <dl class="meta">
-        {% for site, info in p.sources.items() %}
-        <dt>{{ site }}</dt>
-        <dd><a href="{{ info.url }}" target="_blank" rel="noopener">open ↗</a></dd>
-        {% endfor %}
-      </dl>
-    </div>
+    <section aria-labelledby="h-src">
+      <h2 id="h-src">Sources</h2>
+      <div class="card">
+        <dl class="meta">
+          {% for site, info in p.sources.items() %}
+          <dt>{{ site }}</dt>
+          <dd><a href="{{ info.url }}" target="_blank" rel="noopener">open {{ icon('open_in_new') }}<span class="visually-hidden">{{ site }} posting in a new tab</span></a></dd>
+          {% endfor %}
+        </dl>
+      </div>
+    </section>
 
-    <h2>Record</h2>
-    <div class="panel" style="padding:16px">
-      <dl class="meta">
-        <dt>Location</dt><dd>{{ p.location_raw or '—' }}</dd>
-        <dt>Job type</dt><dd>{{ p.job_type or '—' }}</dd>
-        <dt>Posted</dt><dd>{{ p.date_posted.strftime('%d %b %Y') if p.date_posted else '—' }}</dd>
-        <dt>First seen</dt><dd>{{ p.first_seen_at.strftime('%d %b %Y, %H:%M') }}</dd>
-        <dt>Last seen</dt><dd>{{ p.last_retrieved_at.strftime('%d %b %Y, %H:%M') }}</dd>
-        {# One row per criterion (ADR-0016). Each is tri-state, and the three
-           states are different facts: not applied, applied and admitted,
-           applied and rejected. A dash means the criterion did not apply —
-           no pattern set, or no profile recorded an experience level — not
-           that the posting passed. #}
-        <dt>Seniority</dt><dd>{{ p.job_level or '—' }}</dd>
-        <dt>Title filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
-        <dt>Experience filter</dt><dd>{{ 'passed' if p.experience_filter_passed else ('rejected' if p.experience_filter_passed is not none else '—') }}</dd>
-        <dt>Fingerprint</dt><dd class="muted" style="font-size:11px">{{ p.fingerprint[:24] }}…</dd>
-      </dl>
-    </div>
+    <section aria-labelledby="h-rec">
+      <h2 id="h-rec">Record</h2>
+      <div class="card">
+        <dl class="meta">
+          <dt>Location</dt><dd>{{ p.location_raw or '—' }}</dd>
+          <dt>Job type</dt><dd>{{ p.job_type or '—' }}</dd>
+          <dt>Posted</dt><dd>{{ p.date_posted.strftime('%d %b %Y') if p.date_posted else '—' }}</dd>
+          <dt>First seen</dt><dd>{{ p.first_seen_at.strftime('%d %b %Y, %H:%M') }}</dd>
+          <dt>Last seen</dt><dd>{{ p.last_retrieved_at.strftime('%d %b %Y, %H:%M') }}</dd>
+          {# One row per criterion (ADR-0016). Each is tri-state, and the three
+             states are different facts: not applied, applied and admitted,
+             applied and rejected. A dash means the criterion did not apply —
+             no pattern set, or no profile recorded an experience level — not
+             that the posting passed. #}
+          <dt>Seniority</dt><dd>{{ p.job_level or '—' }}</dd>
+          <dt>Title filter</dt><dd>{{ 'passed' if p.title_filter_passed else ('rejected' if p.title_filter_passed is not none else '—') }}</dd>
+          <dt>Experience filter</dt><dd>{{ 'passed' if p.experience_filter_passed else ('rejected' if p.experience_filter_passed is not none else '—') }}</dd>
+          <dt>Fingerprint</dt><dd class="muted small">{{ p.fingerprint[:24] }}…</dd>
+        </dl>
+      </div>
+    </section>
   </div>
 </div>
 

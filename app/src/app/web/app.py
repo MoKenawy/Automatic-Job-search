@@ -9,25 +9,32 @@ app factory, the dashboard landing page, and the container healthcheck
 (refactor-plan.md §7.1).
 """
 
+from pathlib import Path
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services import queries
-from app.web.deps import TEMPLATES, get_db
+from app.web.deps import TEMPLATES, get_db, shell_context
 from app.web.routes import employers, postings, profiles, reports, settings
 
 app = FastAPI(title="Job discovery", docs_url=None, redoc_url=None)
 
-app.include_router(postings.router)
-app.include_router(employers.router)
-app.include_router(profiles.router)
-app.include_router(settings.router)
-app.include_router(reports.router)
+# Vendored htmx, Inter and the icon sprite are served from here so no page needs a
+# third-party origin (constitution II, ADR-0021, research R5).
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+
+app.include_router(postings.router, dependencies=[Depends(shell_context)])
+app.include_router(employers.router, dependencies=[Depends(shell_context)])
+app.include_router(profiles.router, dependencies=[Depends(shell_context)])
+app.include_router(settings.router, dependencies=[Depends(shell_context)])
+app.include_router(reports.router, dependencies=[Depends(shell_context)])
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse, dependencies=[Depends(shell_context)])
 def index(request: Request, db: Session = Depends(get_db)):
     return TEMPLATES.TemplateResponse(
         request=request,

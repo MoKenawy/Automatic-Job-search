@@ -1,62 +1,79 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icon, banner %}
 {% set active = 'settings' %}
+{% block title %}Settings — Job discovery{% endblock %}
 {% block content %}
 
-<h1>Settings</h1>
-<p class="sub">
-  Operational configuration. Changes take effect on the next run — no restart
-  (ADR-0005). Seeded from <code>.env</code>; values here override it.
-</p>
+{% if saved %}{{ banner('success', 'Settings saved — applies on the next run.', focusable=True) }}{% endif %}
+{% if error %}{{ banner('error', error, focusable=True) }}{% endif %}
 
-{% if saved %}<div class="flash">Settings saved.</div>{% endif %}
-{% if error %}<div class="flash err">{{ error }}</div>{% endif %}
+<div class="page-head">
+  <h1>Settings</h1>
+  <p class="page-sub">
+    Operational configuration. Changes take effect on the next run — no restart
+    (ADR-0005). Seeded from <code>.env</code>; values here override it.
+  </p>
+</div>
 
-<form method="post" action="/settings" class="panel" style="padding:18px">
-  <div class="formgrid">
-    {% macro field(key, label, type='text', hint='') %}
-      <label for="{{ key }}">{{ label }}{% if hint %}<span class="muted"> — {{ hint }}</span>{% endif %}</label>
-      <input id="{{ key }}" name="{{ key }}" type="{{ type }}" value="{{ values[key] }}">
-    {% endmacro %}
+{% macro field(key, label, type='text', hint='') %}
+  <div class="field">
+    <label for="{{ key }}">{{ label }}{% if hint %}<span class="muted"> — {{ hint }}</span>{% endif %}</label>
+    <input id="{{ key }}" name="{{ key }}" type="{{ type }}" value="{{ values[key] }}">
+  </div>
+{% endmacro %}
 
-    {{ field('results_per_search', 'Results per search', 'number') }}
-    {{ field('hours_old', 'Hours old window', 'number') }}
-    {{ field('request_delay_seconds', 'Request delay (s)', 'number', 'raise first to ease restriction') }}
-    {{ field('publish_threshold', 'Publish threshold', 'number', '0–100') }}
-    {{ field('scoring_model', 'Scoring model') }}
+<form method="post" action="/settings" class="card">
+  <div class="form-grid-2">
+    <fieldset class="form-col">
+      <legend>Execution &amp; scoring</legend>
+      {{ field('results_per_search', 'Results per search', 'number') }}
+      {{ field('hours_old', 'Hours old window', 'number') }}
+      {{ field('request_delay_seconds', 'Request delay (s)', 'number', 'raise first to ease restriction') }}
+      {{ field('publish_threshold', 'Publish threshold', 'number', '0–100') }}
+      {{ field('scoring_model', 'Scoring model') }}
+      <div class="field">
+        <label class="check" for="linkedin_fetch_description">
+          <input id="linkedin_fetch_description" name="linkedin_fetch_description" type="checkbox"
+                 {{ 'checked' if values['linkedin_fetch_description'] }}>
+          Fetch LinkedIn descriptions<span class="muted"> — slower</span>
+        </label>
+      </div>
+    </fieldset>
 
-    <label for="linkedin_fetch_description">Fetch LinkedIn descriptions<span class="muted"> — slower</span></label>
-    <input id="linkedin_fetch_description" name="linkedin_fetch_description" type="checkbox"
-           {{ 'checked' if values['linkedin_fetch_description'] }}>
-
-    {{ field('title_include_pattern', 'Title include regex') }}
-    {{ field('title_exclude_pattern', 'Title exclude regex') }}
-    {# D6 and ADR-0016. The coupling in the second sentence is invisible from
-       this screen, and the filter fails open when it bites, so nothing else
-       would tell the operator it had happened. #}
-    <p class="sub" style="grid-column:1/-1;margin:-6px 0 10px">
-      Applied to the job title only; empty switches the criterion off. These bind
-      every posting; a search profile can add its own on the
-      <a href="/profiles">profiles</a> page, but never loosen these. Seniority
-      filtering depends on <strong>LinkedIn description fetch</strong> staying
-      on — the board declares a posting's level only when descriptions are
-      fetched.
-    </p>
-
-    <label for="proxies">Proxies<span class="muted"> — one per line</span></label>
-    <textarea id="proxies" name="proxies" rows="2">{{ values['proxies'] | join('\n') }}</textarea>
+    <fieldset class="form-col">
+      <legend>Filters &amp; network</legend>
+      {{ field('title_include_pattern', 'Title include regex') }}
+      {{ field('title_exclude_pattern', 'Title exclude regex') }}
+      {# D6 and ADR-0016. The coupling in the second sentence is invisible from
+         this screen, and the filter fails open when it bites, so nothing else
+         would tell the operator it had happened. #}
+      <p class="hint">
+        Applied to the job title only; empty switches the criterion off. These bind
+        every posting; a search profile can add its own on the
+        <a href="/profiles">profiles</a> page, but never loosen these. Seniority
+        filtering depends on <strong>LinkedIn description fetch</strong> staying
+        on — the board declares a posting's level only when descriptions are
+        fetched.
+      </p>
+      <div class="field">
+        <label for="proxies">Proxies<span class="muted"> — one per line</span></label>
+        <textarea id="proxies" name="proxies" rows="2">{{ values['proxies'] | join('\n') }}</textarea>
+      </div>
+    </fieldset>
   </div>
 
-  <div style="margin-top:16px"><button class="btn" type="submit">Save settings</button></div>
+  <div class="form-footer">
+    <span class="spacer"></span>
+    <button class="btn btn-primary" type="submit">Save settings</button>
+  </div>
 </form>
 
-<h2>Read-only (restart required)</h2>
-<div class="panel" style="padding:16px">
-  <dl class="meta">
-    {% for key, value in readonly.items() %}
-    <dt>{{ key }}</dt><dd>{{ value }}</dd>
-    {% endfor %}
-    <dt>database_url</dt><dd class="muted">hidden — environment only</dd>
-  </dl>
+<h2>{{ icon('lock') }}Read-only (restart required)</h2>
+<div class="kv-grid">
+  {% for key, value in readonly.items() %}
+  <div class="card kv"><span class="metric-label">{{ key }}</span><span>{{ value }}</span></div>
+  {% endfor %}
+  <div class="card kv"><span class="metric-label">database_url</span><span class="muted">hidden — environment only</span></div>
 </div>
 
 {% endblock %}

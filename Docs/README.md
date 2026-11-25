@@ -48,6 +48,7 @@ earlier record is retained.
 | [0018](ADRs/0018-per-profile-title-rules.md) | Per-profile title rules — two levels, one combination rule | Accepted |
 | [0019](ADRs/0019-jobspy-linkedin-seniority-crash.md) | JobSpy's LinkedIn seniority parse — guarding against a whole-search crash | Accepted (option C: fixed upstream, JobSpy 1.4.1) |
 | [0020](ADRs/0020-seniority-for-boards-without-a-label.md) | Seniority for boards that declare none — title fallback, or seniority in the search term? | Accepted (option A, with profile guidance) |
+| [0021](ADRs/0021-ui-styling-hand-written-tokens.md) | Styling the triage interface — hand-written design tokens, self-hosted assets | Accepted |
 
 A **Proposed** record states evidence and options and decides nothing; it binds no
 behaviour until it is accepted. ADR-0017, 0019 and 0020 were opened that way and

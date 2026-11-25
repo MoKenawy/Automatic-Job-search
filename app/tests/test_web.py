@@ -231,3 +231,37 @@ def test_healthz(client):
     r = client.get("/healthz")
     assert r.status_code == 200
     assert r.json() == {"status": "ok"}
+
+
+def test_shell_shows_last_run_and_links_to_runs(client):
+    """FR-013: every page's shell shows the latest run, linking to Runs."""
+    r = client.get("/postings")
+    assert 'href="/runs"' in r.text
+    assert "Last run" in r.text
+    assert "success" in r.text
+
+
+def test_shell_without_runs_says_so():
+    engine = create_engine(
+        "sqlite://",
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False, future=True)
+
+    def override():
+        session = factory()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    app.dependency_overrides[get_db] = override
+    try:
+        r = TestClient(app).get("/")
+    finally:
+        app.dependency_overrides.clear()
+    assert "No runs yet" in r.text
+    assert 'href="/runs"' in r.text

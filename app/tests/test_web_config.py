@@ -308,3 +308,13 @@ def test_the_add_form_accepts_title_patterns(client, factory):
     assert r.status_code == 303
     with factory() as s:
         assert profiles.list_all(s)[0].title_exclude_pattern == "intern"
+
+
+def test_settings_page_never_shows_the_database_url(client):
+    """FR-012: the URL, even partly, never reaches the page."""
+    from app.config import settings
+
+    html = client.get("/settings").text
+    assert "hidden — environment only" in html
+    assert "postgresql://" not in html
+    assert settings.database_url not in html

@@ -1,42 +1,51 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icon, banner, empty_state, table_wrap, metric %}
 {% set active = 'blacklist' %}
+{% block title %}Blacklist — Job discovery{% endblock %}
 {% block content %}
 
-<h1>Blacklist</h1>
-<p class="sub">
-  Postings from a blacklisted employer are hidden from every view here, but
-  retained. Removing a blacklist restores its postings to visibility with
-  their prior triage status intact.
-</p>
-<p class="sub">
-  <strong>Note:</strong> blacklists applied before this change behave
-  differently on removal — their postings stay Rejected rather than
-  returning to their prior status (FR-013).
-</p>
+<div class="page-head">
+  <h1>Blacklist</h1>
+  <p class="page-sub">
+    Postings from a blacklisted employer are hidden from every view here, but
+    retained. Removing a blacklist restores its postings to visibility with
+    their prior triage status intact.
+  </p>
+</div>
 
-<div class="panel scroll-x">
+{# FR-013 rule callout, existing copy. #}
+{{ banner('info', 'Note: blacklists applied before this change behave differently on removal — their postings stay Rejected rather than returning to their prior status (FR-013).') }}
+
+{# Both figures are derived from the rows already on the page (spec classification table). #}
+<div class="metric-grid">
+  {{ metric("Employers blacklisted", employers | length) }}
+  {{ metric("Postings hidden", employers | map(attribute=1) | sum) }}
+</div>
+
+<h2>Blacklisted employers</h2>
+{% call table_wrap("Blacklisted employers") %}
   <table>
     <thead>
-      <tr><th>Employer</th><th class="num">Postings</th><th></th></tr>
+      <tr><th scope="col">Employer</th><th scope="col">Postings</th><th scope="col">Action</th></tr>
     </thead>
     <tbody>
       {% for employer, count in employers %}
       <tr>
         <td>{{ employer.name }}</td>
-        <td class="num">{{ count }}</td>
+        <td><span class="pill">{{ count }} postings hidden</span></td>
         <td>
-          <form method="post" action="/employers/{{ employer.id }}/unblacklist"
-                hx-post="/employers/{{ employer.id }}/unblacklist" style="display:inline">
+          {# Plain form post (FR-016, contract C-6): no hx-post, so the redirect lands on a whole page. #}
+          <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline-form">
             <input type="hidden" name="return_to" value="/blacklist">
-            <button class="btn" type="submit">Remove</button>
+            <button class="btn btn-ghost" type="submit">{{ icon('undo') }}Remove</button>
           </form>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="3" class="empty">No employers blacklisted.</td></tr>
+      <tr><td colspan="3">{{ empty_state("No employers blacklisted. Blacklist one from a posting's detail page.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 {% endblock %}

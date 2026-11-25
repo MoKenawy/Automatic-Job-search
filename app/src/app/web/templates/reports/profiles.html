@@ -1,24 +1,28 @@
 {% extends "base.html" %}
+{% from "_macros.html" import empty_state %}
 {% set active = 'reports' %}
+{% block title %}Profile triage — Reports — Job discovery{% endblock %}
 {% block content %}
 
-<h1>Triage status per search profile</h1>
+<div class="page-head"><h1>Triage status per search profile</h1></div>
 {% include "reports/_caveat.html" %}
 
-<div class="filters">
-  <a href="/reports/profiles" class="{{ 'on' if not show_disabled }}">Enabled only</a>
-  <a href="/reports/profiles?show_disabled=true" class="{{ 'on' if show_disabled }}">Include disabled</a>
-</div>
+<ul class="chips">
+  <li><a class="chip" href="/reports/profiles"{% if not show_disabled %} aria-current="true"{% endif %}>Enabled only</a></li>
+  <li><a class="chip" href="/reports/profiles?show_disabled=true"{% if show_disabled %} aria-current="true"{% endif %}>Include disabled</a></li>
+</ul>
 
-{% set colors = {'new': 'var(--muted)', 'shortlist': 'var(--accent)', 'applied': 'var(--warn)', 'rejected': 'var(--bad)'} %}
+{# Segment colours are tokens; every segment is also named with its count in the legend,
+   so nothing depends on colour alone (FR-007). #}
+{% set colors = {'new': 'var(--outline)', 'shortlist': 'var(--primary-container)', 'applied': 'var(--success)', 'rejected': 'var(--error)'} %}
 
 <div class="pie-grid">
   {% for row in rows %}
-  <div class="pie-card">
+  <div class="card pie-card">
     <h3>{{ row.profile.name }}{% if not row.profile.enabled %} <span class="pill">disabled</span>{% endif %}</h3>
     {% if row.total %}
       {% set ns = namespace(acc=0) %}
-      <div class="pie" style="background: conic-gradient(
+      <div class="pie" aria-hidden="true" style="background: conic-gradient(
         {% for status, count in row.by_status.items() if count %}
         {% set pct = count / row.total * 100 %}
         {{ colors[status] }} {{ ns.acc }}% {{ ns.acc + pct }}%{{ ',' if not loop.last }}
@@ -26,12 +30,12 @@
         {% endfor %}
       );"></div>
     {% else %}
-      <div class="pie pie-empty"></div>
+      <div class="pie pie-empty" aria-hidden="true"></div>
     {% endif %}
     <ul class="legend">
       {% for status, count in row.by_status.items() %}
       <li>
-        <span class="dot" style="background:{{ colors[status] }}"></span>{{ status }}
+        <span class="dot" aria-hidden="true" style="background:{{ colors[status] }}"></span>{{ status }}
         <span class="num muted">{{ count }} ({{ (count / row.total * 100) | round | int if row.total else 0 }}%)</span>
       </li>
       {% endfor %}
@@ -39,23 +43,8 @@
     <div class="muted">{{ row.total }} posting{{ '' if row.total == 1 else 's' }}</div>
   </div>
   {% else %}
-  <p class="empty">No search profiles{{ '' if show_disabled else ' enabled' }} yet.</p>
+  {{ empty_state("No search profiles" ~ ('' if show_disabled else ' enabled') ~ " yet.") }}
   {% endfor %}
 </div>
-
-<style>
-  .pie-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 4px; }
-  .pie-card {
-    background: var(--panel); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 16px; text-align: center;
-  }
-  .pie-card h3 { font-size: 14px; margin: 0 0 12px; font-weight: 600; }
-  .pie { width: 120px; height: 120px; border-radius: 50%; margin: 0 auto 12px; }
-  .pie-empty { background: var(--line); }
-  .legend { list-style: none; margin: 0 0 8px; padding: 0; text-align: left; font-size: 13px; }
-  .legend li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
-  .legend li .num { margin-left: auto; }
-  .legend .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
-</style>
 
 {% endblock %}

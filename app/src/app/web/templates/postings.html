@@ -1,19 +1,25 @@
 {% extends "base.html" %}
+{% from "_macros.html" import icon, banner, empty_state, table_wrap, status_pill %}
 {% set active = 'postings' %}
+{% block title %}Postings — Job discovery{% endblock %}
 {% block content %}
 
-<h1>Postings</h1>
-<p class="sub">
-  {% if pager.total %}Showing {{ pager.first }}–{{ pager.last }} of {{ pager.total }}{% else %}Nothing to show{% endif %},
-  {% if status == 'rejected' %}
-    most recently rejected first.
-  {% else %}
-    ranked by score. Unscored postings sort last.
-  {% endif %}
-</p>
+{% if flash %}{{ banner('success', flash, focusable=True) }}{% endif %}
+
+<div class="page-head">
+  <h1>Postings</h1>
+  <p class="page-sub">
+    {% if pager.total %}Showing {{ pager.first }}–{{ pager.last }} of {{ pager.total }}{% else %}Nothing to show{% endif %},
+    {% if status == 'rejected' %}
+      most recently rejected first.
+    {% else %}
+      ranked by score. Unscored postings sort last.
+    {% endif %}
+  </p>
+</div>
 
 {% if verdict == 'rejected' %}
-<p class="sub">
+<p class="page-sub verdict-note">
   Postings the filter turned away, under the criteria in force now. They are
   withheld from the queue only while untriaged — anything you have already
   shortlisted or applied to still appears there as well. Loosen the criteria at
@@ -22,45 +28,63 @@
 </p>
 {% endif %}
 
-{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+{# Chips and query controls share one surface, as in the mock-ups. #}
+<div class="toolbar">
+{# Status chips are plain links (contract C-4); no counts, because the page has none (US2 AS-8). #}
+<nav aria-label="Status filter">
+  <ul class="chips">
+    <li><a class="chip" href="/postings"{% if not status and not verdict %} aria-current="true"{% endif %}>All</a></li>
+    {% for s in statuses %}
+    <li><a class="chip" href="/postings?status={{ s }}"{% if status == s and not verdict %} aria-current="true"{% endif %}>{{ s }}</a></li>
+    {% endfor %}
+    {# FR-017 — what the filter turned away. Deliberately not the complement of the
+       normal list: a posting rejected after the operator shortlisted it shows in
+       both, because that is the clearest evidence a criterion is too aggressive. #}
+    <li><a class="chip" href="/postings?verdict=rejected"{% if verdict == 'rejected' %} aria-current="true"{% endif %}>filtered out</a></li>
+  </ul>
+</nav>
 
-<form class="filters" method="get" action="/postings">
-  <a href="/postings" class="{{ 'on' if not status and not verdict }}">All</a>
-  {% for s in statuses %}
-  <a href="/postings?status={{ s }}" class="{{ 'on' if status == s and not verdict }}">{{ s }}</a>
-  {% endfor %}
-  {# FR-017 — what the filter turned away. Deliberately not the complement of the
-     normal list: a posting rejected after the operator shortlisted it shows in
-     both, because that is the clearest evidence a criterion is too aggressive. #}
-  <a href="/postings?verdict=rejected" class="{{ 'on' if verdict == 'rejected' }}">filtered out</a>
-  <input type="search" name="q" value="{{ q }}" placeholder="title or company">
-  <select name="country" aria-label="Location">
-    <option value="">Any location</option>
-    <option value="remote" {{ 'selected' if country == 'remote' }}>Remote</option>
-    {% for c in facets.countries %}
-    <option value="{{ c }}" {{ 'selected' if country == c }}>{{ c }}</option>
-    {% endfor %}
-    {% if facets.unknown_country %}
-    <option value="unknown" {{ 'selected' if country == 'unknown' }}>Unknown</option>
-    {% endif %}
-  </select>
-  <select name="source" aria-label="Source">
-    <option value="">Any source</option>
-    {% for s in facets.sources %}
-    <option value="{{ s }}" {{ 'selected' if source == s }}>{{ s }}</option>
-    {% endfor %}
-  </select>
+<form class="filter-bar" method="get" action="/postings" role="search">
+  <div class="field">
+    <label for="f-q">Search</label>
+    <input type="search" id="f-q" name="q" value="{{ q }}" placeholder="title or company">
+  </div>
+  <div class="field">
+    <label for="f-country">Location</label>
+    <select id="f-country" name="country">
+      <option value="">Any location</option>
+      <option value="remote" {{ 'selected' if country == 'remote' }}>Remote</option>
+      {% for c in facets.countries %}
+      <option value="{{ c }}" {{ 'selected' if country == c }}>{{ c }}</option>
+      {% endfor %}
+      {% if facets.unknown_country %}
+      <option value="unknown" {{ 'selected' if country == 'unknown' }}>Unknown</option>
+      {% endif %}
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-source">Source</label>
+    <select id="f-source" name="source">
+      <option value="">Any source</option>
+      {% for s in facets.sources %}
+      <option value="{{ s }}" {{ 'selected' if source == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
   {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
   {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
-  <button class="btn" type="submit">Search</button>
+  <button class="btn" type="submit">{{ icon('search') }}Search</button>
 </form>
+</div>
 
 {# US2 — bulk action bar. The form holds only the bar; row checkboxes live in the
    table and associate with it via the HTML5 form= attribute. This keeps the row
    status controls (their own forms) from being nested inside it — nested forms
-   are invalid. Progressive: submits normally without HTMX. #}
+   are invalid. Progressive: submits normally without HTMX.
+   Contract C-3: id, hx-post/target/swap and the echoed fields stay. #}
 <form id="bulkform" method="post" action="/postings/status"
-      hx-post="/postings/status" hx-target="body" hx-swap="innerHTML">
+      hx-post="/postings/status" hx-target="body" hx-swap="innerHTML"
+      hx-disabled-elt="#bulkapply">
   {# Echo the list state back so the re-render lands on the same filtered page.
      `list_status` is the filter; `status` below is the status being applied. #}
   {% if status %}<input type="hidden" name="list_status" value="{{ status }}">{% endif %}
@@ -70,47 +94,46 @@
   {% if published %}<input type="hidden" name="published" value="true">{% endif %}
   {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
   <input type="hidden" name="page" value="{{ pager.number }}">
-  <div class="bulkbar" id="bulkbar">
-    <span class="muted" id="selcount">0 selected</span>
-    <select name="status" aria-label="Bulk status">
+  <div class="bulk-bar" id="bulkbar">
+    <span id="selcount">0 selected</span>
+    <label class="visually-hidden" for="bulk-status">Bulk status</label>
+    <select id="bulk-status" name="status">
       {% for s in statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
     </select>
-    <button class="btn" type="submit" id="bulkapply" disabled>Apply to selected</button>
+    <button class="btn btn-primary" type="submit" id="bulkapply" disabled>Apply to selected</button>
   </div>
 </form>
 
-<div class="panel scroll-x">
+{% call table_wrap("Postings") %}
   <table>
     <thead>
       <tr>
-        <th><input type="checkbox" id="selall" aria-label="Select all"></th>
-        <th class="num">Score</th>
-        <th>Title</th>
-        <th>Company</th>
-        <th>Location</th>
-        <th>Sources</th>
-        <th>Posted</th>
+        <th scope="col"><input type="checkbox" id="selall" aria-label="Select all"></th>
+        <th scope="col" class="num">Score</th>
+        <th scope="col">Title</th>
+        <th scope="col">Company</th>
+        <th scope="col">Location</th>
+        <th scope="col">Sources</th>
+        <th scope="col">Posted</th>
         {# The rejected bucket is ordered by this column, so show it there. #}
-        {% if status == 'rejected' %}<th>Rejected</th>{% endif %}
-        {% if verdict == 'rejected' %}<th>Turned away on</th>{% endif %}
-        <th>Status</th>
+        {% if status == 'rejected' %}<th scope="col">Rejected</th>{% endif %}
+        {% if verdict == 'rejected' %}<th scope="col">Turned away on</th>{% endif %}
+        <th scope="col">Status</th>
       </tr>
     </thead>
     <tbody>
       {% for p, employer in pager.rows %}
       <tr>
-        <td><input type="checkbox" class="selrow" name="ids" value="{{ p.id }}" form="bulkform"></td>
-        <td class="num score">{{ p.score if p.score is not none else '—' }}</td>
-        <td><a href="/postings/{{ p.id }}">{{ p.title }}</a></td>
-        <td>{{ employer.name }}</td>
-        <td class="muted">
-          {{ 'Remote' if p.is_remote else (p.country_code or '—') }}
-        </td>
-        <td class="muted">
-          {% for site in p.sources.keys() %}{{ site }}{% if not loop.last %}, {% endif %}{% endfor %}
+        <td><input type="checkbox" class="selrow" name="ids" value="{{ p.id }}" form="bulkform" aria-labelledby="title-{{ p.id }}"></td>
+        <td class="num"><span class="score-badge">{{ p.score if p.score is not none else '—' }}</span></td>
+        <td><a id="title-{{ p.id }}" href="/postings/{{ p.id }}">{{ p.title }}</a></td>
+        <td><span class="initial" aria-hidden="true">{{ employer.name[:1] | upper }}</span>{{ employer.name }}</td>
+        <td class="muted">{{ icon('location_on') }} {{ 'Remote' if p.is_remote else (p.country_code or '—') }}</td>
+        <td>
+          {% for site in p.sources.keys() %}<span class="pill">{{ site }}</span> {% endfor %}
           {% if p.sources | length > 1 %}<span class="pill">×{{ p.sources | length }}</span>{% endif %}
         </td>
-        <td class="muted">{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}</td>
+        <td class="muted">{% if shell.now and p.date_posted %}{{ p.date_posted | relative_age(shell.now) }}{% else %}{{ p.date_posted.strftime('%d %b') if p.date_posted else '—' }}{% endif %}</td>
         {% if status == 'rejected' %}
         <td class="muted">{{ p.status_changed_at.strftime('%d %b %Y') if p.status_changed_at else '—' }}</td>
         {% endif %}
@@ -126,11 +149,11 @@
       </tr>
       {% else %}
       {# Two conditional columns, so the span counts them both. #}
-      <tr><td colspan="{{ 8 + (1 if status == 'rejected' else 0) + (1 if verdict == 'rejected' else 0) }}" class="empty">No postings match.</td></tr>
+      <tr><td colspan="{{ 8 + (1 if status == 'rejected' else 0) + (1 if verdict == 'rejected' else 0) }}">{{ empty_state("No postings match.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 {% if pager.pages > 1 %}
 <nav class="pager" aria-label="Pagination">
@@ -138,6 +161,10 @@
   <a class="btn" href="{{ page_url(1) }}" aria-label="First page">« First</a>
   <a class="btn" href="{{ page_url(pager.number - 1) }}" rel="prev">‹ Prev</a>
   {% endif %}
+  {% for n in range([1, pager.number - 2] | max, [pager.pages, pager.number + 2] | min + 1) %}
+    {% if n == pager.number %}<span class="btn page-current" aria-current="true" aria-label="Page {{ n }}, current page">{{ n }}</span>
+    {% else %}<a class="btn" href="{{ page_url(n) }}" aria-label="Page {{ n }}">{{ n }}</a>{% endif %}
+  {% endfor %}
   <span class="muted">Page {{ pager.number }} of {{ pager.pages }}</span>
   {% if pager.has_next %}
   <a class="btn" href="{{ page_url(pager.number + 1) }}" rel="next">Next ›</a>

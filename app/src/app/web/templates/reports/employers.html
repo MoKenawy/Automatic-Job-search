@@ -1,11 +1,13 @@
 {% extends "base.html" %}
+{% from "_macros.html" import empty_state, table_wrap, status_pill %}
 {% set active = 'reports' %}
+{% block title %}Employer activity — Reports — Job discovery{% endblock %}
 {% block content %}
 
-<h1>Employer hiring activity</h1>
+<div class="page-head"><h1>Employer hiring activity</h1></div>
 {% include "reports/_caveat.html" %}
 
-<p class="sub">
+<p class="page-sub">
   <strong>Roles</strong> counts distinct real-world roles, not board listings &mdash;
   the fingerprint already merges a role surfaced by both boards.
   <strong>Titles</strong> is how many distinct titles those roles span: twelve roles
@@ -13,21 +15,21 @@
   different signal from twelve different openings.
 </p>
 
-<div class="filters">
-  <a href="/reports/employers" class="{{ 'on' if not show_suppressed }}">Active only</a>
-  <a href="/reports/employers?show_suppressed=true" class="{{ 'on' if show_suppressed }}">Include blacklisted</a>
-</div>
+<ul class="chips">
+  <li><a class="chip" href="/reports/employers"{% if not show_suppressed %} aria-current="true"{% endif %}>Active only</a></li>
+  <li><a class="chip" href="/reports/employers?show_suppressed=true"{% if show_suppressed %} aria-current="true"{% endif %}>Include blacklisted</a></li>
+</ul>
 
-<div class="panel scroll-x">
+{% call table_wrap("Employer hiring activity") %}
   <table>
     <thead>
       <tr>
-        <th>Employer</th>
-        <th class="num">Roles</th>
-        <th class="num">Titles</th>
-        <th class="num">Days quiet</th>
-        <th>First seen</th>
-        <th>Triage</th>
+        <th scope="col">Employer</th>
+        <th scope="col" class="num">Roles</th>
+        <th scope="col" class="num">Titles</th>
+        <th scope="col" class="num">Days quiet</th>
+        <th scope="col">First seen</th>
+        <th scope="col">Triage</th>
       </tr>
     </thead>
     <tbody>
@@ -45,15 +47,15 @@
         <td class="muted">{{ row.first_seen.strftime('%d %b %Y') if row.first_seen }}</td>
         <td>
           {% for status, count in row.by_status.items() %}
-            <span class="pill {{ status }}">{{ status }} {{ count }}</span>
+            {{ status_pill(status) }}<span class="num">{{ count }}</span>
           {% endfor %}
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="empty">No employers collected yet.</td></tr>
+      <tr><td colspan="6">{{ empty_state("No employers collected yet.") }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
-</div>
+{% endcall %}
 
 {% endblock %}

@@ -1,0 +1,46 @@
+{# Shared presentation macros (spec 004, ADR-0021). No colours here: classes only. #}
+
+{# Icon from the vendored sprite. Hidden from assistive tech unless it has a label (FR-008). #}
+{% macro icon(name, label=None, cls="") -%}
+<svg class="icon {{ cls }}" {% if label %}role="img" aria-label="{{ label }}"{% else %}aria-hidden="true" focusable="false"{% endif %}><use href="/static/icons.svg#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{# Status pill: text plus icon, never colour alone (FR-007). Unknown statuses stay neutral. #}
+{% macro status_pill(status, href=None) -%}
+{% set icons = {"new": "fiber_new", "shortlist": "check_circle", "applied": "send", "rejected": "cancel",
+                "running": "progress_activity", "success": "check_circle", "failed": "error"} %}
+{% set known = status in icons %}
+{% if href %}<a class="pill {{ status if known }}" href="{{ href }}">{% else %}<span class="pill {{ status if known }}">{% endif %}
+{%- if known %}{{ icon(icons[status]) }}{% endif %}{{ status }}
+{%- if href %}</a>{% else %}</span>{% endif %}
+{%- endmacro %}
+
+{# Inline status banner (FR-018). Announced via role; focusable ones can receive focus after a body swap. #}
+{% macro banner(kind, message, focusable=False) -%}
+{% set icons = {"info": "info", "success": "check_circle", "error": "error"} %}
+<div class="banner {{ kind }}" role="{{ 'alert' if kind == 'error' else 'status' }}"{% if focusable %} tabindex="-1"{% endif %}>
+  {{ icon(icons.get(kind, "info")) }}<div>{{ message }}</div>
+</div>
+{%- endmacro %}
+
+{% macro empty_state(message, action_href=None, action_label=None) -%}
+<div class="empty-state">
+  <p>{{ message }}</p>
+  {% if action_href %}<a class="btn" href="{{ action_href }}">{{ action_label }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{# The number is the sole text content of its element (contract C-8: `>3<`). #}
+{% macro metric(label, value, href=None) -%}
+{% if href %}<a class="card metric" href="{{ href }}">{% else %}<div class="card metric">{% endif %}
+  <span class="metric-label">{{ label }}</span>
+  <span class="metric-value">{{ value }}</span>
+{% if href %}</a>{% else %}</div>{% endif %}
+{%- endmacro %}
+
+{# Scrollable table region: keyboard reachable and named (WCAG 2.1.1). Use with {% call %}. #}
+{% macro table_wrap(label) -%}
+<div class="table-wrap panel" tabindex="0" role="region" aria-label="{{ label }}">
+  {{ caller() }}
+</div>
+{%- endmacro %}
