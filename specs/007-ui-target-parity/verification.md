@@ -141,3 +141,10 @@ visual seed has one page only, so the multi-page pager is covered by `test_web_t
 - Add form: section header with `add_circle`, tinted sites group, monospace regex inputs, tinted action bar with Save (`save` icon) and compact hour/minute inputs. Field names, ids and hint text unchanged.
 - Not built: sync/throttle/storage strip, keyboard-shortcut hints, Glassdoor (D3).
 - Re-baselined: `profiles` x 4. Gate: pytest, ruff, CSS build, `--visual` green.
+
+## Step 007-7: Settings
+
+- Section headers with `tune` / `filter_alt`; right-aligned rule hints from `services/settings.py` (int > 0, ≥ 0, 0–100, regex, one per line); unit suffixes inside inputs (items, hours, sec, score; decorative, `aria-hidden`); tinted taller inputs; monospace regex and proxies fields; LinkedIn checkbox in a tinted callout with one explanatory line (restates the seniority dependency already stated on the page); Save with `save` icon; read-only panel with uppercase keys and semibold values (`database_url` still "hidden — environment only").
+- Number input `step` left at the browser default, so validation behaviour is unchanged.
+- Not built: Reset to defaults, Export JSON, Audit log, slider, sync strip, inference ping (D3/D4).
+- Re-baselined: `settings` x 4. Gate: pytest, ruff, CSS build, `--visual` green.
