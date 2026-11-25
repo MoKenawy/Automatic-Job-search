@@ -28,11 +28,20 @@ richer per-page components. This feature closes those gaps visually.
   only from existing query functions (`queries.totals`, `source_health`, `recent_runs`,
   `list_postings`, `known_sites`, `settings_service.get`, `profile_store.list_enabled`).
 - **D5, sequencing.** Starts after 006 closed (PR #50).
+- **D6, row triage buttons (2026-11-25).** Postings rows use icon-only status actions, as in
+  the target. Each is named by `aria-label` and a tooltip ("Set status to Shortlist"); the current
+  status stays visible as text. Amends 004 FR-017 for list rows; the detail page keeps icon plus
+  label.
+- **D7, filtered tab counts (2026-11-25).** The Postings status tabs show counts that respect the
+  active search, location, source and published filters. This is the one backend addition D4
+  allows: `queries.status_counts`, built on the same `_query_filters` as `list_postings`, so a
+  tab's count equals the total of the list it opens (`tests/test_status_counts.py`). Supersedes
+  004 US2 AS-8.
 
 ## Out of scope (need backend work)
 
 CSV export; blacklist add-by-name and its reason and date-added fields; settings reset to defaults;
-runs JSON export; CV upload; report time ranges; a "Filtered out" tab count; self-hosting a
+runs JSON export; CV upload; report time ranges; self-hosting a
 monospace font (the `<code>` snapshots depend on the system font, recorded in 006).
 
 ## Gap list (from the comparison)

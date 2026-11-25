@@ -77,3 +77,46 @@ them: `bar_chart`, `calendar_clock`, `download`, `link`, `monitoring`, `restart_
 `index` × 4 (light, dark; 375, 1280). Reviewed `index-1280-light`, `index-1280-dark` and
 `index-375-light` by eye; the mobile queue rows were reworked after the first review so the text
 takes the full width and the pill and button wrap below.
+
+## Step 007-3 gate: Postings, 2026-11-25
+
+| Check | Result |
+|---|---|
+| `uv run pytest` | 817 passed, 46 skipped (74 new in `tests/test_status_counts.py`) |
+| ruff check / format | clean |
+| `uv run pytest --visual` | 44 of 44 after re-baselining the 4 `postings` snapshots |
+| First load: `app.css` 34,256 + font 48,256 + icons 13,596 + htmx 50,387 | 146,495 bytes (budget 150 KB) |
+
+### Decisions (maintainer, recorded in spec D6, D7)
+- **D6**: row triage actions are icon-only (amends 004 FR-017 for list rows).
+- **D7**: tab counts follow the active filters, which needs one backend read path.
+
+### Backend
+- `queries._query_filters` holds the search, location, source and published conditions, used by
+  both `list_postings` (unchanged behaviour) and the new `queries.status_counts`.
+- `status_counts` runs two queries: a `GROUP BY status` over the visible queue and one count over
+  the filter's review bucket. The status axis is not applied, so each tab counts what it opens.
+- `tests/test_status_counts.py` checks, for all 72 combinations of the query axes, that every tab
+  count equals `list_postings(...).total` for that tab, plus two hand-counted cases (blacklisted
+  and filtered-out postings excluded from the queue).
+
+### What changed on the page
+- Tabs carry a `count_badge` that inverts on the selected tab.
+- Filter bar: search with a leading icon, selects and a primary Search button on one line;
+  labels are visually hidden (still associated).
+- Bulk bar: tinted strip; options read "Set to …"; Apply is a secondary button.
+- Table: one "Title & company" column with an initial tile; neutral score badge ("—" when
+  unscored); location chip (globe icon when remote); board tags (LinkedIn primary tint, Indeed
+  tertiary tint); "Status & triage" column.
+- Row control (`_row_status.html`): icon-only ghost buttons, `aria-label` and `title`
+  "Set status to …"; the status pill stays as text; kept on one line. Contract C-1 unchanged
+  (id, hx-post/target/swap/disabled-elt, field names and order); `tests/test_web_triage.py`
+  passes untouched.
+- Pager moved into the table footer: "Showing a–b of N · Page x of y" and ghost page buttons
+  with first/last, ellipses and Prev/Next.
+- `btn_class` gains an `icon` size (32 px square).
+
+### Re-baselined snapshots
+`postings` × 4. Reviewed `postings-1280-light`, `postings-1280-dark`, `postings-375-light`. The
+visual seed has one page only, so the multi-page pager is covered by `test_web_triage.py`
+("Page 1 of 2", "Page 2 of 2"), not by pixels.

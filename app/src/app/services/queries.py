@@ -13,7 +13,7 @@ from sqlalchemy.sql.elements import ColumnElement
 
 from app.config import WORKING_SITES, RunConfig
 from app.db.attribution import contributors_by_posting
-from app.db.models import STATUS_REJECTED, Employer, Posting, Run, SearchProfile
+from app.db.models import STATUS_REJECTED, STATUSES, Employer, Posting, Run, SearchProfile
 from app.db.visibility import filter_rejected, hidden_by_filter, not_suppressed
 from app.filters import (
     TitleRules,
@@ -169,6 +169,94 @@ def _ordering(status: str | None) -> tuple:
     )
 
 
+def _query_filters(
+    session: Session,
+    *,
+    published_only: bool = False,
+    search: str | None = None,
+    country: str | None = None,
+    remote: bool | None = None,
+    source: str | None = None,
+) -> list[ColumnElement]:
+    """The operator's query axes (search, location, source, published).
+
+    Status, the verdict bucket and visibility are left to the caller: the list
+    selects one status, while `status_counts` groups by it. Both build on this, so
+    a tab's count and the list it opens apply the same axes and cannot disagree.
+    Every condition is over `postings` or `employers`, so callers join `Employer`.
+    """
+    where: list[ColumnElement] = []
+    if published_only:
+        where.append(Posting.published.is_(True))
+    if search:
+        like = f"%{search.lower()}%"
+        where.append(func.lower(Posting.title).like(like) | func.lower(Employer.name).like(like))
+    if country == COUNTRY_UNKNOWN:
+        where.append(Posting.country_code.is_(None))
+    elif country:
+        where.append(Posting.country_code == country.upper())
+    if remote is not None:
+        where.append(Posting.is_remote.is_(remote))
+    if source:
+        where.append(_has_source(session, source))
+    return where
+
+
+@dataclass
+class StatusCounts:
+    """Counts for the Postings status tabs under the active query (spec 007).
+
+    `by_status` has every status, zero included. `all` is the queue the "All" tab
+    opens and `filtered_out` the review bucket (FR-017). Each equals the `total`
+    of the `list_postings` call its tab makes.
+    """
+
+    by_status: dict[str, int]
+    all: int
+    filtered_out: int
+
+
+def status_counts(
+    session: Session,
+    *,
+    published_only: bool = False,
+    search: str | None = None,
+    country: str | None = None,
+    remote: bool | None = None,
+    source: str | None = None,
+) -> StatusCounts:
+    """Per-tab counts with the search, location, source and published axes applied.
+
+    Two grouped/aggregate queries, whatever the number of statuses. The status
+    axis itself is not applied: each tab counts what it would show.
+    """
+    where = _query_filters(
+        session,
+        published_only=published_only,
+        search=search,
+        country=country,
+        remote=remote,
+        source=source,
+    )
+    joined = select(Posting.status, func.count()).join(Employer, Employer.id == Posting.employer_id)
+    grouped = dict(
+        session.execute(
+            joined.where(*where, not_suppressed(), ~hidden_by_filter()).group_by(Posting.status)
+        ).all()
+    )
+    filtered_out = (
+        session.scalar(
+            select(func.count())
+            .select_from(Posting)
+            .join(Employer, Employer.id == Posting.employer_id)
+            .where(*where, not_suppressed(), filter_rejected())
+        )
+        or 0
+    )
+    by_status = {s: grouped.get(s, 0) for s in STATUSES}
+    return StatusCounts(by_status=by_status, all=sum(grouped.values()), filtered_out=filtered_out)
+
+
 def list_postings(
     session: Session,
     *,
@@ -205,22 +293,16 @@ def list_postings(
     and a bucket defined as "everything hidden" would conceal exactly that
     (SC-002, contracts/filter-seam.md).
     """
-    where = []
+    where = _query_filters(
+        session,
+        published_only=published_only,
+        search=search,
+        country=country,
+        remote=remote,
+        source=source,
+    )
     if status:
         where.append(Posting.status == status)
-    if published_only:
-        where.append(Posting.published.is_(True))
-    if search:
-        like = f"%{search.lower()}%"
-        where.append(func.lower(Posting.title).like(like) | func.lower(Employer.name).like(like))
-    if country == COUNTRY_UNKNOWN:
-        where.append(Posting.country_code.is_(None))
-    elif country:
-        where.append(Posting.country_code == country.upper())
-    if remote is not None:
-        where.append(Posting.is_remote.is_(remote))
-    if source:
-        where.append(_has_source(session, source))
     # ADR-0015 and ADR-0016 — applied to both statements below. The count and the
     # page must carry the same conditions, or the pager claims rows the operator
     # cannot reach.

@@ -12,7 +12,7 @@ cut from `007` and merged back by its own PR after its gate (pytest, ruff, drift
 - [X] T003 `007-1`: shell at 90rem, neutral last-run pill with dot and full date, footer (version, timezone)
 - [X] T004 `007-1`: `page_header` on all 11 pages; h1 at headline-xl from 768 px
 - [X] T005 `007-2`: new sprite icons (moved from 007-1); Overview: KPI footnotes, scoring panel, stacked triage bar, labelled source bars, top of the queue
-- [ ] T006 `007-3`: Postings: tab counts, one-row filter bar, bulk bar, merged title column, board tags, icon triage (C-1 intact), numbered pager
+- [X] T006 `007-3`: Postings: tab counts, one-row filter bar, bulk bar, merged title column, board tags, icon triage (C-1 intact), numbered pager
 - [ ] T007 `007-4`: Reports: icon cards with stat badges, pipeline summary panel, detail pages styled
 - [ ] T008 `007-5`: Blacklist: stat cards, initial tiles, blocked chip, restore link, callout
 - [ ] T009 `007-6`: Schedules: list card, toggles, coloured actions, time chips, two-column add form with action bar

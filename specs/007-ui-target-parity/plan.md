@@ -8,8 +8,23 @@ I compared screenshots of the running app (http://localhost:8000, light, 1536px)
 - **Header logo:** keep the current text logo until a real logo exists. Drop the avatar and the decorative terminal/code icons.
 - **Real data only:** a target element ships only when the app has a real value for it. Drop mock data such as latency, "Encrypted", PID/node, tok/s, CAPTCHA and schema rev.
 - **Styling only:** no new endpoints, DB columns or services. Route handlers may pass extra context **only from existing query functions** (`queries.totals`, `queries.source_health`, `queries.recent_runs`, `queries.list_postings`, `queries.known_sites`, `settings_service.get`, `profile_store.list_enabled`).
-  - Out of scope: CSV export, blacklist add-by-name and its reason/date fields, settings reset, runs JSON export, CV upload, report time ranges, the "Filtered out" count.
+  - Out of scope: CSV export, blacklist add-by-name and its reason/date fields, settings reset, runs JSON export, CV upload, report time ranges.
+- **D6 (2026-11-25):** Postings row triage actions are icon-only, named by `aria-label` and a tooltip (amends 004 FR-017 for list rows; the detail page keeps icon plus label).
+- **D7 (2026-11-25):** the Postings status tabs show counts under the active search, location, source and published filters. This is the one backend addition D4 allows: `queries.status_counts`, sharing `_query_filters` with `list_postings` (supersedes 004 US2 AS-8).
 - **Sequencing:** new spec `007-ui-target-parity`, started after 006 closes (T033–T035), so 006's "pixels unchanged" gate stays valid.
+
+## Progress
+
+| Step | Status |
+|---|---|
+| 007-0 spec scaffolding | done |
+| 007-1 shell and foundations | done |
+| 007-2 Overview | done |
+| 007-3 Postings | done |
+| 007-4 Reports | next |
+| 007-5 Blacklist, 007-6 Schedules, 007-7 Settings, 007-8 Runs, 007-9 closing gate | to do |
+
+Per-step results and re-baselines are in `verification.md`.
 
 ## Execution kickoff (006 is merged to main via PR #50)
 1. `git checkout main && git pull --ff-only origin main` (fetch and fast-forward; the untracked `Docs/Job-matching-intelligence-research/` stays untouched).
@@ -103,7 +118,7 @@ I compared screenshots of the running app (http://localhost:8000, light, 1536px)
 ## Step 007-3: Postings (`postings.html`, `_row_status.html`)
 - **Status tabs:**
   - Styled as the target: the selected tab is a dark `inverse-surface` pill (already `chip_class` `aria-current`).
-  - Each tab gets a `count_badge`: All = `totals.postings`, the others from `totals.by_status`. "Filtered out" gets no count (out of scope).
+  - Each tab gets a `count_badge` from `queries.status_counts` (D7): All, each status and "Filtered out", all under the active query filters.
 - **Filter bar:** one row inside a card.
   - Search input with a leading magnifier icon.
   - Location and source selects at 36px height.
@@ -119,7 +134,7 @@ I compared screenshots of the running app (http://localhost:8000, light, 1536px)
   - Status: `tag`.
   - Row hover uses the `surface-container-low` tint.
 - **Triage control in `_row_status.html`:**
-  - Replace the text buttons with compact icon buttons: shortlist (check_circle), reject (cancel), applied (send), new (fiber_new). Each has an `aria-label`, `aria-pressed` for the current state, and a primary fill when active.
+  - Replace the text buttons with compact icon buttons: shortlist (check_circle), reject (cancel), applied (send), new (fiber_new). Each has an `aria-label` and a matching tooltip ("Set status to Shortlist"); the current status stays visible as text in the pill (D6).
   - The htmx attributes (`hx-post`, `hx-target="#status-{id}"`, `hx-swap="outerHTML"`) and form fields stay byte-identical.
   - Update `tests/test_web_triage.py` only if its assertions depend on the button text.
 - **Pager:** footer with "Showing a–b of N" on the left and numbered page links on the right (current page highlighted, ellipsis, Next arrow), using the existing `pager` and `page_url(n)`.
