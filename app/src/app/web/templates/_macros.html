@@ -23,6 +23,8 @@
   "default": "border-outline bg-surface-container-lowest text-on-surface hover:bg-surface-container-high",
   "primary": "btn-primary border-primary-container bg-primary-container text-on-primary-container hover:bg-[color-mix(in_srgb,var(--primary-container)_85%,black)]",
   "ghost": "border-transparent bg-transparent text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface",
+  "ghost-primary": "border-transparent bg-transparent text-primary hover:bg-secondary-container",
+  "ghost-error": "border-transparent bg-transparent text-error hover:bg-error-container hover:text-on-error-container",
   "current": "border-primary bg-secondary-container text-on-secondary-container cursor-default",
 } -%}
 inline-flex items-center justify-center gap-1 {{ "min-w-9" if wide else "min-w-6" }} {{ layout[size] }} leading-none font-medium border rounded no-underline cursor-pointer wrap-anywhere transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] {{ colours[variant] }} disabled:opacity-55 disabled:cursor-not-allowed aria-disabled:opacity-55 aria-disabled:cursor-not-allowed aria-busy:opacity-70 aria-busy:cursor-progress in-[.htmx-request]:opacity-70 in-[.htmx-request]:cursor-progress aria-busy:after:content-[''] aria-busy:after:size-3.5 aria-busy:after:rounded-full aria-busy:after:border-2 aria-busy:after:border-current aria-busy:after:border-r-transparent aria-busy:after:animate-[spin_0.8s_linear_infinite]

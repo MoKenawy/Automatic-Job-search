@@ -15,7 +15,7 @@ cut from `007` and merged back by its own PR after its gate (pytest, ruff, drift
 - [X] T006 `007-3`: Postings: tab counts, one-row filter bar, bulk bar, merged title column, board tags, icon triage (C-1 intact), numbered pager
 - [X] T007 `007-4`: Reports: icon cards with stat badges, pipeline summary panel (detail pages already on `page_header`; no further restyle)
 - [X] T008 `007-5`: Blacklist: stat cards, initial tiles, blocked chip, restore link, callout
-- [ ] T009 `007-6`: Schedules: list card, toggles, coloured actions, time chips, two-column add form with action bar
+- [X] T009 `007-6`: Schedules: list card, toggles, coloured actions, time chips, two-column add form with action bar
 - [ ] T010 `007-7`: Settings: section icons, field hints and units, callout checkbox, action bar, read-only panel
 - [ ] T011 `007-8`: Runs: trend cards with value and run labels, history card with highlighted latest run
 - [ ] T012 `007-9`: final gate and side-by-side screenshots against each target, light and dark
