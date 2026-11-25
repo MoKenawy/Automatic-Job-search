@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "_macros.html" import empty_state, table_wrap, metric %}
+{% from "_macros.html" import empty_state, metric, page_header, table_wrap %}
 {% set active = 'reports' %}
 {% block title %}Source coverage — Reports — Job discovery{% endblock %}
 {% block content %}
 
-<div class="mb-6"><h1>Source coverage and overlap</h1></div>
+{{ page_header('Source coverage and overlap') }}
 {% include "reports/_caveat.html" %}
 
 <div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% from "_macros.html" import card_class, chip_class, empty_state, pill_class %}
+{% from "_macros.html" import card_class, chip_class, empty_state, page_header, pill_class %}
 {% set active = 'reports' %}
 {% block title %}Profile triage — Reports — Job discovery{% endblock %}
 {% block content %}
 
-<div class="mb-6"><h1>Triage status per search profile</h1></div>
+{{ page_header('Triage status per search profile') }}
 {% include "reports/_caveat.html" %}
 
 <ul class="flex flex-wrap gap-2 mb-4 p-0 list-none">

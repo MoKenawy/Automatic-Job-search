@@ -8,9 +8,9 @@ cut from `007` and merged back by its own PR after its gate (pytest, ruff, drift
 `--visual` 44/44 after the recorded re-baseline). Commits and PRs only when the maintainer asks.
 
 - [X] T001 `007-0`: spec scaffolding (`spec.md`, `plan.md`, `tasks.md`); point local `CLAUDE.md` here
-- [ ] T002 `007-1`: tokens (tertiary family, dark values, contrast tests), macros (`page_header`, `section_header`, `stat_card`, `icon_tile`, `initial_tile`, `count_badge`, `tag`, `card_hover_class`, `badge_class`)
-- [ ] T003 `007-1`: shell at 90rem, neutral last-run pill with dot and full date, footer (version, timezone)
-- [ ] T004 `007-1`: `page_header` on all 11 pages; h1 at headline-xl from 768 px
+- [X] T002 `007-1`: tokens (tertiary family, dark values, contrast tests), macros (`page_header`, `section_header`, `stat_card`, `icon_tile`, `initial_tile`, `count_badge`, `tag`, `card_hover_class`, `badge_class`)
+- [X] T003 `007-1`: shell at 90rem, neutral last-run pill with dot and full date, footer (version, timezone)
+- [X] T004 `007-1`: `page_header` on all 11 pages; h1 at headline-xl from 768 px
 - [ ] T005 `007-2`: new sprite icons (moved from 007-1); Overview: KPI footnotes, scoring panel, stacked triage bar, labelled source bars, recent postings
 - [ ] T006 `007-3`: Postings: tab counts, one-row filter bar, bulk bar, merged title column, board tags, icon triage (C-1 intact), numbered pager
 - [ ] T007 `007-4`: Reports: icon cards with stat badges, pipeline summary panel, detail pages styled

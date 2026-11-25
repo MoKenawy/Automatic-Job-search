@@ -59,6 +59,7 @@ PAIRS: list[tuple[str, str, float]] = (
         for bg in ("surface", "surface-container-lowest", "surface-container-low")
     ]
     + [("error", bg, 4.5) for bg in ("surface", "surface-container-lowest")]
+    + [("tertiary", bg, 4.5) for bg in ("surface", "surface-container-lowest")]
     + [("outline", bg, 3.0) for bg in CONTROL_BG + ["surface-container-high"]]
     + [("focus-ring", bg, 3.0) for bg in ("surface", "surface-container-lowest")]
     + [("success", bg, 3.0) for bg in CONTROL_BG]
@@ -67,6 +68,7 @@ PAIRS: list[tuple[str, str, float]] = (
         ("on-primary", "primary", 4.5),
         ("on-success-container", "success-container", 4.5),
         ("on-error-container", "error-container", 4.5),
+        ("on-tertiary-container", "tertiary-container", 4.5),
         ("on-secondary-container", "secondary-container", 4.5),
         ("inverse-on-surface", "inverse-surface", 4.5),
         ("primary", "secondary-container", 4.5),

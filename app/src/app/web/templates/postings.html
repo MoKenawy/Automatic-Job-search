@@ -1,22 +1,20 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, btn_class, chip_class, empty_state, icon, pill_class, status_pill, table_wrap %}
+{% from "_macros.html" import banner, btn_class, chip_class, empty_state, icon, page_header, pill_class, status_pill, table_wrap %}
 {% set active = 'postings' %}
 {% block title %}Postings — Job discovery{% endblock %}
 {% block content %}
 
 {% if flash %}{{ banner('success', flash, focusable=True) }}{% endif %}
 
-<div class="mb-6">
-  <h1>Postings</h1>
-  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
+{% set subtitle %}
     {% if pager.total %}Showing {{ pager.first }}–{{ pager.last }} of {{ pager.total }}{% else %}Nothing to show{% endif %},
     {% if status == 'rejected' %}
       most recently rejected first.
     {% else %}
       ranked by score. Unscored postings sort last.
     {% endif %}
-  </p>
-</div>
+{% endset %}
+{{ page_header('Postings', subtitle) }}
 
 {% if verdict == 'rejected' %}
 <p class="verdict-note mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">

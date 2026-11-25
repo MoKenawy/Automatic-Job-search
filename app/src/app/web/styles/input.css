@@ -42,6 +42,9 @@
   --color-success: var(--success);
   --color-success-container: var(--success-container);
   --color-on-success-container: var(--on-success-container);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
   --color-focus-ring: var(--focus-ring);
 
   --text-*: initial;
@@ -153,6 +156,11 @@
   --success: #1e8e3e;
   --success-container: #e6f4ea;
   --on-success-container: #0d5323;
+  /* Tertiary (DESIGN.md YAML): the warm accent, used for the Indeed board tag (spec 007).
+     The container is the fixed tint, so the tag reads as a tint, not a solid orange. */
+  --tertiary: #943700;
+  --tertiary-container: #ffdbcd;
+  --on-tertiary-container: #7d2d00;
   --focus-ring: var(--primary);
 
   /* Type scale (DESIGN.md typography). */
@@ -206,6 +214,9 @@
     --success: #7dd99a;
     --success-container: #0d3b1e;
     --on-success-container: #b7f0c8;
+    --tertiary: #ffb596;
+    --tertiary-container: #7d2d00;
+    --on-tertiary-container: #ffdbcd;
     --shadow-1: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     --shadow-2: 0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
     --shadow-3: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
@@ -247,13 +258,13 @@ body {
   overflow-wrap: break-word;
 }
 h1, h2, h3 { margin: 0; color: var(--on-surface); font-weight: 600; }
-h1 { font-size: var(--fs-lg); line-height: var(--lh-lg); letter-spacing: var(--ls-lg); }
+h1 { font-size: var(--fs-xl-mobile); line-height: var(--lh-xl-mobile); letter-spacing: var(--ls-xl); }
 h2 { font-size: var(--fs-md); line-height: var(--lh-md); letter-spacing: var(--ls-md); margin: var(--space-2xl) 0 var(--space-md); }
 h3 { font-size: var(--fs-sm); line-height: var(--lh-sm); letter-spacing: var(--ls-sm); }
-/* DESIGN.md headline-xl-mobile is the reduction of a larger desktop headline, not the
-   other way round: the page title grows with the viewport (C14). */
+/* Page title: headline-xl-mobile below 768 px, headline-xl above (DESIGN.md; spec 007 FR-001
+   keeps the wording, the size follows the target). */
 @media (min-width: 768px) {
-  h1 { font-size: var(--fs-xl-mobile); line-height: var(--lh-xl-mobile); }
+  h1 { font-size: var(--fs-xl); line-height: var(--lh-xl); }
 }
 p { margin: 0 0 var(--space-md); }
 a { color: var(--primary); text-underline-offset: 0.15em; }
@@ -262,7 +273,7 @@ code { font: 500 var(--fs-label)/var(--lh-label) ui-monospace, "Cascadia Mono", 
 :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
 main {
-  max-width: 80rem; margin: 0 auto; outline: none;
+  max-width: 90rem; margin: 0 auto; outline: none;
   padding: var(--space-xl) var(--space-lg) var(--space-3xl);
 }
 @media (min-width: 768px) { main { padding-inline: var(--space-xl); } }

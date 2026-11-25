@@ -1,16 +1,14 @@
 {% extends "base.html" %}
-{% from "_macros.html" import card_class, empty_state, status_pill, table_wrap %}
+{% from "_macros.html" import card_class, empty_state, page_header, status_pill, table_wrap %}
 {% set active = 'runs' %}
 {% block title %}Runs — Job discovery{% endblock %}
 {% block content %}
 
-<div class="mb-6">
-  <h1>Runs</h1>
-  <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
+{% set subtitle %}
     The weekly review surface (§7.4). The failure to watch for is not an error but
     a run that succeeds while returning steadily less.
-  </p>
-</div>
+{% endset %}
+{{ page_header('Runs', subtitle) }}
 
 <h2>Per-source trend</h2>
 <div class="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-3">
