@@ -148,3 +148,10 @@ visual seed has one page only, so the multi-page pager is covered by `test_web_t
 - Number input `step` left at the browser default, so validation behaviour is unchanged.
 - Not built: Reset to defaults, Export JSON, Audit log, slider, sync strip, inference ping (D3/D4).
 - Re-baselined: `settings` x 4. Gate: pytest, ruff, CSS build, `--visual` green.
+
+## Step 007-8: Runs
+
+- Per-source trend: one card with a trend heading and "Last N runs" badge; per-board panels with initial tile, "Run #N: X postings" badge, bars with value above and run id below, newest bar highlighted and outlined ("now"), older bars in a lighter primary tint, striped zero bar kept, "vs previous run" delta kept, sr-only list unchanged. Run ids come from `health.runs`, which is aligned with `health.series`.
+- History: section header and subtitle; `whitespace-nowrap` on # and Started; rejected count in error colour when above 0; newest row tinted with a primary left accent; monospace by-source text separated with "·"; error row gets an `error` icon; footer "Showing N recent runs".
+- Not built: JSON export, filter button, trigger button, throttle status (D3/D4).
+- Re-baselined: `runs` x 4. Gate: pytest, ruff, CSS build, `--visual` green.
