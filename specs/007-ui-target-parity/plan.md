@@ -24,7 +24,8 @@ I compared screenshots of the running app (http://localhost:8000, light, 1536px)
 | 007-4 Reports | done |
 | 007-5 Blacklist | done |
 | 007-6 Schedules | done |
-| 007-7 Settings (next), 007-8 Runs, 007-9 closing gate | to do |
+| 007-7 Settings | done |
+| 007-8 Runs (next), 007-8 Runs, 007-9 closing gate | to do |
 
 Per-step results and re-baselines are in `verification.md`.
 
