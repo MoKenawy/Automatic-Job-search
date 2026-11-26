@@ -128,3 +128,9 @@ visual seed has one page only, so the multi-page pager is covered by `test_web_t
 - Re-baselined: `reports` x 4 (index page redesign). Detail report pages unchanged in pixels.
 - Gate: pytest, ruff, CSS build, `--visual` all green after re-baseline.
 - Environment note: Playwright chromium had to be reinstalled locally (`uv run playwright install chromium`).
+
+## Step 007-5: Blacklist
+
+- Count badge in the header action slot; two `stat_card`s (`domain`, `visibility_off`); `initial_tile` employer rows; "N postings hidden" badge with icon; primary-colour Restore button (same POST form, `return_to` unchanged); footer "Showing N blacklisted employers"; FR-013 note as a callout panel (wording unchanged); empty state gets an icon.
+- Not built (D4): add form, reason/date columns, export.
+- Re-baselined: `blacklist` x 4. Gate: pytest, ruff, CSS build, `--visual` all green.

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, btn_class, empty_state, icon, metric, page_header, pill_class, table_wrap %}
+{% from "_macros.html" import badge_class, empty_state, icon, icon_tile, initial_tile, page_header, stat_card, table_wrap %}
 {% set active = 'blacklist' %}
 {% block title %}Blacklist — Job discovery{% endblock %}
 {% block content %}
@@ -9,41 +9,53 @@
     retained. Removing a blacklist restores its postings to visibility with
     their prior triage status intact.
 {% endset %}
-{{ page_header('Blacklist', subtitle) }}
-
-{# FR-013 rule callout, existing copy. #}
-{{ banner('info', 'Note: blacklists applied before this change behave differently on removal — their postings stay Rejected rather than returning to their prior status (FR-013).') }}
+{% call page_header('Blacklist', subtitle) %}
+  <span class="{{ badge_class() }}">{{ employers | length }} blacklisted</span>
+{% endcall %}
 
 {# Both figures are derived from the rows already on the page (spec classification table). #}
-<div class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-3">
-  {{ metric("Employers blacklisted", employers | length) }}
-  {{ metric("Postings hidden", employers | map(attribute=1) | sum) }}
+{% set hidden_total = employers | map(attribute=1) | sum %}
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  {{ stat_card("Employers blacklisted", employers | length, icon_name="domain") }}
+  {{ stat_card("Postings hidden", hidden_total, icon_name="visibility_off") }}
 </div>
 
-<h2>Blacklisted employers</h2>
+<h2 class="mt-8">Blacklisted employers</h2>
 {% call table_wrap("Blacklisted employers") %}
   <table>
     <thead>
-      <tr><th scope="col">Employer</th><th scope="col">Postings</th><th scope="col">Action</th></tr>
+      <tr><th scope="col">Employer</th><th scope="col">Postings</th><th scope="col" class="text-right">Action</th></tr>
     </thead>
     <tbody>
       {% for employer, count in employers %}
       <tr>
-        <td>{{ employer.name }}</td>
-        <td><span class="pill {{ pill_class('') }}">{{ count }} postings hidden</span></td>
-        <td>
+        <td><span class="flex items-center gap-3">{{ initial_tile(employer.name) }}<span class="font-semibold text-on-surface">{{ employer.name }}</span></span></td>
+        <td><span class="{{ badge_class() }}">{{ icon('visibility_off') }}{{ count }} postings hidden</span></td>
+        <td class="text-right">
           {# Plain form post (FR-016, contract C-6): no hx-post, so the redirect lands on a whole page. #}
           <form method="post" action="/employers/{{ employer.id }}/unblacklist" class="inline m-0">
             <input type="hidden" name="return_to" value="/blacklist">
-            <button class="{{ btn_class('ghost') }}" type="submit">{{ icon('undo') }}Remove</button>
+            <button class="inline-flex items-center gap-1 min-h-9 px-2 rounded-md bg-transparent border-0 font-medium text-primary cursor-pointer hover:bg-secondary-container focus-visible:outline-2 focus-visible:outline-focus-ring" type="submit">{{ icon('undo', cls='size-4') }}Restore</button>
           </form>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="3">{{ empty_state("No employers blacklisted. Blacklist one from a posting's detail page.") }}</td></tr>
+      <tr><td colspan="3">
+        <div class="flex flex-col items-center">{{ icon('visibility_off', cls='size-8 mt-8 text-on-surface-variant') }}{{ empty_state("No employers blacklisted. Blacklist one from a posting's detail page.") }}</div>
+      </td></tr>
       {% endfor %}
     </tbody>
   </table>
+  {% if employers %}<p class="m-0 px-4 py-3 border-t border-outline-variant text-body-sm text-on-surface-variant">Showing {{ employers | length }} blacklisted employer{{ '' if employers | length == 1 else 's' }}</p>{% endif %}
 {% endcall %}
+
+{# FR-013 rule callout, existing copy. #}
+<section class="flex items-start gap-4 mt-6 p-5 rounded-lg border border-outline-variant bg-secondary-container/40" aria-label="Note on earlier blacklists">
+  {{ icon_tile('info') }}
+  <div class="min-w-0">
+    <h2 class="m-0 text-headline-sm">Blacklists applied before this change</h2>
+    <p class="mt-1 mb-0 text-on-surface-variant">Note: blacklists applied before this change behave differently on removal — their postings stay Rejected rather than returning to their prior status (FR-013).</p>
+  </div>
+</section>
 
 {% endblock %}
