@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import banner, btn_class, card_class, check_class, empty_state, field_class, hint_class, icon, page_header, pill_class, table_wrap %}
+{% from "_macros.html" import banner, btn_class, card_class, check_class, empty_state, field_class, hint_class, icon, page_header, pill_class, section_header, table_wrap, tag, badge_class %}
 {% set active = 'profiles' %}
 {% block title %}Schedules — Job discovery{% endblock %}
 {% block content %}
@@ -9,9 +9,10 @@
 {% set subtitle %}
     Each profile is a saved job survey with its own role, sites, and run time. Enabled
     profiles run automatically at their scheduled time; any can be run now (ADR-0005).
-    <a href="/settings">{{ icon('settings') }}Run settings</a>
 {% endset %}
-{{ page_header('Search schedules', subtitle) }}
+{% call page_header('Search schedules', subtitle) %}
+  <a class="{{ btn_class() }}" href="/settings">{{ icon('tune') }}Run settings</a>
+{% endcall %}
 <p class="mt-1 mb-0 text-on-surface-variant text-(length:--fs-body)">
   Each profile can also carry its own filter rules. They apply <strong>in addition to</strong>
   the title patterns on the <a href="/settings">settings</a> page, never instead of them, and
@@ -21,6 +22,10 @@
   <code>filter --all</code>; nothing is re-collected.
 </p>
 
+{% set active_count = profiles | selectattr('enabled') | list | length %}
+<div class="mt-6">
+{% call section_header("Profiles", "Saved searches and when they run.", "schedule") %}<span class="{{ badge_class() }}">{{ active_count }} active</span>{% endcall %}
+</div>
 {% call table_wrap("Search profiles") %}
   <table class="[&_td]:align-top">
     <thead>
@@ -33,27 +38,27 @@
     <tbody>
       {% for p in profiles %}
       <tr>
-        <td><strong>{{ p.name }}</strong><br><span class="text-on-surface-variant">{{ p.term }}</span></td>
-        <td class="text-on-surface-variant">{{ p.location or '—' }}{% if p.is_remote %} <span class="pill {{ pill_class('') }}">remote</span>{% endif %}</td>
-        <td>{% for s in p.sites %}<span class="pill {{ pill_class('') }}">{{ s }}</span> {% endfor %}</td>
+        <td><strong class="text-on-surface">{{ p.name }}</strong><br><span class="text-on-surface-variant">{{ p.term }}</span></td>
+        <td class="text-on-surface-variant"><span class="inline-flex items-center gap-1">{{ icon('public' if p.is_remote else 'location_on', cls='size-4') }}{{ p.location or '—' }}{% if p.is_remote %} <span class="pill {{ pill_class('') }}">remote</span>{% endif %}</span></td>
+        <td><span class="flex flex-wrap gap-1">{% for s in p.sites %}{{ tag(s, s | lower) }}{% endfor %}</span></td>
         <td class="text-on-surface-variant">{{ p.experience or '—' }}</td>
-        <td>{{ '%02d:%02d' | format(p.schedule_hour, p.schedule_minute) }}</td>
+        <td><code class="px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface whitespace-nowrap">{{ '%02d:%02d' | format(p.schedule_hour, p.schedule_minute) }}{% if shell.timezone %} {{ shell.timezone }}{% endif %}</code></td>
         <td>
           {# Contract C-7: stays a submit button in the same form; the switch look and
              role are layered on, and the state is also text (US6 AS-1). #}
           <form method="post" action="/profiles/{{ p.id }}/enabled" class="inline m-0">
             <input type="hidden" name="enabled" value="{{ 'false' if p.enabled else 'true' }}">
-            <button class="inline-flex items-center gap-2 min-h-7 pl-1 pr-3 border border-outline rounded-full bg-surface-container-lowest text-on-surface text-(length:--fs-label) leading-none font-medium cursor-pointer transition-[background-color,border-color,color,box-shadow] duration-120 ease-[ease] before:content-[''] before:size-4 before:rounded-full before:bg-outline before:border-2 before:border-outline aria-checked:bg-success-container aria-checked:text-on-success-container aria-checked:border-success aria-checked:before:bg-success aria-checked:before:border-success" type="submit" role="switch" aria-checked="{{ 'true' if p.enabled else 'false' }}">{{ 'Enabled' if p.enabled else 'Disabled' }}</button>
+            <button class="relative inline-flex items-center gap-2 min-h-7 pr-1 border-0 bg-transparent text-on-surface text-(length:--fs-label) leading-none font-medium cursor-pointer before:content-[''] before:order-2 before:w-9 before:h-5 before:rounded-full before:bg-outline before:transition-colors after:content-[''] after:absolute after:right-4.5 after:top-1/2 after:-translate-y-1/2 after:size-4 after:rounded-full after:bg-surface-container-lowest after:transition-[right] aria-checked:before:bg-primary aria-checked:after:right-0.5 focus-visible:outline-2 focus-visible:outline-focus-ring" type="submit" role="switch" aria-checked="{{ 'true' if p.enabled else 'false' }}"><span class="order-1">{{ 'Active' if p.enabled else 'Paused' }}</span></button>
           </form>
         </td>
         <td>
           <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
             <form method="post" action="/profiles/{{ p.id }}/run" class="inline m-0">
-              <button class="{{ btn_class(size='sm') }}" type="submit" title="Run this profile now">{{ icon('play_arrow') }}Run now</button>
+              <button class="{{ btn_class('ghost-primary', size='sm') }}" type="submit" title="Run this profile now">{{ icon('play_arrow') }}Run now</button>
             </form>
             <form method="post" action="/profiles/{{ p.id }}/delete" class="inline m-0"
                   onsubmit="return confirm('Delete profile {{ p.name }}?');">
-              <button class="{{ btn_class(size='sm') }}" type="submit">{{ icon('delete') }}Delete</button>
+              <button class="{{ btn_class('ghost-error', size='sm') }}" type="submit">{{ icon('delete') }}Delete</button>
             </form>
           </div>
         </td>
@@ -101,7 +106,9 @@
   </table>
 {% endcall %}
 
-<h2>Add a profile</h2>
+<div class="mt-8">
+{% call section_header("Add a profile", "Configure the search, target boards and run time.", "add_circle") %}{% endcall %}
+</div>
 <form method="post" action="/profiles" class="{{ card_class() }}">
   <div class="grid grid-cols-1 gap-x-8 md:grid-cols-2">
     <div>
@@ -136,7 +143,7 @@
     <div>
       <fieldset class="{{ field_class() }}">
         <legend class="p-0 mb-1 font-medium">Sites</legend>
-        <div class="flex flex-wrap gap-x-4 gap-y-2">
+        <div class="flex flex-wrap gap-x-4 gap-y-2 p-3 rounded-md bg-surface-container-low">
           {% for s in sites %}
           <label class="{{ check_class() }}"><input type="checkbox" name="sites" value="{{ s }}" checked> {{ s }}</label>
           {% endfor %}
@@ -158,31 +165,31 @@
 
       <div class="{{ field_class() }}">
         <label for="title_include_pattern">Title must match</label>
-        <input class="w-full" id="title_include_pattern" name="title_include_pattern"
+        <input class="w-full font-mono" id="title_include_pattern" name="title_include_pattern"
                placeholder="regular expression (optional)">
       </div>
 
       <div class="{{ field_class() }}">
         <label for="title_exclude_pattern">Title must not match</label>
-        <input class="w-full" id="title_exclude_pattern" name="title_exclude_pattern"
+        <input class="w-full font-mono" id="title_exclude_pattern" name="title_exclude_pattern"
                placeholder="regular expression (optional)">
       </div>
     </div>
   </div>
 
-  <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mt-3 pt-4 border-t border-outline-variant">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-3 mt-3 p-4 rounded-md bg-surface-container-low">
     <label class="{{ check_class() }}" for="is_remote"><input id="is_remote" name="is_remote" type="checkbox"> Remote only</label>
     <div class="{{ field_class(true) }}">
       <label for="schedule_hour">Runs at (hour : minute)</label>
-      <span>
-        <input class="w-full" id="schedule_hour" name="schedule_hour" type="number" min="0" max="23" value="6">
+      <span class="inline-flex items-center gap-1">
+        <input class="w-16 font-mono" id="schedule_hour" name="schedule_hour" type="number" min="0" max="23" value="6">
         :
-        <input class="w-full" name="schedule_minute" type="number" min="0" max="59" value="0" aria-label="Minute">
+        <input class="w-16 font-mono" name="schedule_minute" type="number" min="0" max="59" value="0" aria-label="Minute">
       </span>
     </div>
     <span class="flex-1"></span>
     <button class="{{ btn_class() }}" type="reset">Cancel</button>
-    <button class="{{ btn_class('primary') }}" type="submit">Save schedule</button>
+    <button class="{{ btn_class('primary') }}" type="submit">{{ icon('save') }}Save schedule</button>
   </div>
 </form>
 

@@ -134,3 +134,10 @@ visual seed has one page only, so the multi-page pager is covered by `test_web_t
 - Count badge in the header action slot; two `stat_card`s (`domain`, `visibility_off`); `initial_tile` employer rows; "N postings hidden" badge with icon; primary-colour Restore button (same POST form, `return_to` unchanged); footer "Showing N blacklisted employers"; FR-013 note as a callout panel (wording unchanged); empty state gets an icon.
 - Not built (D4): add form, reason/date columns, export.
 - Re-baselined: `blacklist` x 4. Gate: pytest, ruff, CSS build, `--visual` all green.
+
+## Step 007-6: Schedules
+
+- "Run settings" moved to a header action button (`tune`); "Profiles" section header with "N active" badge; location icon chip (`public` when remote); site `tag`s; runs-at monospace chip with the timezone; pill toggle (still a submit button with `role="switch"`/`aria-checked`, text Active/Paused); Run now (primary) and Delete (error) ghost buttons via new `btn_class` variants `ghost-primary`/`ghost-error`.
+- Add form: section header with `add_circle`, tinted sites group, monospace regex inputs, tinted action bar with Save (`save` icon) and compact hour/minute inputs. Field names, ids and hint text unchanged.
+- Not built: sync/throttle/storage strip, keyboard-shortcut hints, Glassdoor (D3).
+- Re-baselined: `profiles` x 4. Gate: pytest, ruff, CSS build, `--visual` green.
