@@ -14,7 +14,9 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from app.services import profiles as profile_store
 from app.services import queries, reports
+from app.services import settings as settings_service
 from app.web.deps import TEMPLATES, get_db
 
 router = APIRouter(prefix="/reports")
@@ -40,10 +42,38 @@ REPORTS = [
 ]
 
 
+def _pipeline_summary(db: Session) -> dict:
+    """Figures for the index panel, from recent runs only (spec 007 D3: no invented values)."""
+    runs = queries.recent_runs(db, limit=30)
+    collected = sum(r.collected_count for r in runs)
+    distinct = sum(r.deduplicated_count for r in runs)
+    durations = [
+        (r.finished_at - r.started_at).total_seconds()
+        for r in runs
+        if r.finished_at is not None and r.started_at is not None
+    ]
+    return {
+        "runs": len(runs),
+        "distinct_rate": round(distinct / collected * 100) if collected else None,
+        "avg_seconds": round(sum(durations) / len(durations)) if durations else None,
+        "scoring_model": settings_service.get(db, "scoring_model"),
+    }
+
+
 @router.get("", response_class=HTMLResponse)
-def index(request: Request):
+def index(request: Request, db: Session = Depends(get_db)):
+    # Context comes from existing read paths only (spec 007 D4).
+    totals = queries.totals(db)
+    sites = queries.known_sites(db)
+    stats = {
+        "/reports/employers": f"{totals.postings} postings across {totals.employers} employers",
+        "/reports/sources": f"{len(sites)} board{'' if len(sites) == 1 else 's'}",
+        "/reports/profiles": f"{len(profile_store.list_enabled(db))} active profiles",
+    }
     return TEMPLATES.TemplateResponse(
-        request=request, name="reports/index.html", context={"reports": REPORTS}
+        request=request,
+        name="reports/index.html",
+        context={"reports": REPORTS, "stats": stats, "summary": _pipeline_summary(db)},
     )
 
 
